@@ -4,19 +4,20 @@
 Phaser 4 / TypeScript / Vite / pnpm
 
 ## Current milestone
-Explicit table-chair association in `game/restaurant.ts` (remove the "chair is always directly below the table" assumption).
+See `docs/MILESTONES.md`. M01 and M02 (explicit table-chair association, multiple tables) are done; next up is M03 (multiple simultaneous NPCs).
 
 ## Working
 - Restaurant scene, 32x32 grid, walls, door
 - Player movement (WASD/arrows)
 - Furniture as data (`game/restaurant.ts`), rendered generically from a type→style map
+- Two tables with their own chairs (`table-1`/`chair-1`, `table-2`/`chair-2`), each visible and functionally independent (confirmed in-browser)
+- Furniture items have an explicit `id`; chairs carry a `tableId` linking them to their table (`Table`/`Chair` types)
 - NPC entity (`game/npc.ts`): grid position + state (`walking` | `idle` | `seated`)
-- NPC flow: spawns at door -> tweens to entry point -> finds a free table (`findFreeTable`) -> tweens to its seat (`getSeatPosition`), nudging toward the table center and squashing the sprite (`scaleY: 0.65`) as a placeholder sit-down -> state becomes `seated`
+- NPC flow: spawns at door -> tweens to entry point -> finds a free table (`findFreeTable`) -> tweens to its seat (`getSeatForTable`, resolved via `tableId` rather than relative position), nudging toward the table center and squashing the sprite (`scaleY: 0.65`) as a placeholder sit-down -> state becomes `seated`
 - NPC with no free table now sets `state: "idle"` at the entry point instead of staying stuck on `"walking"`
 - Occupied-table tracking (`occupiedTables` in the scene, separate from the static `furniture` layout)
 
 ## Known issues / simplifications
-- `getSeatPosition` assumes the chair is always the tile directly below the table. Only holds because there is currently 1 table + 1 chair; needs explicit table-chair association once more furniture is added.
 - If no table is free, the NPC goes `idle` at the entry point but there's still no real waiting/queue behavior (no visual cue, no retry when a table frees up).
 - Only one NPC exists (spawned once on scene create), no spawning loop yet.
 - Seated pose is a placeholder squash-and-nudge tween on the rectangle sprite, not real art.
@@ -32,6 +33,5 @@ Explicit table-chair association in `game/restaurant.ts` (remove the "chair is a
 - Commits follow Conventional Commits, via the `commit` skill (stage by name, one logical change per commit, push without force)
 
 ## Next
-- Explicit table-chair association (multiple tables/chairs)
-- NPC spawn loop / multiple NPCs
-- Waiting/queue behavior for when no table is free
+- M03: NPC spawn loop / multiple simultaneous NPCs (`docs/MILESTONES.md`)
+- Waiting/queue behavior for when no table is free (M04)

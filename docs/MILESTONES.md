@@ -19,12 +19,12 @@ descripciones largas entre los dos.
 
 ## Milestone 01 — Asociación explícita mesa-silla
 
-- [ ] Agregar `id` a cada elemento de `Furniture`.
-- [ ] Agregar `tableId` a las sillas, asociándolas a su mesa.
-- [ ] Crear `getSeatForTable(table)` usando `tableId` (reemplaza el supuesto "fila de abajo").
-- [ ] Reemplazar `getSeatPosition` por `getSeatForTable` en `restaurant.ts`.
-- [ ] Actualizar `main.ts` si cambia el tipo de retorno.
-- [ ] Actualizar tests unitarios de `restaurant.ts` para la nueva asociación.
+- [x] Agregar `id` a cada elemento de `Furniture`.
+- [x] Agregar `tableId` a las sillas, asociándolas a su mesa.
+- [x] Crear `getSeatForTable(table)` usando `tableId` (reemplaza el supuesto "fila de abajo").
+- [x] Reemplazar `getSeatPosition` por `getSeatForTable` en `restaurant.ts`.
+- [x] Actualizar `main.ts` si cambia el tipo de retorno.
+- [x] Actualizar tests unitarios de `restaurant.ts` para la nueva asociación.
 
 **Completion criteria:** `pnpm test` y `tsc --noEmit` en verde; el NPC se sienta igual
 que antes pero vía asociación explícita, no por posición relativa.
@@ -35,10 +35,10 @@ que antes pero vía asociación explícita, no por posición relativa.
 
 *Depende de: M01.*
 
-- [ ] Agregar una segunda mesa + silla a `furniture`, con `id`/`tableId`.
-- [ ] Confirmar visualmente que ambas mesas y sillas se renderizan.
-- [ ] Extender test de `findFreeTable` a 2 mesas (una ocupada, otra libre).
-- [ ] Test: `getSeatForTable` correcto para ambas mesas.
+- [x] Agregar una segunda mesa + silla a `furniture`, con `id`/`tableId`.
+- [x] Confirmar visualmente que ambas mesas y sillas se renderizan.
+- [x] Extender test de `findFreeTable` a 2 mesas (una ocupada, otra libre).
+- [x] Test: `getSeatForTable` correcto para ambas mesas.
 
 **Completion criteria:** 2 mesas visibles y funcionalmente independientes en el navegador.
 

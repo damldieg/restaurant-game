@@ -5,7 +5,7 @@ import {
   RESTAURANT_ROWS,
   furniture,
   findFreeTable,
-  getSeatPosition,
+  getSeatForTable,
   type Furniture,
 } from "./game/restaurant";
 import { createNpc, type Npc } from "./game/npc";
@@ -163,7 +163,7 @@ class RestaurantScene extends Phaser.Scene {
 
     this.occupiedTables.push(table.position);
 
-    const seat = getSeatPosition(table);
+    const seat = getSeatForTable(table);
     const seatCenter = gridToWorldCenter(seat, this.originX, this.originY);
     const tableCenter = gridToWorldCenter(table.position, this.originX, this.originY);
 

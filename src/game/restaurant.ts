@@ -5,27 +5,46 @@ export const RESTAURANT_ROWS = 14;
 
 export type FurnitureType = "table" | "chair";
 
-export interface Furniture {
-  type: FurnitureType;
+export interface Table {
+  id: string;
+  type: "table";
   position: GridPosition;
 }
 
+export interface Chair {
+  id: string;
+  type: "chair";
+  position: GridPosition;
+  tableId: string;
+}
+
+export type Furniture = Table | Chair;
+
 export const furniture: Furniture[] = [
-  { type: "table", position: { col: 5, row: 5 } },
-  { type: "chair", position: { col: 5, row: 6 } },
+  { id: "table-1", type: "table", position: { col: 5, row: 5 } },
+  { id: "chair-1", type: "chair", position: { col: 5, row: 6 }, tableId: "table-1" },
+  { id: "table-2", type: "table", position: { col: 13, row: 5 } },
+  { id: "chair-2", type: "chair", position: { col: 13, row: 6 }, tableId: "table-2" },
 ];
 
 // Busca la primera mesa cuya posición no esté en la lista de ocupadas.
-export function findFreeTable(occupied: GridPosition[]): Furniture | undefined {
+export function findFreeTable(occupied: GridPosition[]): Table | undefined {
   return furniture.find(
-    (item) =>
+    (item): item is Table =>
       item.type === "table" &&
       !occupied.some((position) => samePosition(position, item.position))
   );
 }
 
-// Por ahora asumimos que la silla de una mesa está en la casilla justo debajo.
-// Cuando haya múltiples mesas/sillas esto deberá asociarlas explícitamente.
-export function getSeatPosition(table: Furniture): GridPosition {
-  return { col: table.position.col, row: table.position.row + 1 };
+// Busca la silla asociada a una mesa por `tableId`.
+export function getSeatForTable(table: Table): GridPosition {
+  const seat = furniture.find(
+    (item): item is Chair => item.type === "chair" && item.tableId === table.id
+  );
+
+  if (!seat) {
+    throw new Error(`No chair found for table "${table.id}"`);
+  }
+
+  return seat.position;
 }
