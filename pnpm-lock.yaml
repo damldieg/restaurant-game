@@ -13,8 +13,8 @@ importers:
         version: 4.2.1
     devDependencies:
       '@damian.diego/claude-toolkit':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: 0.7.0
+        version: 0.7.0
       typescript:
         specifier: ~6.0.2
         version: 6.0.3
@@ -27,8 +27,8 @@ importers:
 
 packages:
 
-  '@damian.diego/claude-toolkit@0.6.0':
-    resolution: {integrity: sha512-lykaHC/MbzjvRYFgPX+OeCnECqLq3aKBlNLujaf+wmKkmAewegRdX6x2tG5QD3XMgMwI/hW8ijkST9uamMQ9fw==}
+  '@damian.diego/claude-toolkit@0.7.0':
+    resolution: {integrity: sha512-Bld8jKg0GfKOY3BT597xVV2DG5qvyTBQQpyOo+e4BPahj4J/iiLT+g1hp6svqu6D5WHMkzWnGMMUOtfJcPCEQA==}
     hasBin: true
 
   '@jridgewell/sourcemap-codec@1.5.5':
@@ -445,7 +445,7 @@ packages:
 
 snapshots:
 
-  '@damian.diego/claude-toolkit@0.6.0': {}
+  '@damian.diego/claude-toolkit@0.7.0': {}
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 

@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@damian.diego/claude-toolkit": "^0.6.0",
+    "@damian.diego/claude-toolkit": "0.7.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
