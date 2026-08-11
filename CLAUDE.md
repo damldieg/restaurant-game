@@ -1,6 +1,6 @@
 # Restaurant Game
 
-Shared working rules, effort routing, and milestone policy: `~/.config/claude-workflow/GUIDELINES.md`.
+Shared working rules, effort routing, and milestone policy: `~/.config/claude-toolkit/GUIDELINES.md`.
 
 ## Project-specific notes
 
