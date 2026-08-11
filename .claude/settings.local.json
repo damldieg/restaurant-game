@@ -7,12 +7,17 @@
       "Bash(git init *)",
       "Bash(git branch *)",
       "Bash(pnpm add *)",
-      "Bash(mkdir -p /Users/damiandiego/restaurant-game/.claude/skills/commit)",
+      "Bash(mkdir -p /Users/damiandiego/Desktop/Development/restaurant-game/.claude/skills/commit)",
       "Bash(pnpm test *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(ls -la ~/Desktop/ 2>&1 | head -30)",
+      "Read(//Users/damiandiego/Desktop/**)",
+      "Bash(ls -la ~/Desktop/Development/ 2>&1)",
+      "Read(//Users/damiandiego/Desktop/Development/**)"
     ],
     "additionalDirectories": [
-      "/Users/damiandiego/restaurant-game/.claude/skills"
+      "/Users/damiandiego/Desktop/Development/restaurant-game/.claude/skills"
     ]
   }
 }
