@@ -1,6 +1,6 @@
 import type { GridPosition } from "./grid";
 
-export type NpcState = "walking" | "idle";
+export type NpcState = "walking" | "idle" | "seated";
 
 export interface Npc {
   position: GridPosition;

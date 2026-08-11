@@ -157,22 +157,29 @@ class RestaurantScene extends Phaser.Scene {
 
     if (!table) {
       // No hay mesa libre: por ahora el NPC se queda esperando en la entrada.
+      this.npc.state = "idle";
       return;
     }
 
     this.occupiedTables.push(table.position);
 
     const seat = getSeatPosition(table);
-    const target = gridToWorldCenter(seat, this.originX, this.originY);
+    const seatCenter = gridToWorldCenter(seat, this.originX, this.originY);
+    const tableCenter = gridToWorldCenter(table.position, this.originX, this.originY);
+
+    // Acerca al NPC hacia la mesa y lo "achata" para simular que se sienta
+    // (placeholder hasta que haya sprites con pose real de sentado).
+    const seatedY = seatCenter.y + (tableCenter.y - seatCenter.y) * 0.25;
 
     this.tweens.add({
       targets: this.npcSprite,
-      x: target.x,
-      y: target.y,
+      x: seatCenter.x,
+      y: seatedY,
+      scaleY: 0.65,
       duration: 800,
       onComplete: () => {
         this.npc.position = seat;
-        this.npc.state = "idle";
+        this.npc.state = "seated";
       },
     });
   }
