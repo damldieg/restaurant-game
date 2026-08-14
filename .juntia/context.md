@@ -8,7 +8,7 @@ this automatically) after a new decision is confirmed.
 
 - Languages: TypeScript
 - Technologies: phaser, vite, tsconfig.json
-- Dependencies: @juntia/juntia@^0.3.0, latest@link:@juntia/juntia/latest, phaser@^4.2.1, typescript@~6.0.2, vite@^8.2.0, vitest@^4.1.10
+- Dependencies: @juntia/juntia@^0.5.0, latest@link:@juntia/juntia/latest, phaser@^4.2.1, typescript@~6.0.2, vite@^8.2.0, vitest@^4.1.10
 - Manifests: package.json, pnpm-lock.yaml
 
 ## Confirmed decisions

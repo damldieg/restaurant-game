@@ -15,7 +15,7 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@juntia/juntia": "^0.3.0",
+    "@juntia/juntia": "^0.5.0",
     "latest": "link:@juntia/juntia/latest",
     "phaser": "^4.2.1"
   }
