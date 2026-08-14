@@ -8,13 +8,16 @@ importers:
 
   .:
     dependencies:
+      '@juntia/juntia':
+        specifier: ^0.5.0
+        version: 0.5.0
+      latest:
+        specifier: link:@juntia/juntia/latest
+        version: link:@juntia/juntia/latest
       phaser:
         specifier: ^4.2.1
         version: 4.2.1
     devDependencies:
-      '@damian.diego/claude-toolkit':
-        specifier: 0.7.0
-        version: 0.7.0
       typescript:
         specifier: ~6.0.2
         version: 6.0.3
@@ -27,12 +30,13 @@ importers:
 
 packages:
 
-  '@damian.diego/claude-toolkit@0.7.0':
-    resolution: {integrity: sha512-Bld8jKg0GfKOY3BT597xVV2DG5qvyTBQQpyOo+e4BPahj4J/iiLT+g1hp6svqu6D5WHMkzWnGMMUOtfJcPCEQA==}
-    hasBin: true
-
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
+
+  '@juntia/juntia@0.5.0':
+    resolution: {integrity: sha512-GrHJr87JBoGDj2+54inQjVZ/CNLo0s6pHKRJRQ1SGuu+QNwugHMBByJ1y2JIG+XX4N4CQbnldAkspupUkkGaeA==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@oxc-project/types@0.143.0':
     resolution: {integrity: sha512-u6JZdLBTLotrNC9Vd6vPssINdzcCzleKAH6EJKImQb7GtYvX5keN2dxkoK44stCc4tffE6QQRtZTXVSzsLUlWA==}
@@ -445,9 +449,9 @@ packages:
 
 snapshots:
 
-  '@damian.diego/claude-toolkit@0.7.0': {}
-
   '@jridgewell/sourcemap-codec@1.5.5': {}
+
+  '@juntia/juntia@0.5.0': {}
 
   '@oxc-project/types@0.143.0': {}
 
