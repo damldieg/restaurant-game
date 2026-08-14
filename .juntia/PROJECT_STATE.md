@@ -8,8 +8,13 @@ Mark anything not yet determined as `UNKNOWN` rather than guessing or silently o
 
 ## Current state
 
-<1-2 lines: where the project stands right now.>
+M01–M03 done and verified (`pnpm test`: 13/13 passing): tables/chairs linked by explicit `id`/`tableId`,
+two independent tables, multiple simultaneous NPCs via `NpcController`. M04 (waiting/queue, abandonment,
+reputation) not started — `NpcState` still only has `walking | idle | seated`, no `waiting`/`leaving`; an
+NPC with no free table sits `idle` at the entry indefinitely with no queue, timeout, or penalty.
+`reputation` isn't real state yet — the HUD text is a fixed placeholder.
 
 ## Next known step
 
-<if there is one; omit the section if not>
+M04 — Espera / cola sin mesas libres, abandono y reputación (`docs/MILESTONES.md`). First unblocked task:
+add the `waiting` state to `NpcState`.

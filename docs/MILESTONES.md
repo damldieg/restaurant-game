@@ -11,7 +11,7 @@
 
 ## Relación con PROJECT_STATE.md
 
-`docs/PROJECT_STATE.md` = estado actual. `docs/MILESTONES.md` = roadmap. Al completar
+`.juntia/PROJECT_STATE.md` = estado actual. `docs/MILESTONES.md` = roadmap. Al completar
 una tarea que cambia el estado real del proyecto, actualizar ambos; no duplicar
 descripciones largas entre los dos.
 
