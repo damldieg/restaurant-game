@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { TILE_SIZE, gridToWorldCenter } from "./game/grid";
 import { RESTAURANT_COLS, RESTAURANT_ROWS, furniture, type Furniture } from "./game/restaurant";
 import { NpcController } from "./game/npc/controller";
+import { applyAbandonPenalty, createReputationState, type ReputationState } from "./game/reputation";
 
 const NPC_SPAWN_INTERVAL_MS = 2500;
 
@@ -20,6 +21,10 @@ class RestaurantScene extends Phaser.Scene {
   private originX = 0;
   private originY = 0;
   private npcController!: NpcController;
+  // Reputación como estado real del juego (M04). La penalización por abandono
+  // ya se aplica acá; conectar el HUD al valor real es tarea de M13, no de este
+  // milestone, así que el texto sigue mostrando el placeholder por ahora.
+  private reputation: ReputationState = createReputationState();
 
   create() {
     this.createRestaurant();
@@ -29,9 +34,16 @@ class RestaurantScene extends Phaser.Scene {
       this.originX,
       this.originY,
       RESTAURANT_COLS,
-      RESTAURANT_ROWS
+      RESTAURANT_ROWS,
+      () => {
+        this.reputation = applyAbandonPenalty(this.reputation);
+      }
     );
     this.npcController.startSpawning(NPC_SPAWN_INTERVAL_MS);
+  }
+
+  update(time: number) {
+    this.npcController.update(time);
   }
 
   private createRestaurant() {
