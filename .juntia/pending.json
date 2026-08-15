@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "interpretation": "docs/MILESTONES.md (Milestone 04, line 71-72) requires a wait-timeout/patience mechanism for NPCs waiting on a table, but does not state a concrete duration. Given the existing spawn interval (NPC_SPAWN_INTERVAL_MS = 2500ms in src/main.ts) and walk-tween durations (WALK_TO_ENTRY_DURATION = 1200ms, WALK_TO_SEAT_DURATION = 800ms in src/game/npc/controller.ts), a patience limit on the order of 15000ms (15s) is likely a reasonable placeholder default for playability, but this is a game-design/tuning choice, not something derivable from the codebase alone.",
+      "confidence": "low",
+      "basedOn": [
+        "docs/MILESTONES.md:71-72 (M04 waiting-reason + patience requirement, no numeric value given)",
+        "src/main.ts:6 (NPC_SPAWN_INTERVAL_MS = 2500)",
+        "src/game/npc/controller.ts:9-10 (WALK_TO_ENTRY_DURATION = 1200, WALK_TO_SEAT_DURATION = 800)"
+      ],
+      "unknowns": [
+        {
+          "topic": "Table-wait patience duration (ms) before an NPC abandons angrily",
+          "reason": "docs/MILESTONES.md does not pin a numeric value; this is a gameplay-balance decision only a human/product owner can confirm. Implementing with a flagged default: TABLE_WAIT_PATIENCE_MS = 15000 in src/game/npc/controller.ts."
+        }
+      ]
+    },
+    {
+      "interpretation": "docs/MILESTONES.md (Milestone 04, line 85-87) requires a one-time reputation penalty on table-wait abandonment, but does not state the magnitude. The HUD placeholder in src/main.ts (line 90, \"Reputación: 0\") suggests reputation is intended as a small integer counter, so a penalty of 1 point per abandonment is a plausible minimal default, but the actual balance value is a product decision.",
+      "confidence": "low",
+      "basedOn": [
+        "docs/MILESTONES.md:85-87 (M04 one-time reputation penalty requirement, no numeric value given)",
+        "src/main.ts:90 (existing HUD placeholder text \"Reputación: 0\", implying an integer-scale reputation stat)"
+      ],
+      "unknowns": [
+        {
+          "topic": "Reputation penalty magnitude per table-wait abandonment",
+          "reason": "docs/MILESTONES.md does not pin a numeric value. Implementing with a flagged default: ABANDONMENT_REPUTATION_PENALTY = 1 in src/game/reputation.ts."
+        }
+      ]
+    },
+    {
+      "interpretation": "docs/MILESTONES.md (Milestone 04, line 71) requires queue positions distinct from entryTarget, non-overlapping per waiting NPC, but does not specify layout/spacing. The existing restaurant grid (RESTAURANT_COLS=20, RESTAURANT_ROWS=14 in src/game/restaurant.ts) and the existing entry/door grid positions used in src/game/npc/controller.ts (entryTarget at row rows-4, door at row rows-1) suggest a queue row placed between them (row rows-3) with NPCs spread alternately left/right of center is a plausible layout, but exact spacing/shape is a level-design choice.",
+      "confidence": "low",
+      "basedOn": [
+        "docs/MILESTONES.md:71 (M04 queue-position requirement, no layout specified)",
+        "src/game/restaurant.ts:3-4 (RESTAURANT_COLS = 20, RESTAURANT_ROWS = 14)",
+        "src/game/npc/controller.ts:48-49 (existing entryTarget/doorPosition grid rows)"
+      ],
+      "unknowns": [
+        {
+          "topic": "Queue layout/spacing (exact positions in the grid)",
+          "reason": "docs/MILESTONES.md does not specify a layout. Implementing with a flagged default: a single row at RESTAURANT_ROWS - 3, NPCs alternating left/right of center column by increasing distance (getQueuePosition in src/game/restaurant.ts)."
+        }
+      ]
+    }
+  ]
+}

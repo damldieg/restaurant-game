@@ -1,37 +1,53 @@
 import Phaser from "phaser";
 import { gridToWorldCenter, type GridPosition } from "../grid";
-import { findFreeTable, getSeatForTable } from "../restaurant";
-import { createNpc, type Npc } from "./npc";
+import {
+  findFreeTable,
+  getDoorPosition,
+  getEntryPosition,
+  getQueuePosition,
+  getSeatForTable,
+} from "../restaurant";
+import { applyAbandonmentPenalty } from "../reputation";
+import { createNpc, hasWaitTimedOut, startLeaving, startWaiting, type Npc } from "./npc";
 
 const NPC_WIDTH = 22;
 const NPC_HEIGHT = 28;
 const NPC_COLOR = 0xc97a5b;
 const WALK_TO_ENTRY_DURATION = 1200;
 const WALK_TO_SEAT_DURATION = 800;
+const WALK_TO_QUEUE_DURATION = 500;
+const WALK_TO_DOOR_DURATION = 1200;
+
+// Límite de paciencia para la espera de mesa. Valor por defecto marcado como
+// propuesta de Producto en .juntia/pending.json (docs/MILESTONES.md no fija
+// una duración concreta).
+export const TABLE_WAIT_PATIENCE_MS = 15000;
 
 export class NpcController {
   private npcs: Npc[] = [];
   private sprites = new Map<string, Phaser.GameObjects.Rectangle>();
   private occupiedTables: GridPosition[] = [];
+  // Índice de cola por NPC (asignado una vez, nunca reutilizado, para que
+  // cada NPC en espera tenga una posición estable y distinta).
+  private queueIndexByNpcId = new Map<string, number>();
+  private nextQueueIndex = 0;
   private nextId = 1;
+  private reputation = 0;
   private scene: Phaser.Scene;
   private originX: number;
   private originY: number;
-  private restaurantCols: number;
-  private restaurantRows: number;
+  private onReputationChange?: (reputation: number) => void;
 
   constructor(
     scene: Phaser.Scene,
     originX: number,
     originY: number,
-    restaurantCols: number,
-    restaurantRows: number
+    onReputationChange?: (reputation: number) => void
   ) {
     this.scene = scene;
     this.originX = originX;
     this.originY = originY;
-    this.restaurantCols = restaurantCols;
-    this.restaurantRows = restaurantRows;
+    this.onReputationChange = onReputationChange;
   }
 
   startSpawning(intervalMs: number) {
@@ -44,9 +60,27 @@ export class NpcController {
     });
   }
 
+  getReputation(): number {
+    return this.reputation;
+  }
+
+  // Llamado desde el `update()` de la escena: revisa a los NPCs en espera de
+  // mesa y dispara el abandono enfadado cuando se vence su paciencia.
+  update(now: number) {
+    for (const npc of [...this.npcs]) {
+      if (npc.state !== "waiting" || npc.waitingReason !== "table") {
+        continue;
+      }
+
+      if (hasWaitTimedOut(npc.waitStartedAt!, npc.waitPatienceMs!, now)) {
+        this.abandonWaiting(npc);
+      }
+    }
+  }
+
   private spawnNpc() {
-    const doorPosition = { col: this.restaurantCols / 2, row: this.restaurantRows - 1 };
-    const entryTarget = { col: this.restaurantCols / 2, row: this.restaurantRows - 4 };
+    const doorPosition = getDoorPosition();
+    const entryTarget = getEntryPosition();
 
     const npc = createNpc(`npc-${this.nextId++}`, doorPosition, "walking");
 
@@ -75,8 +109,7 @@ export class NpcController {
     const table = findFreeTable(this.occupiedTables);
 
     if (!table) {
-      // No hay mesa libre: por ahora el NPC se queda esperando en la entrada.
-      npc.state = "idle";
+      this.joinQueue(npc, sprite);
       return;
     }
 
@@ -101,5 +134,74 @@ export class NpcController {
         npc.state = "seated";
       },
     });
+  }
+
+  // Sin mesa libre: el NPC pasa a `waiting` con motivo `table`, caminando
+  // hacia una posición de cola distinta de `entryTarget` y de la de
+  // cualquier otro NPC en espera.
+  private joinQueue(npc: Npc, sprite: Phaser.GameObjects.Rectangle) {
+    const queueIndex = this.nextQueueIndex++;
+
+    this.queueIndexByNpcId.set(npc.id, queueIndex);
+
+    const queuePosition = getQueuePosition(queueIndex);
+    const queueCenter = gridToWorldCenter(queuePosition, this.originX, this.originY);
+    const now = this.scene.time.now;
+
+    Object.assign(npc, startWaiting(npc, "table", now, TABLE_WAIT_PATIENCE_MS));
+
+    this.scene.tweens.add({
+      targets: sprite,
+      x: queueCenter.x,
+      y: queueCenter.y,
+      duration: WALK_TO_QUEUE_DURATION,
+      onComplete: () => {
+        npc.position = queuePosition;
+      },
+    });
+  }
+
+  // Abandono enfadado: dispara la transición genérica de salida y aplica la
+  // penalización de reputación exactamente una vez.
+  private abandonWaiting(npc: Npc) {
+    this.queueIndexByNpcId.delete(npc.id);
+
+    this.reputation = applyAbandonmentPenalty(this.reputation);
+    this.onReputationChange?.(this.reputation);
+
+    Object.assign(npc, startLeaving(npc));
+
+    const sprite = this.sprites.get(npc.id);
+
+    if (sprite) {
+      this.sendToDoor(npc, sprite);
+    }
+  }
+
+  // Infraestructura genérica de salida: caminar hacia la puerta y
+  // despawnear al llegar. Reutilizable por cualquier motivo de `leaving`
+  // (abandono enfadado en M04, salida tras pagar en M11).
+  private sendToDoor(npc: Npc, sprite: Phaser.GameObjects.Rectangle) {
+    const doorPosition = getDoorPosition();
+    const doorCenter = gridToWorldCenter(doorPosition, this.originX, this.originY);
+
+    this.scene.tweens.add({
+      targets: sprite,
+      x: doorCenter.x,
+      y: doorCenter.y,
+      duration: WALK_TO_DOOR_DURATION,
+      onComplete: () => {
+        this.despawn(npc);
+      },
+    });
+  }
+
+  private despawn(npc: Npc) {
+    this.npcs = this.npcs.filter((candidate) => candidate.id !== npc.id);
+
+    const sprite = this.sprites.get(npc.id);
+
+    sprite?.destroy();
+    this.sprites.delete(npc.id);
   }
 }

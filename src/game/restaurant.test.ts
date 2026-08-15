@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { findFreeTable, furniture, getSeatForTable, type Chair, type Table } from "./restaurant";
+import {
+  findFreeTable,
+  furniture,
+  getDoorPosition,
+  getEntryPosition,
+  getQueuePosition,
+  getSeatForTable,
+  type Chair,
+  type Table,
+} from "./restaurant";
 
 const tables = furniture.filter((item): item is Table => item.type === "table");
 const [firstTable, secondTable] = tables;
@@ -37,5 +46,32 @@ describe("getSeatForTable", () => {
     const orphanTable: Table = { id: "table-orphan", type: "table", position: { col: 0, row: 0 } };
 
     expect(() => getSeatForTable(orphanTable)).toThrow();
+  });
+});
+
+describe("getQueuePosition", () => {
+  it("gives each queue index a distinct position", () => {
+    const positions = Array.from({ length: 6 }, (_, index) => getQueuePosition(index));
+    const unique = new Set(positions.map((position) => `${position.col},${position.row}`));
+
+    expect(unique.size).toBe(positions.length);
+  });
+
+  it("never overlaps the entry position", () => {
+    const entry = getEntryPosition();
+    const positions = Array.from({ length: 6 }, (_, index) => getQueuePosition(index));
+
+    for (const position of positions) {
+      expect(position).not.toEqual(entry);
+    }
+  });
+
+  it("never overlaps the door position", () => {
+    const door = getDoorPosition();
+    const positions = Array.from({ length: 6 }, (_, index) => getQueuePosition(index));
+
+    for (const position of positions) {
+      expect(position).not.toEqual(door);
+    }
   });
 });

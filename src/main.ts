@@ -20,18 +20,23 @@ class RestaurantScene extends Phaser.Scene {
   private originX = 0;
   private originY = 0;
   private npcController!: NpcController;
+  private reputationText!: Phaser.GameObjects.Text;
 
   create() {
     this.createRestaurant();
 
-    this.npcController = new NpcController(
-      this,
-      this.originX,
-      this.originY,
-      RESTAURANT_COLS,
-      RESTAURANT_ROWS
+    this.npcController = new NpcController(this, this.originX, this.originY, (reputation) =>
+      this.updateReputationText(reputation)
     );
     this.npcController.startSpawning(NPC_SPAWN_INTERVAL_MS);
+  }
+
+  update(time: number) {
+    this.npcController.update(time);
+  }
+
+  private updateReputationText(reputation: number) {
+    this.reputationText.setText(`Día 1  •  Reputación: ${reputation}`);
   }
 
   private createRestaurant() {
@@ -87,7 +92,7 @@ class RestaurantScene extends Phaser.Scene {
       color: "#ffffff",
     });
 
-    this.add.text(24, 55, "Día 1  •  Reputación: 0", {
+    this.reputationText = this.add.text(24, 55, "Día 1  •  Reputación: 0", {
       fontFamily: "monospace",
       fontSize: "16px",
       color: "#dddddd",
