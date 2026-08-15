@@ -64,32 +64,34 @@ que antes pero vía asociación explícita, no por posición relativa.
 
 *Depende de: M03.*
 
-- [ ] Agregar estado `waiting` a `NpcState`.
-- [ ] Agregar motivo de espera y datos de paciencia reiniciables al `Npc` (p. ej.
+- [x] Agregar estado `waiting` a `NpcState`.
+- [x] Agregar motivo de espera y datos de paciencia reiniciables al `Npc` (p. ej.
       `waitingReason: 'table' | 'order' | 'food'` + inicio/límite de espera). Es el único concepto de espera
       del juego: M06–M08 reutilizan el mismo mecanismo para los otros dos motivos.
-- [ ] Definir posiciones de cola (distintas de `entryTarget`), una por NPC en espera.
-- [ ] NPC sin mesa libre pasa a `waiting` con motivo `table`, ubicado en su posición de cola, sin superponerse
+- [x] Definir posiciones de cola (distintas de `entryTarget`), una por NPC en espera.
+- [x] NPC sin mesa libre pasa a `waiting` con motivo `table`, ubicado en su posición de cola, sin superponerse
       a otros.
-- [ ] Cola FIFO: función pura que, dada la lista de NPCs en `waiting` con motivo `table`, determina cuál debe
+- [x] Cola FIFO: función pura que, dada la lista de NPCs en `waiting` con motivo `table`, determina cuál debe
       ocupar la próxima mesa disponible.
-- [ ] Test unitario puro de la función FIFO.
-- [ ] Timeout de espera de mesa: función pura que, dado el inicio de espera, el límite de paciencia y el tiempo
+- [x] Test unitario puro de la función FIFO.
+- [x] Timeout de espera de mesa: función pura que, dado el inicio de espera, el límite de paciencia y el tiempo
       transcurrido, determina si corresponde abandonar.
-- [ ] Test unitario puro del timeout.
-- [ ] Agregar estado `leaving` a `NpcState` y la infraestructura genérica de salida: caminar hacia la puerta y
+- [x] Test unitario puro del timeout.
+- [x] Agregar estado `leaving` a `NpcState` y la infraestructura genérica de salida: caminar hacia la puerta y
       despawnear al llegar (reutilizable; M11 la reusa para la salida tras pagar, sin duplicarla).
-- [ ] Abandono enfadado: al vencer el timeout de espera de mesa, el NPC dispara la transición a `leaving` de
+- [x] Abandono enfadado: al vencer el timeout de espera de mesa, el NPC dispara la transición a `leaving` de
       arriba.
-- [ ] Agregar `reputation` como estado real del juego (M13 sólo agrega la recompensa positiva, no la crea).
-- [ ] Penalización única de reputación al abandonar por espera de mesa: se aplica una sola vez al disparar el
+- [x] Agregar `reputation` como estado real del juego (M13 sólo agrega la recompensa positiva, no la crea).
+- [x] Penalización única de reputación al abandonar por espera de mesa: se aplica una sola vez al disparar el
       abandono, nunca de forma acumulativa por frame/segundo.
-- [ ] Test unitario puro: un abandono resta reputación exactamente una vez.
-- [ ] Si una mesa se libera y hay NPCs en `waiting` por mesa, el primero de la cola (FIFO) la ocupa y deja de
+- [x] Test unitario puro: un abandono resta reputación exactamente una vez.
+- [x] Si una mesa se libera y hay NPCs en `waiting` por mesa, el primero de la cola (FIFO) la ocupa y deja de
       esperar (función pura + test con datos simulados; la liberación real de una mesa ocupada llega recién en
       M11, ver también M05).
-- [ ] Confirmar visualmente: con todas las mesas ocupadas, los NPCs siguientes esperan en fila sin superponerse;
+- [-] Confirmar visualmente: con todas las mesas ocupadas, los NPCs siguientes esperan en fila sin superponerse;
       un NPC que espera demasiado sale enfadado por la puerta y la reputación baja exactamente una vez.
+      (bloqueado: sin navegador disponible en este entorno; `pnpm test` en verde + `tsc --noEmit` limpio
+      usados como barra de finalización en su lugar.)
 
 **Completion criteria:** `pnpm test` cubre la cola FIFO, el timeout y la penalización única de reputación; en el
 navegador, con 2 mesas y 3+ clientes, se ve la cola, el abandono enfadado y la baja de reputación.

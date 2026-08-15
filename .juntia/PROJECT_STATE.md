@@ -8,13 +8,30 @@ Mark anything not yet determined as `UNKNOWN` rather than guessing or silently o
 
 ## Current state
 
-M01–M03 done and verified (`pnpm test`: 13/13 passing): tables/chairs linked by explicit `id`/`tableId`,
-two independent tables, multiple simultaneous NPCs via `NpcController`. M04 (waiting/queue, abandonment,
-reputation) not started — `NpcState` still only has `walking | idle | seated`, no `waiting`/`leaving`; an
-NPC with no free table sits `idle` at the entry indefinitely with no queue, timeout, or penalty.
-`reputation` isn't real state yet — the HUD text is a fixed placeholder.
+M01–M04 done (`pnpm test`: 29/29 passing; `tsc --noEmit` clean). `NpcState` now includes `waiting` and
+`leaving`. `Npc` carries reusable wait/patience data (`waitingReason`, `waitStartedAt`, `waitPatienceMs`)
+via `startWaiting`/`stopWaiting`/`startLeaving` in `src/game/npc/npc.ts`, meant for reuse by M06–M08
+(`order`/`food`) and M11 (leaving after paying). An NPC with no free table now walks to a distinct queue
+position (`getQueuePosition` in `src/game/restaurant.ts`) and waits with reason `table`. A pure FIFO
+picker (`pickNextForTable`) and a pure timeout check (`hasWaitTimedOut`) live in `npc.ts`, unit tested.
+`reputation` is real state, owned by `NpcController` (`src/game/npc/controller.ts`), decremented exactly
+once per abandonment via `applyAbandonmentPenalty` (`src/game/reputation.ts`) and reflected in the HUD.
+Angry abandonment (timeout) drives the new generic leaving/despawn infrastructure
+(`NpcController.sendToDoor`/`despawn`), reusable by M11 without duplication.
+
+M04's queue-reassignment-on-freed-table checkbox is covered by the same `pickNextForTable` function plus
+a unit test using simulated data — it is not yet wired to a real table-release event, since no such event
+exists until M05 (`releaseTable`) / M11. Three domain values (table-wait patience duration, reputation
+penalty magnitude, queue layout/spacing) were undefined in `docs/MILESTONES.md`; flagged as Product
+unknowns in `.juntia/pending.json` with reasonable, clearly-labeled defaults (15000ms, 1 point, a single
+row between entry and door) used to unblock implementation — not yet confirmed by a human.
+
+The "confirmar visualmente en el navegador" checkbox in M04 is marked `[-]` (blocked): no browser was
+available in the environment this milestone was implemented in.
 
 ## Next known step
 
-M04 — Espera / cola sin mesas libres, abandono y reputación (`docs/MILESTONES.md`). First unblocked task:
-add the `waiting` state to `NpcState`.
+M05 — Mejor comportamiento básico de NPCs (`docs/MILESTONES.md`): extract table reservations to
+`game/reservations.ts` and wire `releaseTable` to the M04 FIFO picker so freeing a table for real
+reassigns it to the queue automatically. The three Product unknowns above should be confirmed by a
+human (via `juntia confirm`) before M05/M06 build further on top of these placeholder values.

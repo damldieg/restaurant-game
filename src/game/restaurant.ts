@@ -48,3 +48,32 @@ export function getSeatForTable(table: Table): GridPosition {
 
   return seat.position;
 }
+
+// Posición de la puerta en el grid (reutilizada tanto para el spawn como
+// para la salida genérica de M04/M11).
+export function getDoorPosition(): GridPosition {
+  return { col: RESTAURANT_COLS / 2, row: RESTAURANT_ROWS - 1 };
+}
+
+// Punto de entrada al que camina un NPC recién llegado, antes de que se le
+// asigne mesa o pase a la cola.
+export function getEntryPosition(): GridPosition {
+  return { col: RESTAURANT_COLS / 2, row: RESTAURANT_ROWS - 4 };
+}
+
+// Fila de la cola: entre el punto de entrada y la puerta, para no
+// superponerse con ninguno de los dos.
+// Layout marcado como propuesta de Producto en .juntia/pending.json
+// (docs/MILESTONES.md no fija un layout concreto).
+const QUEUE_ROW = RESTAURANT_ROWS - 3;
+const QUEUE_CENTER_COL = RESTAURANT_COLS / 2;
+
+// Posición de cola pura: cada índice (orden de llegada a la cola) obtiene
+// una celda distinta, alternando a izquierda/derecha del centro, sin
+// superponerse a `entryTarget` ni entre sí.
+export function getQueuePosition(index: number): GridPosition {
+  const side = index % 2 === 0 ? 1 : -1;
+  const distance = Math.floor(index / 2) + 1;
+
+  return { col: QUEUE_CENTER_COL + side * distance, row: QUEUE_ROW };
+}
