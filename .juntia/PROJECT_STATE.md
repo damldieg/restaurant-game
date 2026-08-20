@@ -11,26 +11,51 @@ Mark anything not yet determined as `UNKNOWN` rather than guessing or silently o
 `docs/MILESTONES.md` was reordered so construction/economy/reputation come before the customer
 simulation loop; milestone numbers below refer to that new order, not the old one.
 
-M01 (furniture catalog/construction) and M02 (economy foundation) are done and verified
-(`pnpm test`: 20/20 passing; `tsc --noEmit` clean; both verified in-browser with Playwright
-screenshots). `FurnitureDefinition` catalog lives in `src/game/furniture-catalog.ts` (table
-$100 / chair $25 — confirmed product decision, see `DECISIONS.md`). `isValidPlacement`
-(`src/game/placement.ts`) checks grid bounds and collision. Interactive placement (key `1`,
-cursor preview green/red, Esc cancels, click confirms) is wired in `src/main.ts` and only
-creates `table` instances — `chair` stays in the catalog with a defined price but has no
-placement mode yet, since it needs a `tableId` no M01/M02 task collects. `money` is real scene
-state in `src/main.ts` (initial $500 — confirmed product decision), shown in the HUD, deducted
-via `canAfford`/`economy.ts` on each confirmed placement; placement (preview + click) is blocked
-whenever the player can't afford the selected item.
+M01 (furniture catalog/construction), M02 (economy foundation), and M02.5 (core simulation
+foundation) are done and verified (`pnpm test`: 23/23 passing; `tsc --noEmit` clean; all
+verified in-browser with Playwright screenshots).
+
+**Architecture (M02.5 — see `.juntia/ARCHITECTURE.md` for the full picture):**
+
+```
+GameState  →  Game Systems  →  Phaser Renderer
+```
+
+- `src/core/` — pure business logic and data, never imports `phaser`: `restaurant.ts`
+  (furniture data, `findFreeTable`, `getSeatForTable`), `furniture-catalog.ts`
+  (`FurnitureDefinition`, table $100 / chair $25), `economy.ts` (`canAfford`), `placement.ts`
+  (`isValidPlacement`).
+- `src/state/game-state.ts` — `GameState { money, furniture }`, composed from what already
+  existed in `core/`. `RestaurantScene` owns one instance (`this.gameState`) and reads/writes
+  through it instead of holding its own `money` field or importing `furniture` directly.
+- `src/systems/game-system.ts` — the `GameSystem` contract (`update(state, deltaMs)`) and
+  `runSystems(state, deltaMs, systems)`. No concrete system exists yet; `RestaurantScene.systems`
+  is an empty array. `RestaurantScene.update(time, delta)` (Phaser's own per-frame hook) already
+  calls `runSystems`, so the loop is real and wired, just a no-op until the first system lands.
+- `src/game/` still holds Phaser-coupled code not moved in M02.5: `grid.ts` (pixel/world
+  coordinate conversion — imported by `core/`, not the other way around), `main.ts`
+  (`RestaurantScene`), and `npc/` (`controller.ts` mixes sprite/tween rendering with NPC state
+  transitions — untangling that was out of scope for M02.5, since it risks changing M04's
+  existing NPC behavior).
+
+Furniture catalog: table $100 / chair $25 (confirmed decision). Interactive placement (key `1`,
+cursor preview green/red, Esc cancels, click confirms) only creates `table` instances — `chair`
+has no placement mode yet, since it needs a `tableId` no task through M02.5 collects. `money`
+starts at $500 (confirmed decision), shown in the HUD, deducted via `canAfford` on each confirmed
+placement; placement is blocked whenever the player can't afford the selected item.
 
 M03 (reputation foundation) is not started — `reputation` is still a fixed HUD placeholder.
 M04's remaining tasks (stay timer, `leaving` state, walk to door and despawn) are also not
 started — `NpcState` still only has `walking | idle | seated`; an NPC that sits down stays there
 indefinitely. A table placed via the construction mode is not yet picked up by
-`NpcController`/`findFreeTable` as seatable — that wiring isn't an M01/M02 task either.
+`NpcController`/`findFreeTable` as seatable.
 
 ## Next known step
 
 M03 — Reputation foundation (`docs/MILESTONES.md`). First unblocked task: `reputation` as real
-game state with an initial value, then a reputation value added to each `FurnitureDefinition` in
-the catalog — both are new `balancing_value` decisions to confirm before writing them into code.
+game state with an initial value (belongs on `GameState`, following M02.5's pattern — not a new
+scene field), then a reputation value added to each `FurnitureDefinition` in the catalog — both
+are new `balancing_value` decisions to confirm before writing them into code. The pure
+reputation-total calculation is a natural first candidate for a real `GameSystem`, or can start
+as a plain function in `core/` and become one later — worth a quick call when M03 starts, not
+predicted here.

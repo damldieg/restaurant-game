@@ -57,6 +57,8 @@ proposed or implemented:
 
 - Q: "¿Cuánto dinero inicial (money) tiene el jugador al arrancar la partida?" -> CONFIRMED: $500 (product decision, 2026-08-20)
   (options on the table when asked: $300, $150, $500)
+- Q: "¿Qué arquitectura separa el core del juego de Phaser antes de M03 (M02.5)?" -> CONFIRMED: GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts). (architecture decision, 2026-08-20)
+  (options on the table when asked: GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts).)
 
 Already known when this task started:
 

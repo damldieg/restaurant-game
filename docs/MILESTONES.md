@@ -103,6 +103,46 @@ comprar y la compra se bloquea sin fondos suficientes.
 
 ---
 
+## M02.5 — Core simulation foundation
+
+*Depende de: M01 y M02 (reorganiza su código existente). No agrega comportamiento nuevo — es
+preparación arquitectónica antes de M03. Ver `.juntia/ARCHITECTURE.md` para el resultado
+completo y `.juntia/DECISIONS.md` para la decisión arquitectónica que la origina.*
+
+- [x] Crear la estructura inicial `src/core/`, `src/state/`, `src/systems/` (con un README
+      breve cada una describiendo su rol; sin mover código todavía).
+- [x] Mover a `src/core/` los módulos que ya no dependían de Phaser: `restaurant.ts`,
+      `furniture-catalog.ts`, `economy.ts` (`canAfford`) y `placement.ts`
+      (`isValidPlacement`), con sus tests. Actualizar los imports en `main.ts` y
+      `game/npc/controller.ts`.
+- [x] Test: la suite completa sigue en verde tras el movimiento, sin cambios en las
+      aserciones existentes.
+- [x] Crear `GameState` inicial (`src/state/game-state.ts`), componiendo únicamente datos ya
+      existentes (`money`, `furniture`) — sin inventar campos para sistemas futuros.
+- [x] `RestaurantScene` (`main.ts`) reemplaza su campo `money` suelto y el import directo de
+      `furniture` por `this.gameState.money` / `this.gameState.furniture`.
+- [x] Confirmar que el comportamiento no cambió: comprar una mesa sigue descontando dinero y
+      bloqueándose sin fondos, igual que en M02 (verificado en navegador).
+- [x] Definir el contrato `GameSystem` (`src/systems/game-system.ts`): `update(state,
+      deltaMs)` + `runSystems(state, deltaMs, systems)`, sin implementar ningún sistema real
+      todavía.
+- [x] Agregar `update(time, delta)` a `RestaurantScene`, que llama a `runSystems` con la lista
+      de sistemas vacía en cada frame — el flujo `Phaser update(delta) → Game systems update →
+      GameState` queda armado y operativo, aunque no haga nada todavía.
+- [x] Documentar la arquitectura resultante en `.juntia/ARCHITECTURE.md` y registrar la
+      decisión arquitectónica en `.juntia/DECISIONS.md`.
+
+**Player-visible outcome:** el jugador no verá grandes cambios visuales, pero la arquitectura
+queda preparada para añadir reputación, clientes, cocina y empleados sin mezclar lógica de
+negocio con Phaser.
+
+**Completion criteria:** `pnpm test` en verde (23/23, misma cobertura de comportamiento que al
+cierre de M02 más los tests nuevos de `GameState`/`GameSystem`); `tsc --noEmit` limpio; ningún
+archivo de `src/core/` importa `phaser`; en el navegador el juego se comporta igual que al
+cierre de M02 (compra de mesas, HUD de dinero, NPCs).
+
+---
+
 ## M03 — Reputation foundation
 
 *Depende de: M01 (necesita muebles con valor de reputación).*
