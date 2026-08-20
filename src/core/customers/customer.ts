@@ -1,28 +1,34 @@
 import type { GridPosition } from "../../game/grid";
 import type { CustomerState } from "./customer-state";
-import { RESTAURANT_COLS, RESTAURANT_ROWS } from "../restaurant";
+import {
+  RESTAURANT_COLS,
+  RESTAURANT_ROWS,
+  findFreeTable,
+  getSeatForTable,
+  type Furniture,
+  type Table,
+} from "../restaurant";
 
 // Velocidad de caminata — tiles/segundo (decisión confirmada en M04.5, ver
 // .juntia/DECISIONS.md).
 export const CUSTOMER_SPEED_TILES_PER_SEC = 1.5;
 
-// `tableId` (mesa asignada) se agrega cuando CustomerSystem implemente la
-// asignación de mesa (M04.6) — ver la forma conceptual confirmada en
-// .juntia/ARCHITECTURE.md.
 export interface Customer {
   id: string;
   position: GridPosition;
   state: CustomerState;
   target: GridPosition | null;
+  tableId: string | null;
 }
 
 export function createCustomer(
   id: string,
   position: GridPosition,
   state: CustomerState = "idle",
-  target: GridPosition | null = null
+  target: GridPosition | null = null,
+  tableId: string | null = null
 ): Customer {
-  return { id, position, state, target };
+  return { id, position, state, target, tableId };
 }
 
 // Posición lógica de la puerta del restaurante — mismo cálculo que usa
@@ -80,4 +86,46 @@ export function moveCustomer(customer: Customer, deltaMs: number): Customer {
       row: customer.position.row + dy * ratio,
     },
   };
+}
+
+// Asigna mesa a los customers `idle` sin `tableId` todavía, en el orden del
+// array (FIFO natural — el orden de spawn), usando `findFreeTable`/
+// `getSeatForTable`. Evita doble asignación de la misma mesa dentro de la
+// misma pasada llevando una lista de posiciones ya ocupadas (las ya
+// asignadas + las que se van asignando en este mismo llamado). No muta los
+// Customer originales. Solo fija `tableId` y apunta `target` al asiento,
+// volviendo a `walking` para que `moveCustomer` lo lleve hasta ahí — la
+// transición `walking → seated` al llegar es responsabilidad de M04.7, no
+// de esta función.
+export function assignTables(customers: Customer[], furnitureList: Furniture[]): Customer[] {
+  const assignedTableIds = new Set(
+    customers
+      .filter((customer): customer is Customer & { tableId: string } => customer.tableId !== null)
+      .map((customer) => customer.tableId)
+  );
+
+  const occupied: GridPosition[] = furnitureList
+    .filter((item): item is Table => item.type === "table" && assignedTableIds.has(item.id))
+    .map((table) => table.position);
+
+  return customers.map((customer) => {
+    if (customer.state !== "idle" || customer.tableId !== null) {
+      return customer;
+    }
+
+    const table = findFreeTable(occupied);
+
+    if (!table) {
+      return customer;
+    }
+
+    occupied.push(table.position);
+
+    return {
+      ...customer,
+      tableId: table.id,
+      target: getSeatForTable(table),
+      state: "walking" as CustomerState,
+    };
+  });
 }

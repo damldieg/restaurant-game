@@ -17,11 +17,13 @@ simulation loop; milestone numbers below refer to that new order, not the old on
 M01 (furniture catalog/construction), M02 (economy foundation), M02.5 (core simulation
 foundation), M03 (reputation foundation), and M03.5 (customer architecture review) are done.
 M04 (basic customer lifecycle) is in progress — `docs/MILESTONES.md`'s M04 section is an
-M04.1–M04.8 incremental plan (plus an explicit "scope boundaries" list); M04.1–M04.5 are done.
-`pnpm test`: 49/49 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with Playwright
-screenshots; M04.3–M04.5 also verified in-browser (no console errors). M04.4 was a visual
-regression by design (sprite sat at the door, no movement) — M04.5 resolves it: customers now
-visibly walk from the door toward the counter and settle once they arrive.
+M04.1–M04.8 incremental plan (plus an explicit "scope boundaries" list); M04.1–M04.6 are done.
+`pnpm test`: 59/59 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with Playwright
+screenshots; M04.3–M04.6 also verified in-browser (no console errors). M04.4 was a visual
+regression by design (sprite sat at the door, no movement) — M04.5 resolved it (customers walk
+from the door toward the counter) and M04.6 extends it further: customers now split off toward
+one of the two tables and walk to their assigned seat, though they still just go `idle` there
+rather than visibly "sitting" — that's M04.7.
 
 **Architecture (M02.5 — see `.juntia/ARCHITECTURE.md` for the full picture):**
 
@@ -149,6 +151,31 @@ time it reaches `idle` with `target: null`). Verified in-browser with Playwright
 across consecutive screenshots before settling once it arrives; HUD and furniture unaffected; no
 console errors.
 
+**M04.6 (Find and reserve table) — done:** `Customer` gained `tableId: string | null`
+(`core/customers/customer.ts`). New pure function `assignTables(customers, furnitureList)`:
+for every `idle` customer without a `tableId` (i.e. one that just arrived at `ENTRY_TARGET`,
+per M04.5), finds the first free table via the existing `findFreeTable`/`getSeatForTable`
+(`core/restaurant.ts`), assigns its `id` as `tableId`, sets `target` to the table's chair
+position, and flips `state` back to `walking` so `moveCustomer` carries it there next frame; a
+customer left without a free table stays `idle` with `tableId: null`. Never double-assigns the
+same table within one call — tracks occupied table positions locally, seeded from customers that
+already have a `tableId` and extended as it assigns more within the same pass, so two customers
+arriving in the same frame never receive the same table. There is no separate `occupiedTables`
+list to keep in sync (that was deleted with `NpcController` in M04.4) — occupancy is derived
+fresh from `state.customers` every frame. `CustomerSystem.update` calls `assignTables` right
+after `moveCustomer`. Deliberately not yet implemented: the `walking → seated` transition on
+arrival at the seat — a customer that reaches its assigned chair today just goes back to `idle`
+standing there (same arrival logic M04.5 already had), not visibly "seated"; that's M04.7.
+Tested in `customer.test.ts` (assigns first free table, leaves non-idle/already-assigned
+customers untouched, no double-assignment across two customers in one call, treats an
+already-assigned table as occupied, leaves a customer idle/tableless when none is free, doesn't
+mutate inputs) and `customer-system.test.ts` (a customer gets a table once it reaches the entry
+target; two customers spawned together get distinct tables; a third customer with both tables
+taken stays idle without one). Verified in-browser with Playwright (screenshots across a ~13s
+run): customers walk to the entry point, then visibly split off toward one of the two tables in
+the default layout — settling at two distinct chairs, never stacking on the same one; HUD and
+furniture unaffected; no console errors.
+
 **Repository governance:** `main` is branch-protected on GitHub. `.github/workflows/ci.yml`
 (new) runs `pnpm install --frozen-lockfile` → `pnpm test` → `pnpm build` as the `build-and-test`
 check, required and kept up-to-date-with-`main` (`strict: true`) before merge. Merge policy on
@@ -168,10 +195,11 @@ it's a real judgment call, not an implementation detail.
 
 ## Next known step
 
-M04.6 — Find and reserve table: integrate `findFreeTable`/`getSeatForTable` into
-`CustomerSystem`, assign a `tableId` to the `Customer` once it arrives (`target: null`, `state:
-"idle"` after M04.5), and avoid double-assigning the same table (`docs/MILESTONES.md`'s M04
-section has the full M04.1–M04.8 plan). Not solving yet: the full reservation system or the
-definitive `occupiedTables` (that's M06's job). The stay-timer duration (needed once M04.8
-"stay timer and leaving" is reached) is a separate new `balancing_value` decision to confirm
-before writing it into code — not needed yet.
+M04.7 — Sit down state: add the `walking → seated` transition in the simulation
+(`CustomerSystem`/`customer-state.ts`, not a Phaser `onComplete`) once a customer arrives at the
+seat `assignTables` (M04.6) already sends it to; associate it with its `tableId` (already set);
+release movement (`target` already clears on arrival, per M04.5); prepare the ground for future
+states (`waiting`, `eating`, etc. from later milestones) (`docs/MILESTONES.md`'s M04 section has
+the full M04.1–M04.8 plan). The stay-timer duration (needed once M04.8 "stay timer and leaving"
+is reached) is a separate new `balancing_value` decision to confirm before writing it into code —
+not needed yet.

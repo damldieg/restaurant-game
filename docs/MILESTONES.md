@@ -378,17 +378,35 @@ Verificado: `pnpm test` (49/49) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ### M04.6 — Find and reserve table
 
+**Estado: completado.**
+
 **Objetivo:** un cliente puede encontrar mesa.
 
-- [ ] Integrar `findFreeTable`/`getSeatForTable` en `CustomerSystem`.
-- [ ] Asignar `tableId` al `Customer`.
-- [ ] Evitar doble asignación de la misma mesa.
-- [ ] Mantener reservas consistentes con el `occupiedTables` actual.
+- [x] Integrar `findFreeTable`/`getSeatForTable` en `CustomerSystem` — vía la nueva función pura
+      `assignTables(customers, furnitureList)` (`core/customers/customer.ts`), llamada desde
+      `CustomerSystem.update` justo después de `moveCustomer`.
+- [x] Asignar `tableId` al `Customer` — `Customer` gana `tableId: string | null`. Un customer
+      `idle` sin mesa (recién llegado a `ENTRY_TARGET`, per M04.5) recibe la primera mesa libre;
+      `target` pasa al asiento (`getSeatForTable`) y `state` vuelve a `walking` para que
+      `moveCustomer` lo lleve hasta ahí. Sin mesa libre, el customer se queda `idle` sin mesa.
+- [x] Evitar doble asignación de la misma mesa — `assignTables` lleva una lista de posiciones ya
+      ocupadas (semillada desde los `tableId` ya asignados) y la va extendiendo en la misma
+      pasada, así que dos customers que llegan en el mismo frame nunca reciben la misma mesa.
+- [x] Mantener reservas consistentes con el `occupiedTables` actual — no existe ya un
+      `occupiedTables` propio (se eliminó junto con `NpcController` en M04.4); la ocupación se
+      deriva de `state.customers` (qué `tableId` ya está tomado) cada frame, sin lista aparte que
+      pueda desincronizarse.
 
-**No solucionar todavía:** sistema completo de reservas; `occupiedTables` definitivo (eso es
-M06).
+**No solucionar todavía:** sistema completo de reservas; la transición `walking → seated` al
+llegar al asiento (M04.7) — un customer que llega a su mesa hoy vuelve a `idle`, parado en el
+asiento, no `seated`.
 
-**Player-visible outcome:** el cliente tiene una mesa asignada.
+**Player-visible outcome:** el cliente tiene una mesa asignada — verificado en navegador
+(Playwright, screenshots espaciados en una corrida de ~13s): los clientes llegan a la entrada y
+luego se los ve dividirse visiblemente hacia una de las dos mesas del layout inicial, sin
+superponerse en la misma mesa; HUD y muebles sin cambios; sin errores de consola.
+
+Verificado: `pnpm test` (59/59) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 
