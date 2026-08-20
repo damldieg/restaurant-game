@@ -149,6 +149,23 @@
       "source": "human",
       "confirmedAt": "2026-08-20T17:27:28.590Z",
       "status": "active"
+    },
+    {
+      "id": "ef4ebae9ab",
+      "type": "product",
+      "question": "¿Cuánto tiempo debe permanecer sentado un Customer antes de irse (M04.8, placeholder fijo sin comida/pedido real todavía)?",
+      "context": "M04.8 requiere un timer de 'stay' fijo (sin comida/pedido todavía, eso llega en milestones posteriores) que determina cuánto tiempo un Customer permanece 'seated' antes de pasar a 'leaving' y caminar hacia la puerta. Es un valor de balance sin una respuesta objetivamente correcta (trigger balancing_value), explícitamente marcado como tal en docs/MILESTONES.md.",
+      "options": [
+        "10 segundos (equilibrado)",
+        "5 segundos (loop rápido)",
+        "20 segundos (más realista/pausado)"
+      ],
+      "evidence": [],
+      "reason": "Valor numérico ajustable (balancing_value) sin respuesta objetivamente correcta — requiere confirmación humana antes de escribirlo en código.",
+      "text": "10 segundos (equilibrado)",
+      "source": "human",
+      "confirmedAt": "2026-08-20T18:30:42.945Z",
+      "status": "active"
     }
   ]
 }

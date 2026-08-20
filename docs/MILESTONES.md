@@ -444,18 +444,40 @@ Verificado: `pnpm test` (61/61) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ### M04.8 — Stay timer and leaving
 
+**Estado: completado.** Cierra el plan incremental M04.1–M04.8 (milestone M04 completo).
+
 **Objetivo:** cliente permanece un tiempo y abandona.
 
-- [ ] Añadir timer de "stay" (placeholder fijo, sin comida/pedido todavía — es un
-      `balancing_value` a confirmar antes de escribirlo en código).
-- [ ] Agregar estado `leaving` y la infraestructura genérica de salida (caminar hacia la
-      puerta y despawnear al llegar; reutilizable — M05, M09 y M15 la reusan sin duplicarla).
-- [ ] Movimiento lógico hacia la salida (reutiliza M04.5).
-- [ ] Eliminación del cliente de `GameState.customers` cuando sale.
+- [x] Añadir timer de "stay" — `STAY_DURATION_MS = 10_000` (10s, placeholder fijo sin
+      comida/pedido todavía; decisión confirmada, ver `.juntia/DECISIONS.md`). Vive en
+      `Customer.stayRemainingMs: number | null`, arrancando en `STAY_DURATION_MS` la primera
+      vez que `advanceStay` ve a un customer `seated` (no cuenta el tiempo caminando).
+- [x] Agregar estado `leaving` (`CustomerState`) y la infraestructura genérica de salida —
+      `sendToExit(customer)` (`core/customers/customer.ts`): pone `state: "leaving"`,
+      `target: DOOR_POSITION`, libera la mesa (`tableId: null`) de inmediato. No depende de por
+      qué se va, así que M05/M09/M15 pueden reutilizarla para sus propios motivos de abandono
+      sin duplicar esta lógica.
+- [x] Movimiento lógico hacia la salida — reutiliza `moveCustomer` (M04.5) tal cual, sin
+      ninguna modificación: ya movía hacia cualquier `target` sin importar el `state`, y ya
+      dejaba un `state` no-`walking` intacto al llegar.
+- [x] Eliminación del cliente de `GameState.customers` cuando sale —
+      `removeDepartedCustomers(customers)`: filtra cualquier customer `leaving` con
+      `target: null` (ya caminó hasta la puerta). `CustomerRenderer` no necesitó cambios — ya
+      destruía el sprite de cualquier id que desapareciera de la lista, desde M04.4.
+
+Pipeline de `CustomerSystem.update` (`systems/customer-system.ts`), cada frame: `spawn → move
+→ assignTables → advanceStay → removeDepartedCustomers`.
 
 **No implementar todavía:** pedidos; comida; pagos; satisfacción.
 
-**Player-visible outcome:** el restaurante tiene clientes que entran, usan una mesa y salen.
+**Player-visible outcome:** el restaurante tiene clientes que entran, usan una mesa y salen —
+verificado en navegador (Playwright, ~32s de corrida real dado el timer de 10s): clientes
+entran, dos se sientan (posición fija en pantalla mientras están sentados), y entre los
+screenshots de 20s y 26s la cantidad de clientes en pantalla bajó de 5 a 4 — evidencia directa
+de un ciclo completo sentarse → levantarse → caminar a la puerta → despawnear; HUD y muebles
+sin cambios; sin errores de consola en toda la corrida.
+
+Verificado: `pnpm test` (72/72) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 

@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M04.7: Sit down state — añadir la transición walking a seated en la simulación cuando el Customer llega a su mesa asignada","generatedAt":"2026-08-20T18:18:43.652Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M04.8: Stay timer and leaving — agregar timer de estadia fijo, estado leaving, movimiento hacia la puerta y eliminacion del cliente de GameState.customers al salir","generatedAt":"2026-08-20T18:28:25.185Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,11 +7,14 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M04.7: Sit down state — añadir la transición walking a seated en la simulación cuando el Customer llega a su mesa asignada
+> Implementar M04.8: Stay timer and leaving — agregar timer de estadia fijo, estado leaving, movimiento hacia la puerta y eliminacion del cliente de GameState.customers al salir
 
 ## Task Status
 
-ACTIVE
+READY_TO_CONTINUE
+
+A decision that was blocking part of this task has just been confirmed — see "Confirmed decisions"
+below for the real answer, then continue the work that was waiting on it.
 
 Task type: Feature
 Confidence: 0.9
@@ -52,7 +55,8 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-None yet.
+- Q: "¿Cuánto tiempo debe permanecer sentado un Customer antes de irse (M04.8, placeholder fijo sin comida/pedido real todavía)?" -> CONFIRMED: 10 segundos (equilibrado) (product decision, 2026-08-20)
+  (options on the table when asked: 10 segundos (equilibrado), 5 segundos (loop rápido), 20 segundos (más realista/pausado))
 
 Already known when this task started:
 
@@ -129,7 +133,7 @@ The same information above, structured for programmatic use — navigation, neve
     ".juntia/context.md",
     ".juntia/governance/workflows/feature-development.md"
   ],
-  "taskStatus": "ACTIVE"
+  "taskStatus": "READY_TO_CONTINUE"
 }
 ```
 

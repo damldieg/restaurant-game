@@ -22,3 +22,4 @@ this automatically) after a new decision is confirmed.
 - La simulación (GameState/CustomerSystem, vía update(deltaMs)) es la única fuente de verdad del estado de los clientes; Phaser NO controla transiciones de estado mediante tweens, callbacks ni eventos visuales — solo representa el estado actual (sprites, animaciones, interpolación visual, efectos). Motivo: permite tests sin Phaser, simulación acelerada, guardado/carga futuro, y separación real entre lógica y visualización. (architecture decision, confirmed 2026-08-20)
 - Sí, spawn automático continuo en CustomerSystem.update(), mismo intervalo que NpcController hoy (2500ms) — mantiene el ritmo de llegada ya establecido en el juego, ahora simulado en paralelo sin renderizar todavía (product decision, confirmed 2026-08-20)
 - 1.5 tiles/seg (más lento, más 'paseo') (product decision, confirmed 2026-08-20)
+- 10 segundos (equilibrado) (product decision, confirmed 2026-08-20)
