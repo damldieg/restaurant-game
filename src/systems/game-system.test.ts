@@ -4,7 +4,7 @@ import { createGameState } from "../state/game-state";
 
 describe("runSystems", () => {
   it("calls update on every system, in order, with the state and delta", () => {
-    const state = createGameState(500);
+    const state = createGameState(500, 0);
     const calls: Array<{ id: string; deltaMs: number }> = [];
 
     const makeSystem = (id: string): GameSystem => ({
@@ -23,7 +23,7 @@ describe("runSystems", () => {
   });
 
   it("is a no-op with an empty system list", () => {
-    const state = createGameState(500);
+    const state = createGameState(500, 0);
 
     expect(() => runSystems(state, 16, [])).not.toThrow();
   });

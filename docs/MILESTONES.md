@@ -147,14 +147,17 @@ cierre de M02 (compra de mesas, HUD de dinero, NPCs).
 
 *Depende de: M01 (necesita muebles con valor de reputación).*
 
-- [ ] `reputation` como estado real del juego (no solo texto), con un valor inicial.
-- [ ] Agregar un valor de reputación a cada `FurnitureDefinition` del catálogo (M01).
-- [ ] Función pura que calcula la reputación total a partir de los muebles colocados.
-- [ ] Test: reputación total con 0, 1 y varios muebles colocados.
-- [ ] Recalcular la reputación total cada vez que se coloca un mueble nuevo.
-- [ ] Conectar el texto "Reputación: 0" del HUD (`main.ts:90`) al valor real, reemplazando
+- [x] `reputation` como estado real del juego (no solo texto), con un valor inicial. (0 —
+      decisión confirmada, ver `.juntia/DECISIONS.md`.)
+- [x] Agregar un valor de reputación a cada `FurnitureDefinition` del catálogo (M01). (Mesa
+      +3 / Silla +1 — decisión confirmada, ver `.juntia/DECISIONS.md`.)
+- [x] Función pura que calcula la reputación total a partir de los muebles colocados.
+- [x] Test: reputación total con 0, 1 y varios muebles colocados.
+- [x] Recalcular la reputación total cada vez que se coloca un mueble nuevo. (Vía
+      `ReputationSystem`, el primer `GameSystem` real, evaluado cada frame.)
+- [x] Conectar el texto "Reputación: 0" del HUD (`main.ts:90`) al valor real, reemplazando
       el placeholder fijo.
-- [ ] Confirmar visualmente: colocar un mueble con reputación positiva sube el número en
+- [x] Confirmar visualmente: colocar un mueble con reputación positiva sube el número en
       el HUD.
 
 **Player-visible outcome:** el jugador ve la reputación del restaurante en el HUD, y

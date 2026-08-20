@@ -49,6 +49,40 @@
       "source": "human",
       "confirmedAt": "2026-08-20T12:08:29.975Z",
       "status": "active"
+    },
+    {
+      "id": "054158c8af",
+      "type": "product",
+      "question": "¿Cuál es el valor inicial de reputación del restaurante al arrancar la partida?",
+      "context": "M03 requiere `reputation` como estado real del juego (GameState), con un valor inicial, siguiendo el mismo patrón que `money` en M02. Es un valor de balance sin una respuesta objetivamente correcta (trigger balancing_value).",
+      "options": [
+        "0",
+        "50",
+        "100"
+      ],
+      "evidence": [],
+      "reason": "balancing_value: valor numérico ajustable sin respuesta única correcta.",
+      "text": "0",
+      "source": "human",
+      "confirmedAt": "2026-08-20T15:11:33.734Z",
+      "status": "active"
+    },
+    {
+      "id": "78e33ed302",
+      "type": "product",
+      "question": "¿Qué valor de reputación aporta cada tipo de mueble del catálogo (mesa, silla) al colocarlo?",
+      "context": "M03 requiere agregar un campo de reputación a cada `FurnitureDefinition` (mesa $100, silla $25 ya confirmados en M01). La reputación total se calcula a partir de los muebles colocados. Es un valor de balance sin una respuesta objetivamente correcta (trigger balancing_value).",
+      "options": [
+        "Mesa +5 / Silla +1",
+        "Mesa +10 / Silla +2",
+        "Mesa +3 / Silla +1"
+      ],
+      "evidence": [],
+      "reason": "balancing_value: valor numérico ajustable sin respuesta única correcta, relativo al precio ya confirmado de cada mueble.",
+      "text": "Mesa +3 / Silla +1",
+      "source": "human",
+      "confirmedAt": "2026-08-20T15:11:46.445Z",
+      "status": "active"
     }
   ]
 }
