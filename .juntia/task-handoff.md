@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Diseñar la arquitectura de M05 (waiting state, queue positioning, patience timer, satisfaction calculation, customer abandonment) antes de implementar","generatedAt":"2026-08-20T19:50:25.257Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M05.1: Customer waiting state — agregar waiting a CustomerState y waitReason/waitRemainingMs a Customer, sin activar todavia la transicion real","generatedAt":"2026-08-20T22:04:57.242Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,14 +7,11 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Diseñar la arquitectura de M05 (waiting state, queue positioning, patience timer, satisfaction calculation, customer abandonment) antes de implementar
+> Implementar M05.1: Customer waiting state — agregar waiting a CustomerState y waitReason/waitRemainingMs a Customer, sin activar todavia la transicion real
 
 ## Task Status
 
-READY_TO_CONTINUE
-
-A decision that was blocking part of this task has just been confirmed — see "Confirmed decisions"
-below for the real answer, then continue the work that was waiting on it.
+ACTIVE
 
 Task type: Feature
 Confidence: 0.9
@@ -55,10 +52,7 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-- Q: "¿Cómo debe convivir la reputación por eventos de clientes (M05: penalización por abandono, recompensa por ciclo completo) con ReputationSystem, que hoy recalcula state.reputation desde cero (solo mobiliario) en cada frame?" -> CONFIRMED: GameState.reputationAdjustments acumulador (recomendado): nuevo campo GameState.reputationAdjustments: number; ReputationSystem.update pasa a ser state.reputation = calculateTotalReputation(furniture) + reputationAdjustments; CustomerSystem escribe el acumulador una vez por evento de salida. Un solo número de reputación, HUD sin cambios. (architecture decision, 2026-08-20)
-  (options on the table when asked: GameState.reputationAdjustments acumulador (recomendado): nuevo campo GameState.reputationAdjustments: number; ReputationSystem.update pasa a ser state.reputation = calculateTotalReputation(furniture) + reputationAdjustments; CustomerSystem escribe el acumulador una vez por evento de salida. Un solo número de reputación, HUD sin cambios., Dos números de reputación separados: GameState gana un campo aparte (p.ej. serviceReputation) para los eventos de clientes, sin fusionarlo con el reputation actual derivado de mobiliario., ReputationSystem pasa a conocer a los clientes: se extiende para leer state.customers directamente y detectar las salidas él mismo, quedando como dueño único de toda la lógica de reputación (mobiliario + clientes).)
-- Q: "¿Quién es dueño de los eventos del ciclo de vida del Customer (las transiciones que disparan cambios de reputación) y qué límite de responsabilidad separa a CustomerSystem de ReputationSystem en M05 y milestones futuros?" -> CONFIRMED: Customer lifecycle events ownership: los eventos del ciclo de vida del Customer son emitidos únicamente por las transiciones de CustomerSystem; ReputationSystem no inspecciona state.customers ni conoce clientes; CustomerSystem aplica reputationAdjustments solo cuando detecta una transición válida del ciclo de vida del cliente. Separación de responsabilidades: CustomerSystem es dueño de las transiciones y eventos del ciclo de vida del cliente; ReputationSystem es dueño exclusivamente del cálculo de reputación agregada (mobiliario + reputationAdjustments); GameState.reputationAdjustments es el acumulador de eventos dinámicos entre ambos. (architecture decision, 2026-08-20)
-  (options on the table when asked: Customer lifecycle events ownership: los eventos del ciclo de vida del Customer son emitidos únicamente por las transiciones de CustomerSystem; ReputationSystem no inspecciona state.customers ni conoce clientes; CustomerSystem aplica reputationAdjustments solo cuando detecta una transición válida del ciclo de vida del cliente. Separación de responsabilidades: CustomerSystem es dueño de las transiciones y eventos del ciclo de vida del cliente; ReputationSystem es dueño exclusivamente del cálculo de reputación agregada (mobiliario + reputationAdjustments); GameState.reputationAdjustments es el acumulador de eventos dinámicos entre ambos.)
+None yet.
 
 Already known when this task started:
 
@@ -82,6 +76,10 @@ Already known when this task started:
   (options on the table when asked: 2.5 tiles/seg (equivalente al ritmo visual anterior), 1.5 tiles/seg (más lento, más 'paseo'), 4 tiles/seg (más rápido, más ágil))
 - Q: "¿Cuánto tiempo debe permanecer sentado un Customer antes de irse (M04.8, placeholder fijo sin comida/pedido real todavía)?" -> CONFIRMED: 10 segundos (equilibrado) (product decision, 2026-08-20)
   (options on the table when asked: 10 segundos (equilibrado), 5 segundos (loop rápido), 20 segundos (más realista/pausado))
+- Q: "¿Cómo debe convivir la reputación por eventos de clientes (M05: penalización por abandono, recompensa por ciclo completo) con ReputationSystem, que hoy recalcula state.reputation desde cero (solo mobiliario) en cada frame?" -> CONFIRMED: GameState.reputationAdjustments acumulador (recomendado): nuevo campo GameState.reputationAdjustments: number; ReputationSystem.update pasa a ser state.reputation = calculateTotalReputation(furniture) + reputationAdjustments; CustomerSystem escribe el acumulador una vez por evento de salida. Un solo número de reputación, HUD sin cambios. (architecture decision, 2026-08-20)
+  (options on the table when asked: GameState.reputationAdjustments acumulador (recomendado): nuevo campo GameState.reputationAdjustments: number; ReputationSystem.update pasa a ser state.reputation = calculateTotalReputation(furniture) + reputationAdjustments; CustomerSystem escribe el acumulador una vez por evento de salida. Un solo número de reputación, HUD sin cambios., Dos números de reputación separados: GameState gana un campo aparte (p.ej. serviceReputation) para los eventos de clientes, sin fusionarlo con el reputation actual derivado de mobiliario., ReputationSystem pasa a conocer a los clientes: se extiende para leer state.customers directamente y detectar las salidas él mismo, quedando como dueño único de toda la lógica de reputación (mobiliario + clientes).)
+- Q: "¿Quién es dueño de los eventos del ciclo de vida del Customer (las transiciones que disparan cambios de reputación) y qué límite de responsabilidad separa a CustomerSystem de ReputationSystem en M05 y milestones futuros?" -> CONFIRMED: Customer lifecycle events ownership: los eventos del ciclo de vida del Customer son emitidos únicamente por las transiciones de CustomerSystem; ReputationSystem no inspecciona state.customers ni conoce clientes; CustomerSystem aplica reputationAdjustments solo cuando detecta una transición válida del ciclo de vida del cliente. Separación de responsabilidades: CustomerSystem es dueño de las transiciones y eventos del ciclo de vida del cliente; ReputationSystem es dueño exclusivamente del cálculo de reputación agregada (mobiliario + reputationAdjustments); GameState.reputationAdjustments es el acumulador de eventos dinámicos entre ambos. (architecture decision, 2026-08-20)
+  (options on the table when asked: Customer lifecycle events ownership: los eventos del ciclo de vida del Customer son emitidos únicamente por las transiciones de CustomerSystem; ReputationSystem no inspecciona state.customers ni conoce clientes; CustomerSystem aplica reputationAdjustments solo cuando detecta una transición válida del ciclo de vida del cliente. Separación de responsabilidades: CustomerSystem es dueño de las transiciones y eventos del ciclo de vida del cliente; ReputationSystem es dueño exclusivamente del cálculo de reputación agregada (mobiliario + reputationAdjustments); GameState.reputationAdjustments es el acumulador de eventos dinámicos entre ambos.)
 
 ## Agent Context
 
@@ -137,7 +135,7 @@ The same information above, structured for programmatic use — navigation, neve
     ".juntia/context.md",
     ".juntia/governance/workflows/feature-development.md"
   ],
-  "taskStatus": "READY_TO_CONTINUE"
+  "taskStatus": "ACTIVE"
 }
 ```
 

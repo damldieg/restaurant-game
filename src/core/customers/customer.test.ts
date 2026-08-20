@@ -26,18 +26,23 @@ describe("createCustomer", () => {
       target: null,
       tableId: null,
       stayRemainingMs: null,
+      waitReason: null,
+      waitRemainingMs: null,
     });
   });
 
-  it("defaults state to idle, target to null, and tableId to null when not provided", () => {
+  it("defaults state to idle, and target/tableId/waitReason/waitRemainingMs to null when not provided", () => {
     const position = { col: 0, row: 0 };
+    const customer = createCustomer("customer-2", position);
 
-    expect(createCustomer("customer-2", position).state).toBe("idle");
-    expect(createCustomer("customer-2", position).target).toBeNull();
-    expect(createCustomer("customer-2", position).tableId).toBeNull();
+    expect(customer.state).toBe("idle");
+    expect(customer.target).toBeNull();
+    expect(customer.tableId).toBeNull();
+    expect(customer.waitReason).toBeNull();
+    expect(customer.waitRemainingMs).toBeNull();
   });
 
-  it.each<CustomerState>(["walking", "idle", "seated"])(
+  it.each<CustomerState>(["walking", "idle", "seated", "waiting"])(
     "accepts %s as an initial state",
     (state) => {
       expect(createCustomer("customer-3", { col: 1, row: 1 }, state).state).toBe(state);
@@ -57,6 +62,22 @@ describe("createCustomer", () => {
       "table-1"
     );
   });
+
+  it("accepts an explicit waitReason and waitRemainingMs", () => {
+    const customer = createCustomer(
+      "customer-7",
+      { col: 1, row: 1 },
+      "waiting",
+      null,
+      null,
+      null,
+      "table",
+      5000
+    );
+
+    expect(customer.waitReason).toBe("table");
+    expect(customer.waitRemainingMs).toBe(5000);
+  });
 });
 
 describe("spawnCustomer", () => {
@@ -68,6 +89,8 @@ describe("spawnCustomer", () => {
       target: ENTRY_TARGET,
       tableId: null,
       stayRemainingMs: null,
+      waitReason: null,
+      waitRemainingMs: null,
     });
   });
 });

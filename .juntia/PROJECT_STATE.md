@@ -127,11 +127,21 @@ it's a real judgment call, not an implementation detail.
 
 ## Next known step
 
-M05 — Waiting and satisfaction is now broken into an M05.1–M05.5 incremental plan in
-`docs/MILESTONES.md`, same pattern as M04.1–M04.8 (its text no longer uses the stale
-`Npc`/`NpcState` naming — updated to `Customer`/`CustomerState`). Two architecture decisions
-were confirmed before starting implementation — see `.juntia/DECISIONS.md` for the full text:
-`GameState.reputationAdjustments` as the accumulator, and "Customer lifecycle events ownership"
-(`CustomerSystem` owns lifecycle transitions/events; `ReputationSystem` never inspects
-`state.customers`). Next: M05.1 — add `waiting` to `CustomerState` and `waitReason`/
-`waitRemainingMs` to `Customer` (data only, no real transition yet).
+M05 (Waiting and satisfaction) is broken into an M05.1–M05.5 incremental plan in
+`docs/MILESTONES.md`, same pattern as M04.1–M04.8. Two architecture decisions were confirmed
+before starting — see `.juntia/DECISIONS.md`: `GameState.reputationAdjustments` as the
+accumulator, and "Customer lifecycle events ownership" (`CustomerSystem` owns lifecycle
+transitions/events; `ReputationSystem` never inspects `state.customers`).
+
+**M05.1 (Customer waiting state) — done:** `CustomerState` gained `"waiting"`; `Customer`
+gained `waitReason: WaitReason | null` (`WaitReason = "table"` for now, room for `order`/`food`
+later) and `waitRemainingMs: number | null` (same countdown pattern as `stayRemainingMs`). Pure
+data — no code path sets `state: "waiting"` yet, so `pnpm test` (74/74)/`tsc --noEmit`/`pnpm
+build` are the only verification needed (no browser check, nothing new to observe). Known
+follow-up for M05.3: `sendToExit` doesn't yet clear `waitReason`/`waitRemainingMs` (only
+`stayRemainingMs`) — harmless today since nothing sets a non-null `waitReason`, but needs
+revisiting once M05.2 does.
+
+Next: M05.2 — table queue system (queue positions, `resolveTableQueue` FIFO, extend
+`assignTables` to try `waiting` customers first, activate the real `idle → waiting`
+transition).

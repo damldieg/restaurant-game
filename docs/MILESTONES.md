@@ -548,26 +548,35 @@ pasos.
 
 ### M05.1 — Customer waiting state
 
+**Estado: completado.**
+
 **Objetivo:** preparar los datos de espera en `Customer`, sin activar todavía ninguna
 transición real.
 
-- [ ] Añadir `"waiting"` a `CustomerState` (`core/customers/customer-state.ts`).
-- [ ] Añadir `waitReason: "table" | null` a `Customer` — único motivo por ahora; el pedido
-      original lo describe como el único mecanismo de espera del juego, para que M09/M11
-      reutilicen el mismo campo con los otros dos motivos (`order`/`food`) en vez de duplicar
-      la infraestructura.
-- [ ] Añadir `waitRemainingMs: number | null` a `Customer` — mismo patrón que
+- [x] Añadir `"waiting"` a `CustomerState` (`core/customers/customer-state.ts`).
+- [x] Añadir `waitReason: WaitReason | null` a `Customer`, con `WaitReason = "table"` — único
+      motivo implementado por ahora; el tipo queda listo para que M09/M11 le agreguen
+      `"order"`/`"food"` sin duplicar la infraestructura, sin anticiparlos hoy.
+- [x] Añadir `waitRemainingMs: number | null` a `Customer` — mismo patrón que
       `stayRemainingMs` (M04.8): cuenta regresiva reiniciable por `deltaMs`, no un timestamp de
       inicio + límite por separado.
-- [ ] Tests unitarios puros de creación y valores por defecto (mismo patrón que
-      `customer.test.ts` para `target`/`tableId`/`stayRemainingMs`).
+- [x] Tests unitarios puros de creación y valores por defecto (`customer.test.ts`, mismo patrón
+      que `target`/`tableId`/`stayRemainingMs`; incluye `"waiting"` en el test parametrizado de
+      estados iniciales).
 
 **No implementar todavía:** la transición real `idle → waiting` (necesita las posiciones de
 cola de M05.2 para tener un `target` a dónde ir); posiciones de cola; FIFO; timeout de
-paciencia.
+paciencia. Nota para M05.3: `sendToExit` hoy no limpia `waitReason`/`waitRemainingMs` al enviar
+a un customer a la salida (solo limpia `stayRemainingMs`) — inofensivo ahora porque ningún
+customer llega a tener `waitReason` no nulo todavía, pero hay que revisarlo antes de que M05.3
+haga que eso deje de ser cierto.
 
 **Player-visible outcome:** ninguno — mismo tipo de paso que M04.1/M04.2, solo prepara el
 terreno de datos.
+
+Verificado: `pnpm test` (74/74) y `tsc --noEmit` limpios; `pnpm build` limpio. Sin verificación
+en navegador — no hay ningún camino de código que produzca `state: "waiting"` todavía, así que
+no hay nada nuevo que observar (mismo criterio que M04.2).
 
 ---
 
