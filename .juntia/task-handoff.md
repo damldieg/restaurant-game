@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M05.1: Customer waiting state — agregar waiting a CustomerState y waitReason/waitRemainingMs a Customer, sin activar todavia la transicion real","generatedAt":"2026-08-20T22:04:57.242Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M05.2: Table queue system — posiciones de cola, resolveTableQueue FIFO, extender assignTables para priorizar waiting antes que idle, activar la transicion idle a waiting","generatedAt":"2026-08-20T22:12:51.014Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,7 +7,7 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M05.1: Customer waiting state — agregar waiting a CustomerState y waitReason/waitRemainingMs a Customer, sin activar todavia la transicion real
+> Implementar M05.2: Table queue system — posiciones de cola, resolveTableQueue FIFO, extender assignTables para priorizar waiting antes que idle, activar la transicion idle a waiting
 
 ## Task Status
 

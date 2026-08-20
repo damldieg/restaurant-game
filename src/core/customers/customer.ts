@@ -1,4 +1,4 @@
-import type { GridPosition } from "../../game/grid";
+import { samePosition, type GridPosition } from "../../game/grid";
 import type { CustomerState } from "./customer-state";
 import {
   RESTAURANT_COLS,
@@ -82,6 +82,30 @@ export function spawnCustomer(id: string): Customer {
   return createCustomer(id, DOOR_POSITION, "walking", ENTRY_TARGET);
 }
 
+// Posición del slot de cola número `index` (0-based) — M05.2. Una línea
+// horizontal que arranca 2 columnas a la derecha de ENTRY_TARGET (siempre
+// distinta de ENTRY_TARGET por construcción) y se extiende hacia el costado,
+// no hacia la puerta — así no bloquea el camino que usan los customers
+// recién llegados (DOOR_POSITION → ENTRY_TARGET). Fórmula abierta en vez de
+// un array fijo: no hace falta un límite arbitrario de cuántos customers
+// pueden esperar a la vez.
+export function getQueueSlotPosition(index: number): GridPosition {
+  return { col: ENTRY_TARGET.col + 2 + index, row: ENTRY_TARGET.row };
+}
+
+// Primer slot de cola libre, dada la lista de posiciones ya ocupadas —
+// mismo tipo de búsqueda que `findFreeTable`, pero sobre una secuencia
+// abierta en vez de un array fijo de mobiliario.
+export function findFreeQueueSlot(occupiedSlots: GridPosition[]): GridPosition {
+  let index = 0;
+
+  while (occupiedSlots.some((slot) => samePosition(slot, getQueueSlotPosition(index)))) {
+    index += 1;
+  }
+
+  return getQueueSlotPosition(index);
+}
+
 // Mueve un customer hacia su target según deltaMs, dentro de la simulación
 // (nunca vía tween de Phaser — decisión confirmada en M03.5). Devuelve un
 // nuevo Customer; no muta el original. Sin target, no hay movimiento.
@@ -123,15 +147,32 @@ export function moveCustomer(customer: Customer, deltaMs: number): Customer {
   };
 }
 
-// Asigna mesa a los customers `idle` sin `tableId` todavía, en el orden del
-// array (FIFO natural — el orden de spawn), usando `findFreeTable`/
-// `getSeatForTable`. Evita doble asignación de la misma mesa dentro de la
-// misma pasada llevando una lista de posiciones ya ocupadas (las ya
-// asignadas + las que se van asignando en este mismo llamado). No muta los
-// Customer originales. Solo fija `tableId` y apunta `target` al asiento,
-// volviendo a `walking` para que `moveCustomer` lo lleve hasta ahí y lo
-// siente al llegar (transición `walking → seated`, ver `moveCustomer`) —
-// esta función nunca sienta al customer directamente.
+// Asigna mesa a los customers `idle` o `waiting` (por mesa) sin `tableId`
+// todavía, usando `findFreeTable`/`getSeatForTable`. Evita doble asignación
+// de la misma mesa dentro de la misma pasada llevando una lista de
+// posiciones ya ocupadas (las ya asignadas + las que se van asignando en
+// este mismo llamado). No muta los Customer originales.
+//
+// FIFO entre `waiting` e `idle` (M05.2): procesa `customers` en su orden de
+// array — nunca reordenado, ver `spawnCustomer`/`removeDepartedCustomers` —
+// así que un customer que ya estaba `waiting` (llegó antes) siempre aparece
+// antes que uno recién `idle` en esta misma pasada, y por lo tanto siempre
+// se evalúa primero para cualquier mesa que se libere. `resolveTableQueue`
+// expresa este mismo criterio como función standalone para que M06 la
+// llame desde `releaseTable` (un evento puntual de "esta mesa se liberó",
+// fuera del recorrido por frame que ya hace esta función).
+//
+// Sin mesa libre: un customer `idle` pasa a `waiting` con `waitReason:
+// "table"` y `target` al primer slot de cola libre (mismo patrón de
+// `occupied`-tracking, ahora también para slots de cola, evitando que dos
+// customers que entran a la cola en la misma pasada se superpongan). Un
+// customer que ya estaba `waiting` se deja intacto — ya tiene su slot.
+//
+// Con mesa libre: fija `tableId`, apunta `target` al asiento, limpia
+// `waitReason`/`waitRemainingMs` (si venía de la cola) y vuelve a `walking`
+// para que `moveCustomer` lo lleve hasta ahí y lo siente al llegar
+// (transición `walking → seated`, ver `moveCustomer`) — esta función nunca
+// sienta al customer directamente.
 export function assignTables(customers: Customer[], furnitureList: Furniture[]): Customer[] {
   const assignedTableIds = new Set(
     customers
@@ -139,30 +180,69 @@ export function assignTables(customers: Customer[], furnitureList: Furniture[]):
       .map((customer) => customer.tableId)
   );
 
-  const occupied: GridPosition[] = furnitureList
+  const occupiedTables: GridPosition[] = furnitureList
     .filter((item): item is Table => item.type === "table" && assignedTableIds.has(item.id))
     .map((table) => table.position);
 
+  // `target` es la posición del slot mientras el customer todavía camina
+  // hacia él; una vez que llega, `moveCustomer` limpia `target` a `null` y
+  // el slot pasa a estar en `position` — por eso se usa `target ?? position`
+  // acá, y no solo `target` (que dejaría de "ver" como ocupado un slot
+  // donde un customer ya está parado esperando).
+  const occupiedQueueSlots: GridPosition[] = customers
+    .filter((customer) => customer.state === "waiting")
+    .map((customer) => customer.target ?? customer.position);
+
   return customers.map((customer) => {
-    if (customer.state !== "idle" || customer.tableId !== null) {
+    const isWaitingForTable = customer.state === "waiting" && customer.waitReason === "table";
+    const isIdleWithoutTable = customer.state === "idle" && customer.tableId === null;
+
+    if (!isWaitingForTable && !isIdleWithoutTable) {
       return customer;
     }
 
-    const table = findFreeTable(occupied);
+    const table = findFreeTable(occupiedTables);
 
-    if (!table) {
+    if (table) {
+      occupiedTables.push(table.position);
+
+      return {
+        ...customer,
+        tableId: table.id,
+        target: getSeatForTable(table),
+        state: "walking" as CustomerState,
+        waitReason: null,
+        waitRemainingMs: null,
+      };
+    }
+
+    if (isWaitingForTable) {
       return customer;
     }
 
-    occupied.push(table.position);
+    const slot = findFreeQueueSlot(occupiedQueueSlots);
+    occupiedQueueSlots.push(slot);
 
     return {
       ...customer,
-      tableId: table.id,
-      target: getSeatForTable(table),
-      state: "walking" as CustomerState,
+      state: "waiting" as CustomerState,
+      waitReason: "table" as WaitReason,
+      target: slot,
     };
   });
+}
+
+// Cola FIFO (M05.2): dada la lista de customers, determina cuál debe
+// ocupar la próxima mesa que se libere. `assignTables` ya logra este mismo
+// orden de forma implícita procesando `customers` en su propio orden de
+// array; esta función existe como criterio standalone y testeado para que
+// M06 la reutilice desde `releaseTable` (evento de una mesa puntual
+// liberándose, fuera del recorrido por frame de `assignTables`) sin
+// duplicar el criterio de orden.
+export function resolveTableQueue(customers: Customer[]): Customer | undefined {
+  return customers.find(
+    (customer) => customer.state === "waiting" && customer.waitReason === "table"
+  );
 }
 
 // Infraestructura genérica de salida (M04.8) — pone a un customer en camino

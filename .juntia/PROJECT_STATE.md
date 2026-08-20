@@ -137,11 +137,33 @@ transitions/events; `ReputationSystem` never inspects `state.customers`).
 gained `waitReason: WaitReason | null` (`WaitReason = "table"` for now, room for `order`/`food`
 later) and `waitRemainingMs: number | null` (same countdown pattern as `stayRemainingMs`). Pure
 data — no code path sets `state: "waiting"` yet, so `pnpm test` (74/74)/`tsc --noEmit`/`pnpm
-build` are the only verification needed (no browser check, nothing new to observe). Known
-follow-up for M05.3: `sendToExit` doesn't yet clear `waitReason`/`waitRemainingMs` (only
-`stayRemainingMs`) — harmless today since nothing sets a non-null `waitReason`, but needs
-revisiting once M05.2 does.
+build` are the only verification needed (no browser check, nothing new to observe).
 
-Next: M05.2 — table queue system (queue positions, `resolveTableQueue` FIFO, extend
-`assignTables` to try `waiting` customers first, activate the real `idle → waiting`
-transition).
+**M05.2 (Table queue system) — done:** `core/customers/customer.ts` gained
+`getQueueSlotPosition(index)` (an open-ended formula — a horizontal line beside `ENTRY_TARGET`,
+not a fixed-size array, so there's no arbitrary queue-length cap) and `findFreeQueueSlot`.
+`assignTables` now handles `waiting` customers too, trying them before `idle` ones — achieved
+for free by processing `customers` in their existing (never-reordered) array order, since a
+customer that started waiting earlier is always earlier in the array than one that just went
+idle. An `idle` customer with no free table now transitions to `waiting` (`waitReason: "table"`,
+`target` = first free queue slot) instead of getting stuck `idle` forever; `assignTables` itself
+now clears `waitReason`/`waitRemainingMs` when a waiting customer finally gets a table. M05.1's
+noted `sendToExit` follow-up (it doesn't clear those same two fields) is still open — harmless
+for now since `sendToExit` still only fires from `advanceStay`, never on a `waiting` customer;
+still needs fixing once M05.3's `advanceWait` starts calling `sendToExit` on one. New standalone
+`resolveTableQueue` (FIFO) exists for M06's future `releaseTable` to
+reuse, even though `assignTables`'s own array-order processing already achieves the same
+ordering internally. Real bug found and fixed during implementation: initial queue-slot-occupancy
+tracking only checked `customer.target`, but an already-arrived waiting customer has `target:
+null` (like any arrival) while still standing at the slot — fixed with `target ?? position`.
+Tested in `customer.test.ts` (FIFO order, slot-skipping, waiting-before-idle priority, no
+double-assigned slots, wait-field clearing) and `customer-system.test.ts` (updated two
+now-outdated M04.6-era tests that assumed a tableless customer stays `idle` forever). Verified
+in-browser with Playwright (~18s run): with more customers than tables, the overflow forms a
+visible horizontal line of distinct, non-overlapping positions next to the entry point; HUD and
+furniture unaffected; zero console errors. `pnpm test` (82/82) and `tsc --noEmit` clean; `pnpm
+build` clean.
+
+Next: M05.3 — waiting patience (`advanceWait`, mirroring `advanceStay`; `waiting → leaving` via
+the existing `sendToExit`, unmodified; register `advanceWait` in `CustomerSystem.update`'s
+pipeline).

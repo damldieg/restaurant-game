@@ -582,30 +582,47 @@ no hay nada nuevo que observar (mismo criterio que M04.2).
 
 ### M05.2 — Table queue system
 
+**Estado: completado.**
+
 **Objetivo:** un customer sin mesa libre espera en fila, sin superponerse a otros.
 
-- [ ] Definir posiciones de cola (`GridPosition[]`, distintas de `ENTRY_TARGET`) — junto a
-      `DOOR_POSITION`/`ENTRY_TARGET` en `core/customers/customer.ts`, mismo archivo por el
-      mismo motivo que ya viven ahí (geometría de pathing de customers, no de mobiliario).
-- [ ] Implementar `resolveTableQueue` — función pura y FIFO, deliberadamente separada de
-      `assignTables` para que M06 la reutilice desde `releaseTable` sin duplicarla (ver la
-      sección M06 de este documento: "`releaseTable` invoca la función FIFO de M05").
-- [ ] Extender `assignTables` para intentar primero a los customers `waiting` (en su orden FIFO
-      existente en el array) y recién después a los `idle` sin mesa — nadie que llegó después
-      corta la fila.
-- [ ] Activar la transición `idle → waiting`: un customer `idle` sin mesa libre pasa a
-      `waiting` con `waitReason: "table"`, `target` apuntando a su posición de cola (reutiliza
-      el campo `target` existente — sin campo nuevo), sin superponerse a otros customers ya en
-      cola (mismo patrón de `occupied`-tracking dentro de la misma pasada que `assignTables` ya
-      usa para mesas).
-- [ ] Tests unitarios puros: la función FIFO asigna la próxima mesa libre al primero en cola;
-      no hay doble asignación del mismo slot de cola dentro de una pasada; un customer en cola
-      pasa a `walking` hacia la mesa cuando le toca.
+- [x] Definir posiciones de cola (`getQueueSlotPosition(index): GridPosition`, distintas de
+      `ENTRY_TARGET` por construcción) — junto a `DOOR_POSITION`/`ENTRY_TARGET` en
+      `core/customers/customer.ts`. Fórmula abierta (línea horizontal a un costado de
+      `ENTRY_TARGET`, sin bloquear el camino de entrada) en vez de un array fijo, para no
+      necesitar un límite arbitrario de tamaño de cola. `findFreeQueueSlot(occupiedSlots)`
+      encuentra el primer slot libre, mismo tipo de búsqueda que `findFreeTable`.
+- [x] Implementar `resolveTableQueue` — función pura y FIFO, deliberadamente separada de
+      `assignTables` para que M06 la reutilice desde `releaseTable` sin duplicarla.
+- [x] Extender `assignTables` para intentar primero a los customers `waiting` y recién después
+      a los `idle` sin mesa — logrado procesando `customers` en su orden de array existente
+      (nunca reordenado), así que un customer que ya esperaba siempre aparece antes que uno
+      recién `idle` en la misma pasada.
+- [x] Activar la transición `idle → waiting`: un customer `idle` sin mesa libre pasa a
+      `waiting` con `waitReason: "table"`, `target` al primer slot de cola libre, sin
+      superponerse a otros (mismo patrón de `occupied`-tracking que ya usa `assignTables` para
+      mesas, ahora también para slots de cola).
+- [x] Tests unitarios puros (`customer.test.ts`): `resolveTableQueue` respeta el orden FIFO del
+      array; `findFreeQueueSlot` salta slots ocupados; `assignTables` prioriza a un customer ya
+      `waiting` sobre uno recién `idle` para una mesa liberada, no asigna el mismo slot de cola
+      a dos customers en la misma pasada, limpia `waitReason`/`waitRemainingMs` al conseguir
+      mesa, y deja intacto a un customer `waiting` sin mesa todavía disponible.
+
+Bug real encontrado y corregido durante la implementación: el cálculo de slots de cola ocupados
+inicialmente solo miraba `customer.target`, pero un customer que ya llegó a su slot tiene
+`target: null` (igual que cualquier arribo) aunque siga parado ahí — así que un slot ocupado
+podía "verse" libre para el siguiente customer que entra a la cola. Corregido usando
+`customer.target ?? customer.position`.
 
 **No implementar todavía:** timeout de paciencia (M05.3); eventos de reputación (M05.4).
 
 **Player-visible outcome:** con las mesas ocupadas, los customers siguientes esperan en fila
-sin superponerse, y el primero en cola ocupa la próxima mesa que se libera.
+sin superponerse, y el primero en cola ocupa la próxima mesa que se libera — verificado en
+navegador (Playwright, ~18-20s de corrida): con más de 2 customers compitiendo por las 2 mesas
+del layout inicial, los excedentes caminan a posiciones de cola distintas entre sí y de
+`ENTRY_TARGET`, sin superponerse; HUD y muebles sin cambios; sin errores de consola.
+
+Verificado: `pnpm test` (82/82) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 

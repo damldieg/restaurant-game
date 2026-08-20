@@ -105,7 +105,7 @@ describe("CustomerSystem", () => {
     system.update(state, 5000);
 
     const waiting = state.customers.find((customer) => customer.tableId === null);
-    expect(waiting?.state).toBe("idle");
+    expect(waiting?.state).toBe("waiting");
 
     system.update(state, 5000);
     system.update(state, 1);
@@ -126,7 +126,7 @@ describe("CustomerSystem", () => {
     expect(new Set(tableIds).size).toBe(2);
   });
 
-  it("leaves a customer idle without a table once every table is taken", () => {
+  it("sends a customer to the queue once every table is taken", () => {
     const state = createGameState(500, 0);
 
     new CustomerSystem().update(state, SPAWN_INTERVAL_MS * 3);
@@ -134,7 +134,8 @@ describe("CustomerSystem", () => {
     expect(state.customers).toHaveLength(3);
     const withoutTable = state.customers.filter((customer) => customer.tableId === null);
     expect(withoutTable).toHaveLength(1);
-    expect(withoutTable[0].state).toBe("idle");
-    expect(withoutTable[0].target).toBeNull();
+    expect(withoutTable[0].state).toBe("waiting");
+    expect(withoutTable[0].waitReason).toBe("table");
+    expect(withoutTable[0].target).not.toBeNull();
   });
 });

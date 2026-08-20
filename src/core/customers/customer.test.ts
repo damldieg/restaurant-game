@@ -4,6 +4,9 @@ import {
   spawnCustomer,
   moveCustomer,
   assignTables,
+  resolveTableQueue,
+  getQueueSlotPosition,
+  findFreeQueueSlot,
   sendToExit,
   advanceStay,
   removeDepartedCustomers,
@@ -219,7 +222,7 @@ describe("assignTables", () => {
     expect(assignedWaiting.tableId).toBe(table2.id);
   });
 
-  it("leaves an idle customer without a table when none is free", () => {
+  it("sends an idle customer to the queue when no table is free", () => {
     const first = createCustomer("customer-1", { col: 0, row: 0 }, "idle", null, table1.id);
     const second = createCustomer("customer-2", { col: 0, row: 0 }, "idle", null, table2.id);
     const third = createCustomer("customer-3", { col: 0, row: 0 }, "idle");
@@ -227,8 +230,79 @@ describe("assignTables", () => {
     const [, , assignedThird] = assignTables([first, second, third], furniture);
 
     expect(assignedThird.tableId).toBeNull();
-    expect(assignedThird.target).toBeNull();
-    expect(assignedThird.state).toBe("idle");
+    expect(assignedThird.state).toBe("waiting");
+    expect(assignedThird.waitReason).toBe("table");
+    expect(assignedThird.target).toEqual(getQueueSlotPosition(0));
+  });
+
+  it("does not assign the same queue slot to two idle customers entering the queue in the same call", () => {
+    const seated1 = createCustomer("customer-1", { col: 0, row: 0 }, "idle", null, table1.id);
+    const seated2 = createCustomer("customer-2", { col: 0, row: 0 }, "idle", null, table2.id);
+    const first = createCustomer("customer-3", { col: 0, row: 0 }, "idle");
+    const second = createCustomer("customer-4", { col: 0, row: 0 }, "idle");
+
+    const [, , assignedFirst, assignedSecond] = assignTables(
+      [seated1, seated2, first, second],
+      furniture
+    );
+
+    expect(assignedFirst.target).toEqual(getQueueSlotPosition(0));
+    expect(assignedSecond.target).toEqual(getQueueSlotPosition(1));
+  });
+
+  it("prioritizes an already-waiting customer over a freshly idle one for a freed table", () => {
+    const waiting = createCustomer(
+      "customer-1",
+      { col: 0, row: 0 },
+      "waiting",
+      getQueueSlotPosition(0),
+      null,
+      null,
+      "table",
+      3000
+    );
+    const idle = createCustomer("customer-2", { col: 0, row: 0 }, "idle");
+    const occupiesTheOtherTable = createCustomer(
+      "customer-3",
+      { col: 0, row: 0 },
+      "idle",
+      null,
+      table2.id
+    );
+
+    const [assignedWaiting, assignedIdle] = assignTables(
+      [waiting, idle, occupiesTheOtherTable],
+      furniture
+    );
+
+    expect(assignedWaiting.tableId).toBe(table1.id);
+    expect(assignedWaiting.target).toEqual(getSeatForTable(table1));
+    expect(assignedWaiting.state).toBe("walking");
+    expect(assignedWaiting.waitReason).toBeNull();
+    expect(assignedWaiting.waitRemainingMs).toBeNull();
+
+    expect(assignedIdle.tableId).toBeNull();
+    expect(assignedIdle.state).toBe("waiting");
+    expect(assignedIdle.target).toEqual(getQueueSlotPosition(1));
+  });
+
+  it("leaves an already-waiting customer untouched when still no table is free", () => {
+    const waiting = createCustomer(
+      "customer-1",
+      { col: 0, row: 0 },
+      "waiting",
+      getQueueSlotPosition(0),
+      null,
+      null,
+      "table",
+      5000
+    );
+    const seated1 = createCustomer("customer-2", { col: 0, row: 0 }, "idle", null, table1.id);
+    const seated2 = createCustomer("customer-3", { col: 0, row: 0 }, "idle", null, table2.id);
+
+    const [assignedWaiting] = assignTables([waiting, seated1, seated2], furniture);
+
+    expect(assignedWaiting).toEqual(waiting);
   });
 
   it("does not mutate the original customers", () => {
@@ -238,6 +312,55 @@ describe("assignTables", () => {
     assignTables([customer], furniture);
 
     expect(customer).toEqual(snapshot);
+  });
+});
+
+describe("getQueueSlotPosition / findFreeQueueSlot", () => {
+  it("returns positions distinct from ENTRY_TARGET and from each other", () => {
+    expect(getQueueSlotPosition(0)).not.toEqual(ENTRY_TARGET);
+    expect(getQueueSlotPosition(0)).not.toEqual(getQueueSlotPosition(1));
+  });
+
+  it("finds the first slot when none are occupied", () => {
+    expect(findFreeQueueSlot([])).toEqual(getQueueSlotPosition(0));
+  });
+
+  it("skips already-occupied slots", () => {
+    expect(
+      findFreeQueueSlot([getQueueSlotPosition(0), getQueueSlotPosition(1)])
+    ).toEqual(getQueueSlotPosition(2));
+  });
+});
+
+describe("resolveTableQueue", () => {
+  it("returns the first customer waiting for a table, in array order", () => {
+    const notWaiting = createCustomer("customer-1", { col: 0, row: 0 }, "idle");
+    const firstWaiting = createCustomer(
+      "customer-2",
+      { col: 0, row: 0 },
+      "waiting",
+      null,
+      null,
+      null,
+      "table"
+    );
+    const secondWaiting = createCustomer(
+      "customer-3",
+      { col: 0, row: 0 },
+      "waiting",
+      null,
+      null,
+      null,
+      "table"
+    );
+
+    expect(resolveTableQueue([notWaiting, firstWaiting, secondWaiting])).toBe(firstWaiting);
+  });
+
+  it("returns undefined when nobody is waiting for a table", () => {
+    const customer = createCustomer("customer-1", { col: 0, row: 0 }, "idle");
+
+    expect(resolveTableQueue([customer])).toBeUndefined();
   });
 });
 
