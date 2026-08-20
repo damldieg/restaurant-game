@@ -4,8 +4,10 @@ import { RESTAURANT_COLS, RESTAURANT_ROWS, furniture, type Furniture } from "./g
 import { NpcController } from "./game/npc/controller";
 import { FURNITURE_CATALOG } from "./game/furniture-catalog";
 import { isValidPlacement } from "./game/placement";
+import { canAfford } from "./game/economy";
 
 const NPC_SPAWN_INTERVAL_MS = 2500;
+const INITIAL_MONEY = 500;
 
 // Provisional: por ahora solo la mesa tiene una forma de instancia que
 // `isValidPlacement`+confirmación pueden crear sin datos adicionales (una
@@ -32,6 +34,8 @@ class RestaurantScene extends Phaser.Scene {
   private placementActive = false;
   private previewRect!: Phaser.GameObjects.Rectangle;
   private placementText!: Phaser.GameObjects.Text;
+  private money = INITIAL_MONEY;
+  private moneyText!: Phaser.GameObjects.Text;
 
   create() {
     this.createRestaurant();
@@ -77,11 +81,7 @@ class RestaurantScene extends Phaser.Scene {
 
       const gridPosition = this.pointerToGridPosition(pointer);
       const center = gridToWorldCenter(gridPosition, this.originX, this.originY);
-      const valid = isValidPlacement(
-        gridPosition,
-        { cols: RESTAURANT_COLS, rows: RESTAURANT_ROWS },
-        furniture
-      );
+      const valid = this.canPlaceAt(gridPosition);
 
       this.previewRect.setPosition(center.x, center.y);
       this.previewRect.setFillStyle(valid ? 0x4caf50 : 0xe74c3c, 0.5);
@@ -98,15 +98,23 @@ class RestaurantScene extends Phaser.Scene {
     return worldToGridPosition(pointer.worldX, pointer.worldY, this.originX, this.originY);
   }
 
-  private confirmPlacement(pointer: Phaser.Input.Pointer) {
-    const gridPosition = this.pointerToGridPosition(pointer);
-    const valid = isValidPlacement(
+  private canPlaceAt(gridPosition: GridPosition): boolean {
+    const withinGridAndFree = isValidPlacement(
       gridPosition,
       { cols: RESTAURANT_COLS, rows: RESTAURANT_ROWS },
       furniture
     );
 
-    if (!valid) return;
+    return withinGridAndFree && canAfford(this.money, PLACEABLE_DEFINITION.price);
+  }
+
+  private confirmPlacement(pointer: Phaser.Input.Pointer) {
+    const gridPosition = this.pointerToGridPosition(pointer);
+
+    if (!this.canPlaceAt(gridPosition)) return;
+
+    this.money -= PLACEABLE_DEFINITION.price;
+    this.updateMoneyDisplay();
 
     furniture.push({
       id: `table-${this.nextFurnitureId++}`,
@@ -186,6 +194,17 @@ class RestaurantScene extends Phaser.Scene {
       fontSize: "16px",
       color: "#dddddd",
     });
+
+    this.moneyText = this.add.text(24, 80, "", {
+      fontFamily: "monospace",
+      fontSize: "16px",
+      color: "#dddddd",
+    });
+    this.updateMoneyDisplay();
+  }
+
+  private updateMoneyDisplay() {
+    this.moneyText.setText(`Dinero: $${this.money}`);
   }
 }
 

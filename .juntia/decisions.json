@@ -17,6 +17,23 @@
       "source": "human",
       "confirmedAt": "2026-08-20T11:40:15.318Z",
       "status": "active"
+    },
+    {
+      "id": "1af82a921b",
+      "type": "product",
+      "question": "¿Cuánto dinero inicial (money) tiene el jugador al arrancar la partida?",
+      "context": "M02 requiere `money` como estado real del juego con un valor inicial. Es un valor de balance sin una respuesta objetivamente correcta (trigger balancing_value), relativo a los precios del catálogo de M01 (mesa $100, silla $25).",
+      "options": [
+        "$300",
+        "$150",
+        "$500"
+      ],
+      "evidence": [],
+      "reason": "balancing_value: valor numérico ajustable sin respuesta única correcta (decision-triggers.md)",
+      "text": "$500",
+      "source": "human",
+      "confirmedAt": "2026-08-20T11:55:08.652Z",
+      "status": "active"
     }
   ]
 }
