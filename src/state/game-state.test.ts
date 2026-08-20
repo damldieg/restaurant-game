@@ -9,5 +9,6 @@ describe("createGameState", () => {
     expect(state.money).toBe(500);
     expect(state.reputation).toBe(0);
     expect(state.furniture).toBe(furniture);
+    expect(state.customers).toEqual([]);
   });
 });

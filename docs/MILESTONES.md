@@ -231,11 +231,20 @@ testeables, sin big-bang refactor:**
       mesas ni comportamiento. Test: creación de `Customer` y sus tres estados iniciales
       (`customer.test.ts`). Verificado: `pnpm test` (32/32) y `tsc --noEmit` limpios;
       `NpcController`/`RestaurantScene`/rendering/`occupiedTables`/`findFreeTable` sin cambios.
-- [ ] Paso 2 — Agregar `customers: Customer[]` a `GameState`, vacío en `createGameState` (test:
-      mismo patrón que `reputation` en `game-state.test.ts`).
-- [ ] Paso 3 — Crear `CustomerSystem` con responsabilidad de spawn únicamente (agrega un
-      `Customer` en la puerta cada N ms acumulados por `deltaMs`, sin mesa ni movimiento todavía;
-      test puro sobre el conteo tras N ms simulados).
+- [x] **Paso 2 (M04.2) — `CustomerSystem` base + integración con `GameState`.**
+      `customers: Customer[]` agregado a `GameState`, vacío en `createGameState` (test: mismo
+      patrón que `reputation` en `game-state.test.ts`). `systems/customer-system.ts` creado
+      siguiendo el patrón `GameSystem` (`update(state, deltaMs)`, sin depender de Phaser) y
+      registrado en `RestaurantScene.systems` (`main.ts`) — la ubicación oficial donde la
+      simulación de clientes se actualizará queda conectada al loop real. Todavía sin spawn,
+      movimiento, estados nuevos, mesas, reservas, paciencia, rendering ni integración con
+      `NpcController` — `CustomerSystem.update` es intencionalmente un no-op, un punto de
+      extensión correcto para el Paso 3. Test: `customer-system.test.ts` (no lanza excepción,
+      `state.customers` sigue vacío). Verificado: `pnpm test` (33/33) y `tsc --noEmit` limpios;
+      `NpcController` intacto; `RestaurantScene` solo cambia para registrar el sistema.
+- [ ] Paso 3 — Responsabilidad de spawn en `CustomerSystem` (agrega un `Customer` en la puerta
+      cada N ms acumulados por `deltaMs`, sin mesa ni movimiento todavía; test puro sobre el
+      conteo tras N ms simulados).
 - [ ] Paso 4 — `NpcController` deja de crear el `Npc`: lee spawns nuevos en `state.customers` y
       sigue animando la entrada con el tween actual — este paso resuelve, solo para el spawn, la
       pregunta de qué reloj manda (sistema vs. tween).

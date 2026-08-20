@@ -8,6 +8,7 @@ import { canAfford } from "./core/economy";
 import { createGameState, type GameState } from "./state/game-state";
 import { runSystems, type GameSystem } from "./systems/game-system";
 import { ReputationSystem } from "./systems/reputation-system";
+import { CustomerSystem } from "./systems/customer-system";
 
 const NPC_SPAWN_INTERVAL_MS = 2500;
 const INITIAL_MONEY = 500;
@@ -41,7 +42,7 @@ class RestaurantScene extends Phaser.Scene {
   private gameState: GameState = createGameState(INITIAL_MONEY, INITIAL_REPUTATION);
   private moneyText!: Phaser.GameObjects.Text;
   private reputationText!: Phaser.GameObjects.Text;
-  private systems: GameSystem[] = [new ReputationSystem()];
+  private systems: GameSystem[] = [new ReputationSystem(), new CustomerSystem()];
 
   create() {
     this.createRestaurant();
