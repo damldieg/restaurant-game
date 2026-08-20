@@ -215,6 +215,23 @@
       "source": "human",
       "confirmedAt": "2026-08-20T22:35:42.646Z",
       "status": "active"
+    },
+    {
+      "id": "aaac4746eb",
+      "type": "product",
+      "question": "¿Cuánta reputación resta un abandono por paciencia agotada, y cuánta suma un ciclo completado normalmente (M05.4)?",
+      "context": "El plan de M05.4 en docs/MILESTONES.md marca explícitamente estos dos valores como balancing_value a confirmar antes de escribirlos en código. Se aplican a GameState.reputationAdjustments (decisión de arquitectura ya confirmada), exactamente una vez por evento de salida — nunca por frame. Referencia de escala ya confirmada: mesa +3 / silla +1 al colocar mobiliario (M03); reputación inicial 0.",
+      "options": [
+        "Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal)",
+        "Abandono -1 / Ciclo completo +1 (simétrico — un abandono cancela exactamente un ciclo completo)",
+        "Abandono -5 / Ciclo completo +2 (impacto fuerte — el abandono es un evento negativo grave comparado con el aporte de mobiliario)"
+      ],
+      "evidence": [],
+      "reason": "balancing_value (decision-triggers.md): valores numéricos ajustables sin respuesta objetivamente correcta; el propio plan de M05.4 ya los marca como pendientes de confirmar.",
+      "text": "Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal)",
+      "source": "human",
+      "confirmedAt": "2026-08-20T23:04:12.937Z",
+      "status": "active"
     }
   ]
 }

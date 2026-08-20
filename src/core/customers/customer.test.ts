@@ -10,6 +10,7 @@ import {
   sendToExit,
   advanceStay,
   advanceWait,
+  countTransitionsToLeaving,
   removeDepartedCustomers,
   DOOR_POSITION,
   ENTRY_TARGET,
@@ -548,6 +549,42 @@ describe("advanceWait", () => {
     advanceWait(customer, 1000);
 
     expect(customer).toEqual(snapshot);
+  });
+});
+
+describe("countTransitionsToLeaving", () => {
+  it("counts a customer that transitioned from the given state to leaving", () => {
+    const before = [createCustomer("customer-1", { col: 5, row: 6 }, "seated", null, "table-1")];
+    const after = [sendToExit(before[0])];
+
+    expect(countTransitionsToLeaving(before, after, "seated")).toBe(1);
+  });
+
+  it("ignores a customer already leaving before this step", () => {
+    const before = [createCustomer("customer-1", DOOR_POSITION, "leaving", null)];
+    const after = [createCustomer("customer-1", DOOR_POSITION, "leaving", null)];
+
+    expect(countTransitionsToLeaving(before, after, "seated")).toBe(0);
+  });
+
+  it("ignores a transition from a different state", () => {
+    const before = [
+      createCustomer("customer-1", { col: 5, row: 6 }, "waiting", null, null, null, "table"),
+    ];
+    const after = [sendToExit(before[0])];
+
+    expect(countTransitionsToLeaving(before, after, "seated")).toBe(0);
+  });
+
+  it("counts multiple matching transitions in the same batch", () => {
+    const before = [
+      createCustomer("customer-1", { col: 5, row: 6 }, "seated", null, "table-1"),
+      createCustomer("customer-2", { col: 5, row: 6 }, "seated", null, "table-2"),
+      createCustomer("customer-3", { col: 0, row: 0 }, "idle"),
+    ];
+    const after = [sendToExit(before[0]), sendToExit(before[1]), before[2]];
+
+    expect(countTransitionsToLeaving(before, after, "seated")).toBe(2);
   });
 });
 

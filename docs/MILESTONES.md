@@ -683,29 +683,42 @@ un customer que termina su `stayRemainingMs` en M04.8.
 
 ### M05.4 — Customer reputation events
 
+**Estado: completado.**
+
 **Objetivo:** el abandono penaliza reputación y el ciclo completo la recompensa, una sola vez
 cada uno.
 
-- [ ] Añadir `GameState.reputationAdjustments: number` (decisión de arquitectura confirmada,
-      ver `.juntia/DECISIONS.md`).
-- [ ] `ReputationSystem.update` pasa a `state.reputation = calculateTotalReputation(furniture,
+- [x] Añadir `GameState.reputationAdjustments: number` (decisión de arquitectura confirmada,
+      ver `.juntia/DECISIONS.md`). Inicial `0` en `createGameState`.
+- [x] `ReputationSystem.update` pasa a `state.reputation = calculateTotalReputation(furniture,
       catalog) + state.reputationAdjustments` — sin inspeccionar `state.customers` en ningún
       momento (decisión confirmada: "Customer lifecycle events ownership").
-- [ ] `CustomerSystem.update` aplica el delta a `reputationAdjustments` exactamente una vez por
-      evento de salida, detectando qué paso del pipeline causó la transición: recompensa cuando
-      viene de `advanceStay` (ciclo completo), penalización cuando viene de `advanceWait`
-      (abandono por paciencia). Los valores concretos son `balancing_value` a confirmar antes
-      de escribirlos en código.
-- [ ] Tests unitarios puros: un abandono resta reputación exactamente una vez (nunca por
-      frame/segundo); un ciclo completado suma reputación exactamente una vez;
-      `ReputationSystem` no cambia su resultado si `state.customers` cambia sin que cambie
-      `reputationAdjustments`.
+- [x] `CustomerSystem.update` aplica el delta a `reputationAdjustments` exactamente una vez por
+      evento de salida. En vez de que `advanceStay`/`advanceWait`/`sendToExit` distingan el
+      motivo (que los volvería menos genéricos), `CustomerSystem` compara el snapshot de
+      `state.customers` antes y después de cada paso del pipeline vía la nueva función pura
+      `countTransitionsToLeaving(before, after, fromState)` (`core/customers/customer.ts`):
+      recompensa `+1` por cada `seated → leaving` detectado justo después de `advanceStay`
+      (ciclo completo), penalización `-2` por cada `waiting → leaving` detectado justo después
+      de `advanceWait` (abandono por paciencia) — valores confirmados como decisión de producto.
+- [x] Tests unitarios puros: `countTransitionsToLeaving` (cuenta transiciones que matchean,
+      ignora las que no, cuenta múltiples en el mismo batch); `CustomerSystem` — un abandono
+      resta reputación exactamente una vez (no de nuevo en el tick siguiente), un ciclo
+      completado suma reputación exactamente una vez; `ReputationSystem` suma
+      `reputationAdjustments` al total derivado del mobiliario sin que `state.customers` influya
+      en el resultado.
 
-**No implementar todavía:** nada nuevo del lado de clientes — esta pieza es puramente la
-conexión entre las transiciones ya construidas en M05.2/M05.3 y la reputación.
+**No se implementó nada nuevo del lado de clientes** — esta pieza es puramente la conexión entre
+las transiciones ya construidas en M05.2/M05.3 y la reputación; `sendToExit`, `advanceStay` y
+`advanceWait` quedan sin cambios respecto a M05.3.
 
 **Player-visible outcome:** la reputación del HUD baja cuando un customer abandona por espera y
-sube cuando un customer completa el ciclo normalmente.
+sube cuando un customer completa el ciclo normalmente — verificado en navegador (Playwright,
+~36s de corrida, capturas cada 3-5s): reputación 8 → 9 (ciclo completo) → 10 (otro ciclo
+completo) → 8 (abandono, baja exactamente 2), visible directamente en el texto del HUD; cero
+errores de consola en toda la corrida.
+
+Verificado: `pnpm test` (95/95) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 

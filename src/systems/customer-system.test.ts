@@ -138,4 +138,52 @@ describe("CustomerSystem", () => {
     expect(withoutTable[0].waitReason).toBe("table");
     expect(withoutTable[0].target).not.toBeNull();
   });
+
+  it("rewards reputation exactly once when a customer completes a full seated cycle", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+    const findCustomer1 = () => state.customers.find((customer) => customer.id === "customer-1");
+
+    system.update(state, SPAWN_INTERVAL_MS);
+    // Distancia real de ENTRY_TARGET al asiento de table-1 (~6.4 tiles a
+    // 1.5 tiles/seg) — recién con este segundo tick customer-1 llega a
+    // sentarse.
+    system.update(state, 4300);
+    expect(findCustomer1()?.state).toBe("seated");
+    expect(state.reputationAdjustments).toBe(0);
+
+    // Agota el stayRemainingMs recién iniciado de customer-1 (5700) sin
+    // llegar a los 10000ms (STAY_DURATION_MS) que también expirarían de
+    // movida al segundo customer que se sienta en este mismo tick.
+    system.update(state, 6000);
+    expect(findCustomer1()?.state).toBe("leaving");
+    expect(state.reputationAdjustments).toBe(1);
+
+    system.update(state, 1000);
+    expect(state.reputationAdjustments).toBe(1);
+  });
+
+  it("penalizes reputation exactly once when a customer abandons after patience runs out", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+
+    system.update(state, SPAWN_INTERVAL_MS * 3);
+    const waiting = state.customers.find((customer) => customer.state === "waiting");
+    expect(waiting).toBeDefined();
+    expect(state.reputationAdjustments).toBe(0);
+
+    // Entre 7500ms (paciencia restante tras el primer tick) y 10000ms
+    // (STAY_DURATION_MS) — agota la paciencia del customer en cola sin
+    // agotar también el stay recién iniciado de los que se acaban de
+    // sentar en este mismo tick.
+    system.update(state, 8000);
+
+    const waitingCustomerId = waiting?.id;
+    const stillThere = state.customers.find((customer) => customer.id === waitingCustomerId);
+    expect(stillThere?.state).toBe("leaving");
+    expect(state.reputationAdjustments).toBe(-2);
+
+    system.update(state, 1000);
+    expect(state.reputationAdjustments).toBe(-2);
+  });
 });

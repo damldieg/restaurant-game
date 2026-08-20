@@ -308,6 +308,29 @@ export function advanceWait(customer: Customer, deltaMs: number): Customer {
   return sendToExit(customer);
 }
 
+// Cuenta cuántos customers pasaron de `fromState` a "leaving" entre dos
+// snapshots consecutivos del mismo pipeline (mismo orden y longitud — el
+// "antes" y el "después" de un único paso como advanceStay/advanceWait).
+// Usado por CustomerSystem (M05.4) para atribuir un evento de reputación
+// al paso del pipeline que causó la transición, sin que sendToExit deje
+// de ser genérico y sin que ReputationSystem necesite conocer a los
+// customers (decisión confirmada: "Customer lifecycle events ownership").
+export function countTransitionsToLeaving(
+  before: Customer[],
+  after: Customer[],
+  fromState: CustomerState
+): number {
+  let count = 0;
+
+  for (let i = 0; i < before.length; i += 1) {
+    if (before[i].state === fromState && after[i].state === "leaving") {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
 // Elimina del array a cualquier customer que ya llegó a la puerta mientras
 // se iba ("leaving" sin target activo — moveCustomer ya lo dejó ahí).
 // Genérica: no le importa qué disparó el "leaving" en primer lugar.

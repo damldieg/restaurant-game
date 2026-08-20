@@ -189,6 +189,26 @@ with patience-abandonment actually removing customers from the queue (exact timi
 directly by the unit tests, not re-derived visually). `pnpm test` (88/88) and `tsc --noEmit`
 clean; `pnpm build` clean.
 
-Next: M05.4 — customer reputation events (`GameState.reputationAdjustments`; `ReputationSystem`
-adds it to the furniture-derived total; `CustomerSystem` writes to it once per abandon/complete
-lifecycle event, per the confirmed M05 architecture decisions).
+**M05.4 (Customer reputation events) — done:** `GameState.reputationAdjustments: number` (initial
+`0`), and `ReputationSystem.update` now sets `state.reputation = calculateTotalReputation(...) +
+reputationAdjustments` — still never inspects `state.customers` (confirmed "Customer lifecycle
+events ownership" decision). `CustomerSystem.update` applies the delta exactly once per exit
+event by comparing `state.customers` snapshots before/after each pipeline step, via a new pure
+`countTransitionsToLeaving(before, after, fromState)` in `core/customers/customer.ts`: `+1` per
+`seated → leaving` right after `advanceStay` (completed cycle), `-2` per `waiting → leaving`
+right after `advanceWait` (patience abandon) — both confirmed product decisions.
+`advanceStay`/`advanceWait`/`sendToExit` are unchanged from M05.3; the attribution lives entirely
+in `CustomerSystem`, keeping `sendToExit` generic. Tested in `customer.test.ts`
+(`countTransitionsToLeaving`), `customer-system.test.ts` (reward/penalty applied exactly once,
+no double-counting on a later tick — required working out real elapsed-distance/spawn-timing
+numbers so a second, unrelated customer wouldn't also complete a cycle in the same test tick),
+and `reputation-system.test.ts` (adjustments added regardless of `state.customers`). Verified
+in-browser with Playwright (~36s run, screenshots every 3-5s): HUD reputation went 8 → 9 (a
+completed cycle) → 10 (another) → 8 (a patience abandon, dropping exactly 2), directly visible in
+the HUD text; zero console errors throughout. `pnpm test` (95/95) and `tsc --noEmit` clean;
+`pnpm build` clean.
+
+Next: M05.5 — validation and integration (closes M05): verify the full queued lifecycle in-browser
+(`entering → walking → waiting → seated → leaving → removed`, 2 tables + 3+ customers), confirm no
+duplicated responsibilities between `CustomerSystem`/`ReputationSystem`/`CustomerRenderer`, no new
+functionality expected.
