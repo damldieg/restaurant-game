@@ -217,48 +217,174 @@ de `src/` cambia de comportamiento; `pnpm test` sigue en verde sin modificacione
 
 ## M04 — Basic customer lifecycle
 
-*Objetivo: cliente entra → encuentra mesa → se sienta → se queda → se va. Depende de M00
-(usa el furniture existente, hardcodeado o comprado — no depende de M01/M02 para
-funcionar). Depende también de M03.5 (arquitectura de `Customer` confirmada).*
+*Depende de M00 (usa el furniture existente, hardcodeado o comprado) y de M03.5 (arquitectura
+de `Customer` confirmada: la simulación es la fuente de verdad del estado del cliente; Phaser
+solo renderiza, anima e interpola visualmente — nunca dispara una transición de estado desde un
+tween o un callback).*
 
-**Estrategia incremental hacia `core/customers/`/`CustomerSystem` (M03.5), pasos pequeños y
-testeables, sin big-bang refactor:**
+**Player-visible outcome (milestone completo):** el jugador podrá ver clientes entrar al
+restaurante, encontrar una mesa, sentarse y abandonar el restaurante. La implementación es
+progresiva (M04.1–M04.8) y la simulación está separada de Phaser en cada paso.
 
-- [x] **Paso 1 — Crear `Customer` como entidad de simulación nueva en `core/customers/`**
-      (`customer.ts` + `customer-state.ts`), sin mover ni modificar `Npc`/`NpcState`/
-      `NpcController` todavía. Mínimo `id`, `position`, `state`; `target`/`tableId` quedan
-      documentados como campos futuros (comentario en `customer.ts`), sin lógica de movimiento,
-      mesas ni comportamiento. Test: creación de `Customer` y sus tres estados iniciales
-      (`customer.test.ts`). Verificado: `pnpm test` (32/32) y `tsc --noEmit` limpios;
-      `NpcController`/`RestaurantScene`/rendering/`occupiedTables`/`findFreeTable` sin cambios.
-- [x] **Paso 2 (M04.2) — `CustomerSystem` base + integración con `GameState`.**
-      `customers: Customer[]` agregado a `GameState`, vacío en `createGameState` (test: mismo
-      patrón que `reputation` en `game-state.test.ts`). `systems/customer-system.ts` creado
-      siguiendo el patrón `GameSystem` (`update(state, deltaMs)`, sin depender de Phaser) y
-      registrado en `RestaurantScene.systems` (`main.ts`) — la ubicación oficial donde la
-      simulación de clientes se actualizará queda conectada al loop real. Todavía sin spawn,
-      movimiento, estados nuevos, mesas, reservas, paciencia, rendering ni integración con
-      `NpcController` — `CustomerSystem.update` es intencionalmente un no-op, un punto de
-      extensión correcto para el Paso 3. Test: `customer-system.test.ts` (no lanza excepción,
-      `state.customers` sigue vacío). Verificado: `pnpm test` (33/33) y `tsc --noEmit` limpios;
-      `NpcController` intacto; `RestaurantScene` solo cambia para registrar el sistema.
-- [ ] Paso 3 — Responsabilidad de spawn en `CustomerSystem` (agrega un `Customer` en la puerta
-      cada N ms acumulados por `deltaMs`, sin mesa ni movimiento todavía; test puro sobre el
-      conteo tras N ms simulados).
-- [ ] Paso 4 — `NpcController` deja de crear el `Npc`: lee spawns nuevos en `state.customers` y
-      sigue animando la entrada con el tween actual — este paso resuelve, solo para el spawn, la
-      pregunta de qué reloj manda (sistema vs. tween).
-- [ ] Paso 5 — Mover la asignación de mesa (`findFreeTable`/`getSeatForTable`) a
-      `CustomerSystem`; el renderer reacciona a un cambio de `customer.state`
-      (`walking`→`seated`) reproduciendo el tween de sentarse existente, en vez de que el tween
-      dispare el cambio de estado él mismo.
+M04 es un plan incremental de tareas pequeñas, cada una testeable y verificable por separado —
+trabajar siempre en la primera `M04.x` con estado pendiente, sin saltar pasos.
 
-Cada paso se prueba y el juego sigue jugable después de cada uno. Lo que **no** se toca en este
-proceso: `occupiedTables` (tarea de M06), las constantes de presentación del renderer, y
-`findFreeTable` leyendo el export de módulo en vez de recibir `furniture` por parámetro (cleanup
-de bajo riesgo, no bloqueante, para más adelante).
+---
 
-### Ya completado (heredado de los antiguos M01–M03)
+### M04.1 — Customer entity
+
+**Estado: completado.**
+
+- [x] Crear `Customer` en `core/` (`core/customers/customer.ts` + `customer-state.ts`).
+- [x] `Customer` independiente de Phaser.
+- [x] Estados iniciales definidos (`CustomerState = "walking" | "idle" | "seated"`).
+- [x] Tests creados (`customer.test.ts`: creación + los tres estados iniciales).
+
+Verificado: `pnpm test` (32/32) y `tsc --noEmit` limpios; `Npc`/`NpcState`/`NpcController`/
+`RestaurantScene`/rendering/`occupiedTables`/`findFreeTable` sin cambios.
+
+---
+
+### M04.2 — CustomerSystem base
+
+**Estado: completado.**
+
+**Objetivo:** crear el sistema de simulación de clientes.
+
+- [x] Crear `CustomerSystem` siguiendo el contrato `GameSystem` (`update(state, deltaMs)`,
+      sin depender de Phaser).
+- [x] Añadir `GameState.customers[]` (vacío en `createGameState`, mismo patrón que
+      `reputation`).
+- [x] Integrar `CustomerSystem` en `runSystems` (registrado en `RestaurantScene.systems`,
+      `main.ts`).
+- [x] No añadir todavía comportamiento — `CustomerSystem.update` es un no-op intencional, el
+      punto de extensión correcto para M04.3.
+
+**Player-visible outcome:** sin cambios visibles. La arquitectura queda preparada.
+
+Verificado: `pnpm test` (33/33) y `tsc --noEmit` limpios; `NpcController` intacto;
+`RestaurantScene` solo cambia para registrar el sistema.
+
+---
+
+### M04.3 — Customer spawning lógico
+
+**Objetivo:** crear clientes dentro de la simulación.
+
+- [ ] Crear función `spawnCustomer()`.
+- [ ] Añadir cliente a `GameState.customers`.
+- [ ] Definir posición inicial lógica (puerta del restaurante).
+- [ ] Crear tests de spawn.
+
+**No:** sprites; Phaser; movimiento visual.
+
+**Player-visible outcome:** todavía no hay cambio visual necesariamente.
+
+---
+
+### M04.4 — Customer rendering
+
+**Objetivo:** representar clientes existentes en Phaser.
+
+- [ ] Crear renderer separado (`CustomerRenderer`, o `game/npc/controller.ts` reducido a esto).
+- [ ] Leer `GameState.customers`.
+- [ ] Crear sprite cuando existe un `Customer` nuevo.
+- [ ] Actualizar posición visual desde el estado.
+
+**Regla:** el renderer nunca modifica `CustomerState` — solo lee `GameState` y dibuja.
+
+**Player-visible outcome:** el jugador puede ver clientes generados.
+
+---
+
+### M04.5 — Customer movement simulation
+
+**Objetivo:** mover clientes mediante simulación.
+
+- [ ] Añadir `target` position al `Customer`.
+- [ ] Añadir velocidad.
+- [ ] Actualizar posición mediante `deltaMs` en `CustomerSystem`.
+- [ ] Detectar llegada al objetivo (dentro de la simulación, no vía callback de Phaser).
+- [ ] Crear tests de movimiento lógico.
+
+**No usar:** tween de Phaser como fuente de verdad de la posición.
+
+**Player-visible outcome:** los clientes se desplazan correctamente.
+
+---
+
+### M04.6 — Find and reserve table
+
+**Objetivo:** un cliente puede encontrar mesa.
+
+- [ ] Integrar `findFreeTable`/`getSeatForTable` en `CustomerSystem`.
+- [ ] Asignar `tableId` al `Customer`.
+- [ ] Evitar doble asignación de la misma mesa.
+- [ ] Mantener reservas consistentes con el `occupiedTables` actual.
+
+**No solucionar todavía:** sistema completo de reservas; `occupiedTables` definitivo (eso es
+M06).
+
+**Player-visible outcome:** el cliente tiene una mesa asignada.
+
+---
+
+### M04.7 — Sit down state
+
+**Objetivo:** cliente sentado.
+
+- [ ] Añadir transición `walking → seated` en la simulación (`CustomerSystem`/
+      `customer-state.ts`), no en un `onComplete` de tween.
+- [ ] Asociar el cliente con su mesa (`tableId`).
+- [ ] Liberar el movimiento (el cliente deja de tener `target` activo).
+- [ ] Preparar el terreno para estados futuros (`waiting`, `eating`, etc. de milestones
+      posteriores).
+
+**Player-visible outcome:** el cliente llega y se sienta.
+
+---
+
+### M04.8 — Stay timer and leaving
+
+**Objetivo:** cliente permanece un tiempo y abandona.
+
+- [ ] Añadir timer de "stay" (placeholder fijo, sin comida/pedido todavía — es un
+      `balancing_value` a confirmar antes de escribirlo en código).
+- [ ] Agregar estado `leaving` y la infraestructura genérica de salida (caminar hacia la
+      puerta y despawnear al llegar; reutilizable — M05, M09 y M15 la reusan sin duplicarla).
+- [ ] Movimiento lógico hacia la salida (reutiliza M04.5).
+- [ ] Eliminación del cliente de `GameState.customers` cuando sale.
+
+**No implementar todavía:** pedidos; comida; pagos; satisfacción.
+
+**Player-visible outcome:** el restaurante tiene clientes que entran, usan una mesa y salen.
+
+---
+
+### M04 scope boundaries
+
+Fuera de alcance — pertenecen a milestones posteriores:
+
+- pedidos;
+- camareros;
+- cocina;
+- recetas;
+- pagos;
+- paciencia;
+- colas;
+- reputación dinámica;
+- `occupiedTables` refactor completo.
+
+**Completion criteria (milestone completo):** `pnpm test` en verde con los tests de cada
+subpaso M04.1–M04.8; en el navegador un cliente completa el ciclo entra → encuentra mesa → se
+sienta → se queda → se va, sin intervención manual.
+
+---
+
+### Historial heredado (pre-reordenamiento, ya en producción)
+
+*Trabajo de infraestructura ya completado antes de que M03.5 definiera el plan M04.1–M04.8 de
+arriba — no forma parte de esa secuencia, se mantiene como registro histórico.*
 
 - [x] Agregar `id` a cada elemento de `Furniture`.
 - [x] Agregar `tableId` a las sillas, asociándolas a su mesa.
@@ -279,25 +405,6 @@ de bajo riesgo, no bloqueante, para más adelante).
 - [x] Animación de múltiples NPCs activos en simultáneo: cada uno recibe su propio tween
       de entrada/asiento al spawnear, gestionado por Phaser.
 - [x] Confirmar visualmente: 2+ clientes entrando y sentándose en mesas distintas.
-
-### Pendiente: quedarse y salir
-
-- [ ] Agregar estado `leaving` a `NpcState` y la infraestructura genérica de salida:
-      caminar hacia la puerta y despawnear al llegar (reutilizable; M05, M09 y M15 la
-      reusan sin duplicarla).
-- [ ] Temporizador fijo de "stay" (tiempo que el NPC permanece sentado antes de irse) —
-      placeholder mínimo, sin comida/pedido todavía.
-- [ ] Al vencer el temporizador de stay, el NPC dispara la transición a `leaving`.
-- [ ] Al entrar en `leaving`, liberar la mesa ocupada (placeholder simple; M06 lo
-      robustece con el módulo de reservas).
-- [ ] Confirmar visualmente: un cliente entra, se sienta, permanece un tiempo fijo, y se
-      va por la puerta.
-
-**Player-visible outcome:** el jugador ve un cliente entrar, sentarse en una mesa, quedarse
-un rato y luego irse por la puerta.
-
-**Completion criteria:** `pnpm test` en verde (13/13 heredados + nuevos); en el navegador
-un cliente completa el ciclo entrar→sentarse→quedarse→salir sin intervención manual.
 
 ---
 

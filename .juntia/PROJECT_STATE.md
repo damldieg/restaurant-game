@@ -13,9 +13,10 @@ simulation loop; milestone numbers below refer to that new order, not the old on
 
 M01 (furniture catalog/construction), M02 (economy foundation), M02.5 (core simulation
 foundation), M03 (reputation foundation), and M03.5 (customer architecture review) are done.
-M04 (basic customer lifecycle) is in progress — steps 1–2 of 5 of the confirmed incremental plan
+M04 (basic customer lifecycle) is in progress — `docs/MILESTONES.md`'s M04 section is now an
+M04.1–M04.8 incremental plan (plus an explicit "scope boundaries" list); M04.1 and M04.2 are
 done. `pnpm test`: 33/33 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with
-Playwright screenshots (M04 steps 1–2 have no visual surface — see below).
+Playwright screenshots (M04.1–M04.2 have no visual surface — see below).
 
 **Architecture (M02.5 — see `.juntia/ARCHITECTURE.md` for the full picture):**
 
@@ -64,34 +65,35 @@ subfolder in `core/`) + `GameState.customers: Customer[]` + `systems/customer-sy
 pure reader of `state.customers`; (2) the ownership principle — simulation (`GameState`/
 `CustomerSystem`) is the sole source of truth for customer state, Phaser never drives a state
 transition via tween/callback, only renders whatever `GameState` already says. `docs/
-MILESTONES.md`'s M04 section carries the 5-step incremental plan to get there. Nothing
-implemented — `NpcState` still only has `walking | idle | seated`; an NPC that sits down stays
-there indefinitely; a table placed via construction mode is not yet picked up by
+MILESTONES.md`'s M04 section carries the resulting M04.1–M04.8 incremental plan (plus a "scope
+boundaries" list of what's explicitly out for later milestones). Nothing implemented yet at the
+time — `NpcState` still only has `walking | idle | seated`; an NPC that sits down stays there
+indefinitely; a table placed via construction mode is not yet picked up by
 `NpcController`/`findFreeTable` as seatable; `occupiedTables` is untouched (still M06's job).
 
-**M04 step 1 (Customer entity):** `src/core/customers/` (new subfolder, per M03.5's confirmed
+**M04.1 (Customer entity) — done:** `src/core/customers/` (new subfolder, per M03.5's confirmed
 decision) holds `customer-state.ts` (`CustomerState = "walking" | "idle" | "seated"`, no
 transitions implemented yet) and `customer.ts` (`Customer { id, position, state }`,
 `createCustomer`) — a pure simulation entity with zero Phaser dependency, tested in
 `customer.test.ts` (creation + all three initial states). `target`/`tableId` are documented as
 future fields in a code comment, not implemented.
 
-**M04 step 2 / M04.2 (CustomerSystem base + GameState integration):** `GameState` gained
+**M04.2 (CustomerSystem base + GameState integration) — done:** `GameState` gained
 `customers: Customer[]` (empty in `createGameState`, same pattern as `reputation`).
 `systems/customer-system.ts` — `CustomerSystem implements GameSystem`, `update(state, deltaMs)`,
 zero Phaser dependency, registered in `RestaurantScene.systems` (`main.ts`) alongside
 `ReputationSystem` — so `state.customers` now has an official place to be updated every frame via
 `runSystems`. `CustomerSystem.update` is intentionally a no-op today (tested: doesn't throw,
-`state.customers` stays empty) — a correct extension point for step 3's spawn logic, not a
+`state.customers` stays empty) — a correct extension point for M04.3's spawn logic, not a
 placeholder that does anything yet. Deliberately isolated: `Npc`/`NpcState`, `NpcController`, and
 `occupiedTables`/`findFreeTable` are all untouched — nothing about existing NPC behavior changed;
 `main.ts`'s only change is the two-line system registration.
 
 ## Next known step
 
-M04 step 3 — give `CustomerSystem` spawn responsibility: push a new `Customer` at the door
-position into `state.customers` on a `deltaMs`-accumulated timer, no table/movement logic yet
-(`docs/MILESTONES.md`'s M04 section has the full 5-step plan). The stay-timer duration (needed
-once "quedarse y salir" is reached, later in M04) is a separate new `balancing_value` decision to
-confirm before writing it into code — not needed for step 3. The spawn interval itself may also
-need a confirmed value once step 3 starts.
+M04.3 — Customer spawning lógico: `spawnCustomer()`, adds a `Customer` to `GameState.customers`
+at a logical starting position, no sprites/Phaser/visual movement (`docs/MILESTONES.md`'s M04
+section has the full M04.1–M04.8 plan). The stay-timer duration (needed once M04.8 "stay timer
+and leaving" is reached) is a separate new `balancing_value` decision to confirm before writing
+it into code — not needed for M04.3. The spawn interval/cadence itself may also need a confirmed
+value once M04.3 starts.
