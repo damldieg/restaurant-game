@@ -103,6 +103,23 @@ spawn loops now run side by side (Phaser's visible NPCs via `NpcController`, and
 simulated `Customer`s via `CustomerSystem`), which is expected until M04.4 gives `Customer` a
 renderer.
 
+**Repository governance:** `main` is branch-protected on GitHub. `.github/workflows/ci.yml`
+(new) runs `pnpm install --frozen-lockfile` → `pnpm test` → `pnpm build` as the `build-and-test`
+check, required and kept up-to-date-with-`main` (`strict: true`) before merge. Merge policy on
+`main`: every change needs a PR (no direct pushes), at least 1 approval (stale approvals
+dismissed on new commits), the `build-and-test` check passing, and all PR conversations
+resolved; force pushes and branch deletion are blocked. `enforce_admins` is on, so none of this
+is bypassable, including by repo admins. No linter is configured in this project (no ESLint or
+similar in `package.json`/lockfile) — deliberately not added as a side effect of setting this up,
+since a new dependency and tooling choice needs its own call, not a silent pick.
+
+**Known limitation:** this is a solo-maintained repo, and GitHub blocks a PR author from
+approving their own PR. With `required_approving_review_count: 1` and no other collaborator, no
+PR — including the one that added this very note — can be merged through the UI without either a
+second GitHub account/collaborator reviewing it, or relaxing the rule (e.g., temporarily dropping
+the approval requirement, or adding a bypass actor in a repository ruleset). Not fixed here since
+it's a real judgment call, not an implementation detail.
+
 ## Next known step
 
 M04.4 — Customer rendering: a dedicated renderer (`CustomerRenderer`, or `game/npc/controller.ts`
