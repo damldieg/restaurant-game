@@ -166,6 +166,38 @@
       "source": "human",
       "confirmedAt": "2026-08-20T18:30:42.945Z",
       "status": "active"
+    },
+    {
+      "id": "42dd544d44",
+      "type": "architecture",
+      "question": "¿Cómo debe convivir la reputación por eventos de clientes (M05: penalización por abandono, recompensa por ciclo completo) con ReputationSystem, que hoy recalcula state.reputation desde cero (solo mobiliario) en cada frame?",
+      "context": "M05 requiere aplicar una penalización única de reputación al abandono por espera de mesa y una recompensa única al completar el ciclo normalmente (ver docs/MILESTONES.md, sección M05). Hoy ReputationSystem.update sobreescribe state.reputation cada frame con calculateTotalReputation(state.furniture, FURNITURE_CATALOG), sin ningún acumulador — cualquier delta puntual aplicado directamente sobre state.reputation se perdería en el siguiente frame. Es un data_model_change (cambia la forma de GameState), trigger bloqueante.",
+      "options": [
+        "GameState.reputationAdjustments acumulador (recomendado): nuevo campo GameState.reputationAdjustments: number; ReputationSystem.update pasa a ser state.reputation = calculateTotalReputation(furniture) + reputationAdjustments; CustomerSystem escribe el acumulador una vez por evento de salida. Un solo número de reputación, HUD sin cambios.",
+        "Dos números de reputación separados: GameState gana un campo aparte (p.ej. serviceReputation) para los eventos de clientes, sin fusionarlo con el reputation actual derivado de mobiliario.",
+        "ReputationSystem pasa a conocer a los clientes: se extiende para leer state.customers directamente y detectar las salidas él mismo, quedando como dueño único de toda la lógica de reputación (mobiliario + clientes)."
+      ],
+      "evidence": [],
+      "reason": "Cambia la forma de GameState (data_model_change) de forma difícil de revertir una vez que código/tests dependan de la forma elegida — requiere confirmación humana antes de implementar M05.",
+      "text": "GameState.reputationAdjustments acumulador (recomendado): nuevo campo GameState.reputationAdjustments: number; ReputationSystem.update pasa a ser state.reputation = calculateTotalReputation(furniture) + reputationAdjustments; CustomerSystem escribe el acumulador una vez por evento de salida. Un solo número de reputación, HUD sin cambios.",
+      "source": "human",
+      "confirmedAt": "2026-08-20T19:55:51.730Z",
+      "status": "active"
+    },
+    {
+      "id": "a119c6163c",
+      "type": "architecture",
+      "question": "¿Quién es dueño de los eventos del ciclo de vida del Customer (las transiciones que disparan cambios de reputación) y qué límite de responsabilidad separa a CustomerSystem de ReputationSystem en M05 y milestones futuros?",
+      "context": "M05 introduce reputación derivada de eventos de clientes (abandono por espera, ciclo completado), aplicada vía el acumulador GameState.reputationAdjustments ya confirmado. Falta formalizar, como principio propio y citable (no solo como consecuencia implícita de esa decisión), quién tiene permitido escribir ese acumulador y quién tiene prohibido inspeccionar state.customers — para que M09/M11/M15 (que también agregarán eventos de ciclo de vida) lo respeten sin tener que re-derivarlo.",
+      "options": [
+        "Customer lifecycle events ownership: los eventos del ciclo de vida del Customer son emitidos únicamente por las transiciones de CustomerSystem; ReputationSystem no inspecciona state.customers ni conoce clientes; CustomerSystem aplica reputationAdjustments solo cuando detecta una transición válida del ciclo de vida del cliente. Separación de responsabilidades: CustomerSystem es dueño de las transiciones y eventos del ciclo de vida del cliente; ReputationSystem es dueño exclusivamente del cálculo de reputación agregada (mobiliario + reputationAdjustments); GameState.reputationAdjustments es el acumulador de eventos dinámicos entre ambos."
+      ],
+      "evidence": [],
+      "reason": "Formaliza un límite de módulo (module_boundary) que varios milestones futuros (M09, M11, M15) dependerán respetar; difícil de revertir una vez que ReputationSystem u otro sistema empiece a inspeccionar customers directamente — requiere confirmación humana antes de implementar M05.4.",
+      "text": "Customer lifecycle events ownership: los eventos del ciclo de vida del Customer son emitidos únicamente por las transiciones de CustomerSystem; ReputationSystem no inspecciona state.customers ni conoce clientes; CustomerSystem aplica reputationAdjustments solo cuando detecta una transición válida del ciclo de vida del cliente. Separación de responsabilidades: CustomerSystem es dueño de las transiciones y eventos del ciclo de vida del cliente; ReputationSystem es dueño exclusivamente del cálculo de reputación agregada (mobiliario + reputationAdjustments); GameState.reputationAdjustments es el acumulador de eventos dinámicos entre ambos.",
+      "source": "human",
+      "confirmedAt": "2026-08-20T20:00:31.634Z",
+      "status": "active"
     }
   ]
 }
