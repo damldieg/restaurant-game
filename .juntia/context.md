@@ -14,3 +14,4 @@ this automatically) after a new decision is confirmed.
 ## Confirmed decisions
 
 - Mesa 100 / Silla 25 (product decision, confirmed 2026-08-20)
+- $500 (product decision, confirmed 2026-08-20)

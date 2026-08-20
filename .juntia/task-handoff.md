@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implement M01: furniture catalog and construction (FurnitureDefinition, purchasable furniture)","generatedAt":"2026-08-20T11:38:46.564Z"} -->
+<!-- juntia:task-meta {"text":"Implement M02: economy foundation (real money state, HUD display, canAfford, deduct price on placement, block placement without funds)","generatedAt":"2026-08-20T11:54:15.629Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,7 +7,7 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implement M01: furniture catalog and construction (FurnitureDefinition, purchasable furniture)
+> Implement M02: economy foundation (real money state, HUD display, canAfford, deduct price on placement, block placement without funds)
 
 ## Task Status
 
@@ -55,12 +55,13 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-- Q: "¿Qué precio tiene cada tipo de mueble en el catálogo de M01 (mesa, silla)?" -> CONFIRMED: Mesa 100 / Silla 25 (product decision, 2026-08-20)
-  (options on the table when asked: Mesa 50 / Silla 15, Mesa 100 / Silla 25, Mesa 40 / Silla 10)
+- Q: "¿Cuánto dinero inicial (money) tiene el jugador al arrancar la partida?" -> CONFIRMED: $500 (product decision, 2026-08-20)
+  (options on the table when asked: $300, $150, $500)
 
 Already known when this task started:
 
-None of this workflow's own decision type(s) had a confirmed decision yet.
+- Q: "¿Qué precio tiene cada tipo de mueble en el catálogo de M01 (mesa, silla)?" -> CONFIRMED: Mesa 100 / Silla 25 (product decision, 2026-08-20)
+  (options on the table when asked: Mesa 50 / Silla 15, Mesa 100 / Silla 25, Mesa 40 / Silla 10)
 
 ## Agent Context
 

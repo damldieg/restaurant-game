@@ -85,13 +85,14 @@ grid.
 
 *Depende de: M01 (necesita algo que comprar).*
 
-- [ ] `money` como estado real del juego (no solo texto), con un valor inicial.
-- [ ] Mostrar `money` en el HUD.
-- [ ] Función pura `canAfford(money, price)`.
-- [ ] Test: `canAfford` con fondos suficientes e insuficientes.
-- [ ] Al confirmar una colocación (M01), descontar el precio del mueble de `money`.
-- [ ] Impedir la colocación si no alcanza el dinero (usar `canAfford`).
-- [ ] Confirmar visualmente: comprar una mesa descuenta dinero visible en el HUD; sin
+- [x] `money` como estado real del juego (no solo texto), con un valor inicial. ($500 —
+      decisión confirmada, ver `.juntia/DECISIONS.md`.)
+- [x] Mostrar `money` en el HUD.
+- [x] Función pura `canAfford(money, price)`.
+- [x] Test: `canAfford` con fondos suficientes e insuficientes.
+- [x] Al confirmar una colocación (M01), descontar el precio del mueble de `money`.
+- [x] Impedir la colocación si no alcanza el dinero (usar `canAfford`).
+- [x] Confirmar visualmente: comprar una mesa descuenta dinero visible en el HUD; sin
       fondos suficientes, la compra queda bloqueada.
 
 **Player-visible outcome:** el jugador ve su dinero en el HUD, puede comprar y colocar una
