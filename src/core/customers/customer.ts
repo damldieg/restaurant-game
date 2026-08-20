@@ -18,6 +18,12 @@ export const CUSTOMER_SPEED_TILES_PER_SEC = 1.5;
 // .juntia/DECISIONS.md).
 export const STAY_DURATION_MS = 10_000;
 
+// Único motivo de espera implementado por ahora (M05.1) — el pedido
+// original lo describe como el único mecanismo de espera del juego, para
+// que M09/M11 reutilicen el mismo campo con `"order"`/`"food"` en vez de
+// duplicar la infraestructura, sin necesidad de anticiparlos hoy.
+export type WaitReason = "table";
+
 export interface Customer {
   id: string;
   position: GridPosition;
@@ -27,6 +33,12 @@ export interface Customer {
   // Cuenta regresiva de M04.8 mientras está "seated"; null en cualquier
   // otro estado (todavía no se sentó, o ya se está yendo).
   stayRemainingMs: number | null;
+  // M05.1 — motivo de espera; null salvo mientras está "waiting". Todavía
+  // no hay ningún código que fije `state: "waiting"` (eso llega en M05.2).
+  waitReason: WaitReason | null;
+  // M05.1 — cuenta regresiva de paciencia mientras está "waiting", mismo
+  // patrón que `stayRemainingMs`; null en cualquier otro estado.
+  waitRemainingMs: number | null;
 }
 
 export function createCustomer(
@@ -35,9 +47,20 @@ export function createCustomer(
   state: CustomerState = "idle",
   target: GridPosition | null = null,
   tableId: string | null = null,
-  stayRemainingMs: number | null = null
+  stayRemainingMs: number | null = null,
+  waitReason: WaitReason | null = null,
+  waitRemainingMs: number | null = null
 ): Customer {
-  return { id, position, state, target, tableId, stayRemainingMs };
+  return {
+    id,
+    position,
+    state,
+    target,
+    tableId,
+    stayRemainingMs,
+    waitReason,
+    waitRemainingMs,
+  };
 }
 
 // Posición lógica de la puerta del restaurante — mismo cálculo que usa

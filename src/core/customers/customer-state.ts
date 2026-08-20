@@ -1,1 +1,1 @@
-export type CustomerState = "walking" | "idle" | "seated" | "leaving";
+export type CustomerState = "walking" | "idle" | "seated" | "leaving" | "waiting";
