@@ -1,10 +1,10 @@
 import Phaser from "phaser";
 import { TILE_SIZE, gridToWorldCenter, worldToGridPosition, type GridPosition } from "./game/grid";
-import { RESTAURANT_COLS, RESTAURANT_ROWS, furniture, type Furniture } from "./game/restaurant";
+import { RESTAURANT_COLS, RESTAURANT_ROWS, furniture, type Furniture } from "./core/restaurant";
 import { NpcController } from "./game/npc/controller";
-import { FURNITURE_CATALOG } from "./game/furniture-catalog";
-import { isValidPlacement } from "./game/placement";
-import { canAfford } from "./game/economy";
+import { FURNITURE_CATALOG } from "./core/furniture-catalog";
+import { isValidPlacement } from "./core/placement";
+import { canAfford } from "./core/economy";
 
 const NPC_SPAWN_INTERVAL_MS = 2500;
 const INITIAL_MONEY = 500;

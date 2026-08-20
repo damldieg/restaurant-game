@@ -1,4 +1,4 @@
-import { samePosition, type GridPosition } from "./grid";
+import { samePosition, type GridPosition } from "../game/grid";
 
 export const RESTAURANT_COLS = 20;
 export const RESTAURANT_ROWS = 14;

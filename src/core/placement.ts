@@ -1,4 +1,4 @@
-import { samePosition, type GridPosition } from "./grid";
+import { samePosition, type GridPosition } from "../game/grid";
 import type { Furniture } from "./restaurant";
 
 export interface PlacementBounds {
