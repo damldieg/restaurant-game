@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M04.5: Customer movement simulation — agregar target y speed a Customer, mover por deltaMs dentro de CustomerSystem, detección de llegada en la simulación","generatedAt":"2026-08-20T17:25:21.416Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M04.6: Find and reserve table — integrar findFreeTable/getSeatForTable en CustomerSystem, asignar tableId al Customer, evitar doble asignación de la misma mesa","generatedAt":"2026-08-20T17:51:33.962Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,14 +7,11 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M04.5: Customer movement simulation — agregar target y speed a Customer, mover por deltaMs dentro de CustomerSystem, detección de llegada en la simulación
+> Implementar M04.6: Find and reserve table — integrar findFreeTable/getSeatForTable en CustomerSystem, asignar tableId al Customer, evitar doble asignación de la misma mesa
 
 ## Task Status
 
-READY_TO_CONTINUE
-
-A decision that was blocking part of this task has just been confirmed — see "Confirmed decisions"
-below for the real answer, then continue the work that was waiting on it.
+ACTIVE
 
 Task type: Feature
 Confidence: 0.9
@@ -55,8 +52,7 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-- Q: "¿Qué velocidad de caminata deben tener los Customer en la simulación (M04.5)?" -> CONFIRMED: 1.5 tiles/seg (más lento, más 'paseo') (product decision, 2026-08-20)
-  (options on the table when asked: 2.5 tiles/seg (equivalente al ritmo visual anterior), 1.5 tiles/seg (más lento, más 'paseo'), 4 tiles/seg (más rápido, más ágil))
+None yet.
 
 Already known when this task started:
 
@@ -76,6 +72,8 @@ Already known when this task started:
   (options on the table when asked: La simulación (GameState/CustomerSystem, vía update(deltaMs)) es la única fuente de verdad del estado de los clientes; Phaser NO controla transiciones de estado mediante tweens, callbacks ni eventos visuales — solo representa el estado actual (sprites, animaciones, interpolación visual, efectos). Motivo: permite tests sin Phaser, simulación acelerada, guardado/carga futuro, y separación real entre lógica y visualización.)
 - Q: "¿M04.3 debe activar spawn automático de Customer en CustomerSystem.update(), y con qué intervalo?" -> CONFIRMED: Sí, spawn automático continuo en CustomerSystem.update(), mismo intervalo que NpcController hoy (2500ms) — mantiene el ritmo de llegada ya establecido en el juego, ahora simulado en paralelo sin renderizar todavía (product decision, 2026-08-20)
   (options on the table when asked: Sí, spawn automático continuo en CustomerSystem.update(), mismo intervalo que NpcController hoy (2500ms) — mantiene el ritmo de llegada ya establecido en el juego, ahora simulado en paralelo sin renderizar todavía, Sí, spawn automático continuo, pero con un intervalo propio distinto al de NpcController, No todavía — M04.3 solo expone spawnCustomer() como función pura y testeable; activar el timer real en CustomerSystem queda para un paso posterior)
+- Q: "¿Qué velocidad de caminata deben tener los Customer en la simulación (M04.5)?" -> CONFIRMED: 1.5 tiles/seg (más lento, más 'paseo') (product decision, 2026-08-20)
+  (options on the table when asked: 2.5 tiles/seg (equivalente al ritmo visual anterior), 1.5 tiles/seg (más lento, más 'paseo'), 4 tiles/seg (más rápido, más ágil))
 
 ## Agent Context
 
@@ -131,7 +129,7 @@ The same information above, structured for programmatic use — navigation, neve
     ".juntia/context.md",
     ".juntia/governance/workflows/feature-development.md"
   ],
-  "taskStatus": "READY_TO_CONTINUE"
+  "taskStatus": "ACTIVE"
 }
 ```
 

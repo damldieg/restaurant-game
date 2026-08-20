@@ -50,14 +50,37 @@ describe("CustomerSystem", () => {
     expect(state.customers[0].target).not.toBeNull();
   });
 
-  it("moves a customer to idle once it reaches its target", () => {
+  it("assigns a free table once a customer reaches the entry target", () => {
     const state = createGameState(500, 0);
     const system = new CustomerSystem();
 
     system.update(state, SPAWN_INTERVAL_MS);
-    system.update(state, 60_000);
 
-    expect(state.customers[0].state).toBe("idle");
-    expect(state.customers[0].target).toBeNull();
+    expect(state.customers[0].tableId).not.toBeNull();
+    expect(state.customers[0].target).not.toBeNull();
+    expect(state.customers[0].state).toBe("walking");
+  });
+
+  it("assigns distinct tables to multiple customers arriving in the same update", () => {
+    const state = createGameState(500, 0);
+
+    new CustomerSystem().update(state, SPAWN_INTERVAL_MS * 2);
+
+    expect(state.customers).toHaveLength(2);
+    const tableIds = state.customers.map((customer) => customer.tableId);
+    expect(tableIds.every((id) => id !== null)).toBe(true);
+    expect(new Set(tableIds).size).toBe(2);
+  });
+
+  it("leaves a customer idle without a table once every table is taken", () => {
+    const state = createGameState(500, 0);
+
+    new CustomerSystem().update(state, SPAWN_INTERVAL_MS * 3);
+
+    expect(state.customers).toHaveLength(3);
+    const withoutTable = state.customers.filter((customer) => customer.tableId === null);
+    expect(withoutTable).toHaveLength(1);
+    expect(withoutTable[0].state).toBe("idle");
+    expect(withoutTable[0].target).toBeNull();
   });
 });
