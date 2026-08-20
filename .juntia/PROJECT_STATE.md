@@ -11,9 +11,9 @@ Mark anything not yet determined as `UNKNOWN` rather than guessing or silently o
 `docs/MILESTONES.md` was reordered so construction/economy/reputation come before the customer
 simulation loop; milestone numbers below refer to that new order, not the old one.
 
-M01 (furniture catalog/construction), M02 (economy foundation), and M02.5 (core simulation
-foundation) are done and verified (`pnpm test`: 23/23 passing; `tsc --noEmit` clean; all
-verified in-browser with Playwright screenshots).
+M01 (furniture catalog/construction), M02 (economy foundation), M02.5 (core simulation
+foundation), and M03 (reputation foundation) are done and verified (`pnpm test`: 27/27
+passing; `tsc --noEmit` clean; all verified in-browser with Playwright screenshots).
 
 **Architecture (M02.5 — see `.juntia/ARCHITECTURE.md` for the full picture):**
 
@@ -44,18 +44,22 @@ has no placement mode yet, since it needs a `tableId` no task through M02.5 coll
 starts at $500 (confirmed decision), shown in the HUD, deducted via `canAfford` on each confirmed
 placement; placement is blocked whenever the player can't afford the selected item.
 
-M03 (reputation foundation) is not started — `reputation` is still a fixed HUD placeholder.
-M04's remaining tasks (stay timer, `leaving` state, walk to door and despawn) are also not
-started — `NpcState` still only has `walking | idle | seated`; an NPC that sits down stays there
+**M03 (reputation foundation):** `reputation` is real `GameState` (initial value 0 — confirmed
+decision), shown in the HUD. `FurnitureDefinition` in the catalog carries a `reputation` value
+per type (Mesa +3 / Silla +1 — confirmed decision). `core/reputation.ts` exports the pure
+`calculateTotalReputation(furniture, catalog)`. `systems/reputation-system.ts` is the first real
+`GameSystem` — `ReputationSystem.update` recalculates `state.reputation` from `state.furniture`
+every frame, so placing a table/chair (or the 2 starter tables + 2 starter chairs already in
+`restaurant.ts`) is reflected in the HUD without any placement-site-specific recalculation code.
+
+M04's remaining tasks (stay timer, `leaving` state, walk to door and despawn) are not started —
+`NpcState` still only has `walking | idle | seated`; an NPC that sits down stays there
 indefinitely. A table placed via the construction mode is not yet picked up by
 `NpcController`/`findFreeTable` as seatable.
 
 ## Next known step
 
-M03 — Reputation foundation (`docs/MILESTONES.md`). First unblocked task: `reputation` as real
-game state with an initial value (belongs on `GameState`, following M02.5's pattern — not a new
-scene field), then a reputation value added to each `FurnitureDefinition` in the catalog — both
-are new `balancing_value` decisions to confirm before writing them into code. The pure
-reputation-total calculation is a natural first candidate for a real `GameSystem`, or can start
-as a plain function in `core/` and become one later — worth a quick call when M03 starts, not
-predicted here.
+M04 — remaining tasks: "quedarse y salir" (`docs/MILESTONES.md`). First unblocked task: add
+`leaving` to `NpcState` plus the reusable walk-to-door-and-despawn infrastructure that M05/M09/M15
+will also use, then a fixed stay timer that triggers the transition. The stay-timer duration is a
+new `balancing_value` decision to confirm before writing it into code.

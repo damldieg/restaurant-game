@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implement M02: economy foundation (real money state, HUD display, canAfford, deduct price on placement, block placement without funds)","generatedAt":"2026-08-20T11:54:15.629Z"} -->
+<!-- juntia:task-meta {"text":"Implementemo M03: reputation foundation","generatedAt":"2026-08-20T15:10:21.740Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,7 +7,7 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implement M02: economy foundation (real money state, HUD display, canAfford, deduct price on placement, block placement without funds)
+> Implementemo M03: reputation foundation
 
 ## Task Status
 
@@ -55,15 +55,19 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-- Q: "¿Cuánto dinero inicial (money) tiene el jugador al arrancar la partida?" -> CONFIRMED: $500 (product decision, 2026-08-20)
-  (options on the table when asked: $300, $150, $500)
-- Q: "¿Qué arquitectura separa el core del juego de Phaser antes de M03 (M02.5)?" -> CONFIRMED: GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts). (architecture decision, 2026-08-20)
-  (options on the table when asked: GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts).)
+- Q: "¿Cuál es el valor inicial de reputación del restaurante al arrancar la partida?" -> CONFIRMED: 0 (product decision, 2026-08-20)
+  (options on the table when asked: 0, 50, 100)
+- Q: "¿Qué valor de reputación aporta cada tipo de mueble del catálogo (mesa, silla) al colocarlo?" -> CONFIRMED: Mesa +3 / Silla +1 (product decision, 2026-08-20)
+  (options on the table when asked: Mesa +5 / Silla +1, Mesa +10 / Silla +2, Mesa +3 / Silla +1)
 
 Already known when this task started:
 
 - Q: "¿Qué precio tiene cada tipo de mueble en el catálogo de M01 (mesa, silla)?" -> CONFIRMED: Mesa 100 / Silla 25 (product decision, 2026-08-20)
   (options on the table when asked: Mesa 50 / Silla 15, Mesa 100 / Silla 25, Mesa 40 / Silla 10)
+- Q: "¿Cuánto dinero inicial (money) tiene el jugador al arrancar la partida?" -> CONFIRMED: $500 (product decision, 2026-08-20)
+  (options on the table when asked: $300, $150, $500)
+- Q: "¿Qué arquitectura separa el core del juego de Phaser antes de M03 (M02.5)?" -> CONFIRMED: GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts). (architecture decision, 2026-08-20)
+  (options on the table when asked: GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts).)
 
 ## Agent Context
 

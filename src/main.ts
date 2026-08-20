@@ -7,9 +7,11 @@ import { isValidPlacement } from "./core/placement";
 import { canAfford } from "./core/economy";
 import { createGameState, type GameState } from "./state/game-state";
 import { runSystems, type GameSystem } from "./systems/game-system";
+import { ReputationSystem } from "./systems/reputation-system";
 
 const NPC_SPAWN_INTERVAL_MS = 2500;
 const INITIAL_MONEY = 500;
+const INITIAL_REPUTATION = 0;
 
 // Provisional: por ahora solo la mesa tiene una forma de instancia que
 // `isValidPlacement`+confirmación pueden crear sin datos adicionales (una
@@ -36,11 +38,10 @@ class RestaurantScene extends Phaser.Scene {
   private placementActive = false;
   private previewRect!: Phaser.GameObjects.Rectangle;
   private placementText!: Phaser.GameObjects.Text;
-  private gameState: GameState = createGameState(INITIAL_MONEY);
+  private gameState: GameState = createGameState(INITIAL_MONEY, INITIAL_REPUTATION);
   private moneyText!: Phaser.GameObjects.Text;
-  // Vacía hasta que un milestone agregue su primer GameSystem real
-  // (reputación, clientes, cocina, empleados...).
-  private systems: GameSystem[] = [];
+  private reputationText!: Phaser.GameObjects.Text;
+  private systems: GameSystem[] = [new ReputationSystem()];
 
   create() {
     this.createRestaurant();
@@ -59,6 +60,7 @@ class RestaurantScene extends Phaser.Scene {
 
   update(_time: number, delta: number) {
     runSystems(this.gameState, delta, this.systems);
+    this.updateReputationDisplay();
   }
 
   private createPlacementMode() {
@@ -198,11 +200,12 @@ class RestaurantScene extends Phaser.Scene {
       color: "#ffffff",
     });
 
-    this.add.text(24, 55, "Día 1  •  Reputación: 0", {
+    this.reputationText = this.add.text(24, 55, "", {
       fontFamily: "monospace",
       fontSize: "16px",
       color: "#dddddd",
     });
+    this.updateReputationDisplay();
 
     this.moneyText = this.add.text(24, 80, "", {
       fontFamily: "monospace",
@@ -214,6 +217,10 @@ class RestaurantScene extends Phaser.Scene {
 
   private updateMoneyDisplay() {
     this.moneyText.setText(`Dinero: $${this.gameState.money}`);
+  }
+
+  private updateReputationDisplay() {
+    this.reputationText.setText(`Día 1  •  Reputación: ${this.gameState.reputation}`);
   }
 }
 
