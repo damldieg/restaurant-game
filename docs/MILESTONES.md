@@ -51,21 +51,24 @@ Ya implementado:
 
 *Primer milestone de trabajo real. Sin dependencias bloqueantes (usa M00).*
 
-- [ ] Crear catálogo de muebles comprables: `FurnitureDefinition { type, name, price }`
+- [x] Crear catálogo de muebles comprables: `FurnitureDefinition { type, name, price }`
       (ej. mesa, silla), separado de las instancias ya colocadas en el restaurante.
-- [ ] Definir el precio de cada tipo de mueble del catálogo.
-- [ ] Función pura `isValidPlacement(position, grid, existingFurniture)`: valida límites
+- [x] Definir el precio de cada tipo de mueble del catálogo. (Mesa 100 / Silla 25 —
+      decisión confirmada, ver `.juntia/DECISIONS.md`.)
+- [x] Función pura `isValidPlacement(position, grid, existingFurniture)`: valida límites
       del grid y colisión con muebles existentes.
-- [ ] Test: colocación dentro de límites y sin colisión es válida.
-- [ ] Test: colocación fuera de límites es inválida.
-- [ ] Test: colocación sobre un mueble existente es inválida.
-- [ ] Modo de colocación: seleccionar un tipo de mueble del catálogo (tecla o click
-      provisional, sin UI elaborada).
-- [ ] Preview del mueble siguiendo al cursor/celda antes de confirmar.
-- [ ] Cancelar colocación (ej. tecla Esc) sin agregar el mueble.
-- [ ] Confirmar colocación: agrega el mueble al mismo array `furniture` que ya usan
+- [x] Test: colocación dentro de límites y sin colisión es válida.
+- [x] Test: colocación fuera de límites es inválida.
+- [x] Test: colocación sobre un mueble existente es inválida.
+- [x] Modo de colocación: seleccionar un tipo de mueble del catálogo (tecla o click
+      provisional, sin UI elaborada). (Tecla `1` selecciona Mesa; Silla queda en el
+      catálogo con precio definido pero sin modo de colocación propio todavía, porque
+      requiere un `tableId` que ninguna tarea de M01 pide recolectar.)
+- [x] Preview del mueble siguiendo al cursor/celda antes de confirmar.
+- [x] Cancelar colocación (ej. tecla Esc) sin agregar el mueble.
+- [x] Confirmar colocación: agrega el mueble al mismo array `furniture` que ya usan
       NPCs/reservas (sin duplicar el modelo de datos existente).
-- [ ] Confirmar visualmente: el jugador puede previsualizar y colocar una mesa nueva en
+- [x] Confirmar visualmente: el jugador puede previsualizar y colocar una mesa nueva en
       una celda vacía.
 
 **Player-visible outcome:** el jugador elige una mesa del catálogo, ve una previsualización

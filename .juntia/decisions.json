@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "id": "9fff5ce9b0",
+      "type": "product",
+      "question": "¿Qué precio tiene cada tipo de mueble en el catálogo de M01 (mesa, silla)?",
+      "context": "M01 requiere un FurnitureDefinition { type, name, price } por tipo de mueble comprable. El precio es un valor de balance sin una respuesta objetivamente correcta (trigger balancing_value). Todavía no se gasta dinero real al colocar un mueble (eso llega en M02), pero el catálogo necesita el valor ahora.",
+      "options": [
+        "Mesa 50 / Silla 15",
+        "Mesa 100 / Silla 25",
+        "Mesa 40 / Silla 10"
+      ],
+      "evidence": [],
+      "reason": "balancing_value: valor numérico ajustable sin respuesta única correcta (decision-triggers.md)",
+      "text": "Mesa 100 / Silla 25",
+      "source": "human",
+      "confirmedAt": "2026-08-20T11:40:15.318Z",
+      "status": "active"
+    }
+  ]
+}

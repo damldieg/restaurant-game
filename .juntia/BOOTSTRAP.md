@@ -43,6 +43,17 @@ answer can continue. Once a human answers via `juntia confirm`, re-read `.juntia
 Status returns to normal and the real answer appears in "Confirmed decisions" — and resume from there. Do
 not try to predict every decision a feature will eventually need before you begin.
 
+A task handoff already exists at `.juntia/task-handoff.md` from a previous request — read its own
+"Task Status" first, before anything else. If it reads `WAITING_HUMAN_CONFIRMATION`, a decision is
+already blocking part of this task — resolve that before continuing (get the human's answer, run
+`juntia confirm`), even in a brand-new session with no memory of how it got there. Otherwise, it may
+already answer what you're about to ask `route` for; run `route` again only for a genuinely new request.
+
+If you are resuming mid-task, also re-read its own "Confirmed decisions" section before continuing —
+`juntia confirm` refreshes it automatically every time a human confirms a decision, and separates what
+was already known when this task started from what was confirmed since. Anything in the second group
+supersedes a provisional value you may have already chosen, even if it contradicts it.
+
 ## What else is here
 
 - `.juntia/governance/rules/agent-rules.md` — how to behave in this project, always applicable.

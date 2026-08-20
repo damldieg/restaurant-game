@@ -1,9 +1,17 @@
 import Phaser from "phaser";
-import { TILE_SIZE, gridToWorldCenter } from "./game/grid";
+import { TILE_SIZE, gridToWorldCenter, worldToGridPosition, type GridPosition } from "./game/grid";
 import { RESTAURANT_COLS, RESTAURANT_ROWS, furniture, type Furniture } from "./game/restaurant";
 import { NpcController } from "./game/npc/controller";
+import { FURNITURE_CATALOG } from "./game/furniture-catalog";
+import { isValidPlacement } from "./game/placement";
 
 const NPC_SPAWN_INTERVAL_MS = 2500;
+
+// Provisional: por ahora solo la mesa tiene una forma de instancia que
+// `isValidPlacement`+confirmación pueden crear sin datos adicionales (una
+// silla real necesita un `tableId`, que este modo de colocación todavía no
+// pide). El catálogo completo (con precios) ya existe para M02/M03.
+const PLACEABLE_DEFINITION = FURNITURE_CATALOG.find((item) => item.type === "table")!;
 
 // Cómo se dibuja cada tipo de mueble: es una decisión de renderizado
 // (Phaser), no de datos del juego, por eso vive aquí y no en game/restaurant.ts.
@@ -20,6 +28,10 @@ class RestaurantScene extends Phaser.Scene {
   private originX = 0;
   private originY = 0;
   private npcController!: NpcController;
+  private nextFurnitureId = 1;
+  private placementActive = false;
+  private previewRect!: Phaser.GameObjects.Rectangle;
+  private placementText!: Phaser.GameObjects.Text;
 
   create() {
     this.createRestaurant();
@@ -32,6 +44,88 @@ class RestaurantScene extends Phaser.Scene {
       RESTAURANT_ROWS
     );
     this.npcController.startSpawning(NPC_SPAWN_INTERVAL_MS);
+
+    this.createPlacementMode();
+  }
+
+  private createPlacementMode() {
+    const style = FURNITURE_STYLE[PLACEABLE_DEFINITION.type];
+
+    this.previewRect = this.add.rectangle(0, 0, style.size, style.size, style.color, 0.5);
+    this.previewRect.setVisible(false);
+
+    this.placementText = this.add.text(
+      24,
+      580,
+      `[1] Construir ${PLACEABLE_DEFINITION.name} ($${PLACEABLE_DEFINITION.price}) · Click: confirmar · Esc: cancelar`,
+      { fontFamily: "monospace", fontSize: "12px", color: "#dddddd" }
+    );
+    this.placementText.setVisible(false);
+
+    this.input.keyboard!.on("keydown-ONE", () => {
+      this.placementActive = true;
+      this.previewRect.setVisible(true);
+      this.placementText.setVisible(true);
+    });
+
+    this.input.keyboard!.on("keydown-ESC", () => {
+      this.cancelPlacement();
+    });
+
+    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      if (!this.placementActive) return;
+
+      const gridPosition = this.pointerToGridPosition(pointer);
+      const center = gridToWorldCenter(gridPosition, this.originX, this.originY);
+      const valid = isValidPlacement(
+        gridPosition,
+        { cols: RESTAURANT_COLS, rows: RESTAURANT_ROWS },
+        furniture
+      );
+
+      this.previewRect.setPosition(center.x, center.y);
+      this.previewRect.setFillStyle(valid ? 0x4caf50 : 0xe74c3c, 0.5);
+    });
+
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (!this.placementActive) return;
+
+      this.confirmPlacement(pointer);
+    });
+  }
+
+  private pointerToGridPosition(pointer: Phaser.Input.Pointer): GridPosition {
+    return worldToGridPosition(pointer.worldX, pointer.worldY, this.originX, this.originY);
+  }
+
+  private confirmPlacement(pointer: Phaser.Input.Pointer) {
+    const gridPosition = this.pointerToGridPosition(pointer);
+    const valid = isValidPlacement(
+      gridPosition,
+      { cols: RESTAURANT_COLS, rows: RESTAURANT_ROWS },
+      furniture
+    );
+
+    if (!valid) return;
+
+    furniture.push({
+      id: `table-${this.nextFurnitureId++}`,
+      type: "table",
+      position: gridPosition,
+    });
+
+    const center = gridToWorldCenter(gridPosition, this.originX, this.originY);
+    const style = FURNITURE_STYLE.table;
+
+    this.add.rectangle(center.x, center.y, style.size, style.size, style.color);
+
+    this.cancelPlacement();
+  }
+
+  private cancelPlacement() {
+    this.placementActive = false;
+    this.previewRect.setVisible(false);
+    this.placementText.setVisible(false);
   }
 
   private createRestaurant() {

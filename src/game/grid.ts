@@ -21,3 +21,16 @@ export function gridToWorldCenter(
     y: originY + position.row * TILE_SIZE + TILE_SIZE / 2,
   };
 }
+
+// Inversa de gridToWorldCenter: dado un punto del mundo, la celda de grid que lo contiene.
+export function worldToGridPosition(
+  worldX: number,
+  worldY: number,
+  originX: number,
+  originY: number
+): GridPosition {
+  return {
+    col: Math.floor((worldX - originX) / TILE_SIZE),
+    row: Math.floor((worldY - originY) / TILE_SIZE),
+  };
+}
