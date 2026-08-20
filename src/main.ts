@@ -6,6 +6,7 @@ import { FURNITURE_CATALOG } from "./core/furniture-catalog";
 import { isValidPlacement } from "./core/placement";
 import { canAfford } from "./core/economy";
 import { createGameState, type GameState } from "./state/game-state";
+import { runSystems, type GameSystem } from "./systems/game-system";
 
 const NPC_SPAWN_INTERVAL_MS = 2500;
 const INITIAL_MONEY = 500;
@@ -37,6 +38,9 @@ class RestaurantScene extends Phaser.Scene {
   private placementText!: Phaser.GameObjects.Text;
   private gameState: GameState = createGameState(INITIAL_MONEY);
   private moneyText!: Phaser.GameObjects.Text;
+  // Vacía hasta que un milestone agregue su primer GameSystem real
+  // (reputación, clientes, cocina, empleados...).
+  private systems: GameSystem[] = [];
 
   create() {
     this.createRestaurant();
@@ -51,6 +55,10 @@ class RestaurantScene extends Phaser.Scene {
     this.npcController.startSpawning(NPC_SPAWN_INTERVAL_MS);
 
     this.createPlacementMode();
+  }
+
+  update(_time: number, delta: number) {
+    runSystems(this.gameState, delta, this.systems);
   }
 
   private createPlacementMode() {
