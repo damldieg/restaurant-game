@@ -83,6 +83,38 @@
       "source": "human",
       "confirmedAt": "2026-08-20T15:11:46.445Z",
       "status": "active"
+    },
+    {
+      "id": "50c641f8ac",
+      "type": "architecture",
+      "question": "¿Qué arquitectura separa la simulación de clientes (Customer) de su representación en Phaser, antes de M04?",
+      "context": "M03.5 analizó game/npc/npc.ts (ya puro) y game/npc/controller.ts (mezcla npcs[]/occupiedTables con sprites/tweens; las transiciones de estado hoy ocurren en el onComplete de un tween de Phaser, no en un tick de simulación). Añadir `customers` a GameState es un data_model_change (trigger bloqueante).",
+      "options": [
+        "core/customer.ts (plano, sin subcarpeta) + GameState.customers[] + systems/customer-system.ts (CustomerSystem, mismo patrón que ReputationSystem) + game/npc/controller.ts reducido a lector puro de state.customers",
+        "core/customers/ (subcarpeta, como en el ejemplo del pedido original) con customer.ts + customer-state.ts separados, mismo resto",
+        "Mantener Npc/NpcController como están y posponer la separación hasta que M04 la necesite de verdad"
+      ],
+      "evidence": [],
+      "reason": "data_model_change: agrega un campo nuevo a GameState, difícil de revertir una vez que M04 construya sobre él.",
+      "text": "core/customers/ (subcarpeta, como en el ejemplo del pedido original) con customer.ts + customer-state.ts separados, mismo resto",
+      "source": "human",
+      "confirmedAt": "2026-08-20T15:28:55.648Z",
+      "status": "active"
+    },
+    {
+      "id": "67de94c2ef",
+      "type": "architecture",
+      "question": "¿Quién es la fuente de verdad del estado de los clientes: la simulación (GameState/CustomerSystem) o Phaser (tweens/callbacks)?",
+      "context": "M03.5 ya confirmó dónde vive el código de clientes (core/customers/ + GameState.customers[] + CustomerSystem). Falta fijar el principio de propiedad: hoy game/npc/controller.ts dispara transiciones de estado dentro de onComplete de un tween de Phaser. Especificado explícitamente por el usuario en la solicitud.",
+      "options": [
+        "La simulación (GameState/CustomerSystem, vía update(deltaMs)) es la única fuente de verdad del estado de los clientes; Phaser NO controla transiciones de estado mediante tweens, callbacks ni eventos visuales — solo representa el estado actual (sprites, animaciones, interpolación visual, efectos). Motivo: permite tests sin Phaser, simulación acelerada, guardado/carga futuro, y separación real entre lógica y visualización."
+      ],
+      "evidence": [],
+      "reason": "Principio de arquitectura (technical_direction) que rige cómo se construye CustomerSystem en M04; especificado explícitamente por el usuario, no un guess del agente.",
+      "text": "La simulación (GameState/CustomerSystem, vía update(deltaMs)) es la única fuente de verdad del estado de los clientes; Phaser NO controla transiciones de estado mediante tweens, callbacks ni eventos visuales — solo representa el estado actual (sprites, animaciones, interpolación visual, efectos). Motivo: permite tests sin Phaser, simulación acelerada, guardado/carga futuro, y separación real entre lógica y visualización.",
+      "source": "human",
+      "confirmedAt": "2026-08-20T15:35:06.059Z",
+      "status": "active"
     }
   ]
 }

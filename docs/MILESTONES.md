@@ -168,11 +168,80 @@ el número del HUD sube al colocar un mueble.
 
 ---
 
+## M03.5 — Customer architecture review
+
+*Depende de: M03. No agrega funcionalidad de juego — es análisis y planificación antes de M04,
+para reducir el riesgo de introducir la primera entidad simulada compleja (clientes) sin mezclar
+lógica de negocio con Phaser. Ver `.juntia/ARCHITECTURE.md` (sección "Próxima extensión:
+Customer") para el análisis completo y `.juntia/DECISIONS.md` para la decisión arquitectónica
+que produce.*
+
+- [x] Analizar `game/npc/npc.ts` y `game/npc/controller.ts`: qué es lógica de simulación pura,
+      qué es renderizado Phaser, qué está mezclado, y qué riesgos concretos tiene separarlos.
+- [x] Documentar la separación entre Customer simulation y Customer rendering (ver
+      `.juntia/ARCHITECTURE.md`, sección "Principio de propiedad del estado").
+- [x] Definir la forma conceptual futura de `CustomerState` — sin implementarla todavía:
+      ```
+      Customer:
+        - id
+        - position
+        - state
+        - target
+        - tableId
+      ```
+- [x] Definir la responsabilidad futura de `CustomerSystem`: estados, transiciones, timers y
+      movimiento lógico. NO sprites, tweens ni animaciones.
+- [x] Definir la responsabilidad futura de `CustomerRenderer` (hoy `game/npc/controller.ts`):
+      representar posición, animaciones e interpolación visual. NO estados, transiciones ni
+      timers.
+- [x] Definir una estrategia incremental de pasos pequeños y testeables para M04 (sin big-bang
+      refactor).
+- [x] Identificar qué partes del NPC actual quedan intactas por ahora (`occupiedTables`,
+      constantes de presentación, `findFreeTable` leyendo el export de módulo) y por qué.
+- [x] Confirmar la decisión de arquitectura para `Customer` (`data_model_change`, ver
+      `.juntia/DECISIONS.md`): `core/customers/` (`customer.ts` + `customer-state.ts`) +
+      `GameState.customers[]` + `systems/customer-system.ts` + `game/npc/controller.ts` reducido
+      a lector puro de `state.customers`.
+- [x] Confirmar el principio de propiedad del estado (ver `.juntia/DECISIONS.md`): la simulación
+      es la fuente de verdad; Phaser no controla transiciones de estado mediante tweens,
+      callbacks ni eventos visuales.
+
+**Player-visible outcome:** el jugador no verá cambios visuales. Esta fase prepara la base para
+que los clientes puedan existir como entidades simuladas independientes de Phaser.
+
+**Completion criteria:** `.juntia/ARCHITECTURE.md` documenta la extensión propuesta para
+`Customer`; `.juntia/DECISIONS.md` registra la decisión arquitectónica confirmada; ningún archivo
+de `src/` cambia de comportamiento; `pnpm test` sigue en verde sin modificaciones.
+
+---
+
 ## M04 — Basic customer lifecycle
 
 *Objetivo: cliente entra → encuentra mesa → se sienta → se queda → se va. Depende de M00
 (usa el furniture existente, hardcodeado o comprado — no depende de M01/M02 para
-funcionar).*
+funcionar). Depende también de M03.5 (arquitectura de `Customer` confirmada).*
+
+**Estrategia incremental hacia `core/customers/`/`CustomerSystem` (M03.5), pasos pequeños y
+testeables, sin big-bang refactor:**
+
+1. Mover `Npc`/`NpcState` a `core/customers/customer.ts` sin cambiar su forma (test: el
+   `npc.test.ts` existente se muda y sigue en verde).
+2. Agregar `customers: Customer[]` a `GameState`, vacío en `createGameState` (test: mismo patrón
+   que `reputation` en `game-state.test.ts`).
+3. Crear `CustomerSystem` con responsabilidad de spawn únicamente (agrega un `Customer` en la
+   puerta cada N ms acumulados por `deltaMs`, sin mesa ni movimiento todavía; test puro sobre el
+   conteo tras N ms simulados).
+4. `NpcController` deja de crear el `Npc`: lee spawns nuevos en `state.customers` y sigue
+   animando la entrada con el tween actual — este paso resuelve, solo para el spawn, la pregunta
+   de qué reloj manda (sistema vs. tween).
+5. Mover la asignación de mesa (`findFreeTable`/`getSeatForTable`) a `CustomerSystem`; el
+   renderer reacciona a un cambio de `customer.state` (`walking`→`seated`) reproduciendo el tween
+   de sentarse existente, en vez de que el tween dispare el cambio de estado él mismo.
+
+Cada paso se prueba y el juego sigue jugable después de cada uno. Lo que **no** se toca en este
+proceso: `occupiedTables` (tarea de M06), las constantes de presentación del renderer, y
+`findFreeTable` leyendo el export de módulo en vez de recibir `furniture` por parámetro (cleanup
+de bajo riesgo, no bloqueante, para más adelante).
 
 ### Ya completado (heredado de los antiguos M01–M03)
 

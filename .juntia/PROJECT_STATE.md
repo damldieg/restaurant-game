@@ -12,8 +12,9 @@ Mark anything not yet determined as `UNKNOWN` rather than guessing or silently o
 simulation loop; milestone numbers below refer to that new order, not the old one.
 
 M01 (furniture catalog/construction), M02 (economy foundation), M02.5 (core simulation
-foundation), and M03 (reputation foundation) are done and verified (`pnpm test`: 27/27
-passing; `tsc --noEmit` clean; all verified in-browser with Playwright screenshots).
+foundation), M03 (reputation foundation), and M03.5 (customer architecture review) are done.
+`pnpm test`: 27/27 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with Playwright
+screenshots. M03.5 was analysis/planning only — no `src/` file changed, no test count change.
 
 **Architecture (M02.5 — see `.juntia/ARCHITECTURE.md` for the full picture):**
 
@@ -52,14 +53,25 @@ per type (Mesa +3 / Silla +1 — confirmed decision). `core/reputation.ts` expor
 every frame, so placing a table/chair (or the 2 starter tables + 2 starter chairs already in
 `restaurant.ts`) is reflected in the HUD without any placement-site-specific recalculation code.
 
-M04's remaining tasks (stay timer, `leaving` state, walk to door and despawn) are not started —
-`NpcState` still only has `walking | idle | seated`; an NPC that sits down stays there
-indefinitely. A table placed via the construction mode is not yet picked up by
-`NpcController`/`findFreeTable` as seatable.
+**M03.5 (customer architecture review):** analyzed `game/npc/npc.ts` (already pure) and
+`game/npc/controller.ts` (mixes `npcs[]`/`occupiedTables` with sprites/tweens; state transitions
+today fire inside a Phaser tween's `onComplete`, not a simulation tick). Two confirmed
+architecture decisions (see `.juntia/DECISIONS.md` and `.juntia/ARCHITECTURE.md`): (1) where
+`Customer` code lives — `core/customers/` (`customer.ts` + `customer-state.ts`, the first
+subfolder in `core/`) + `GameState.customers: Customer[]` + `systems/customer-system.ts`
+(`CustomerSystem`, same pattern as `ReputationSystem`) + `game/npc/controller.ts` reduced to a
+pure reader of `state.customers`; (2) the ownership principle — simulation (`GameState`/
+`CustomerSystem`) is the sole source of truth for customer state, Phaser never drives a state
+transition via tween/callback, only renders whatever `GameState` already says. `docs/
+MILESTONES.md`'s M04 section carries the 5-step incremental plan to get there. Nothing
+implemented — `NpcState` still only has `walking | idle | seated`; an NPC that sits down stays
+there indefinitely; a table placed via construction mode is not yet picked up by
+`NpcController`/`findFreeTable` as seatable; `occupiedTables` is untouched (still M06's job).
 
 ## Next known step
 
-M04 — remaining tasks: "quedarse y salir" (`docs/MILESTONES.md`). First unblocked task: add
-`leaving` to `NpcState` plus the reusable walk-to-door-and-despawn infrastructure that M05/M09/M15
-will also use, then a fixed stay timer that triggers the transition. The stay-timer duration is a
-new `balancing_value` decision to confirm before writing it into code.
+M04 — Basic customer lifecycle (`docs/MILESTONES.md`), following M03.5's confirmed architecture
+and its step-1 first: move `Npc`/`NpcState` into `core/customers/customer.ts` unchanged, migrate
+`npc.test.ts` with it, keep everything else exactly as it behaves today. The stay-timer duration
+(needed once "quedarse y salir" is reached) is a new `balancing_value` decision to confirm before
+writing it into code — not needed for step 1.
