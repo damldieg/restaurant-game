@@ -127,13 +127,11 @@ it's a real judgment call, not an implementation detail.
 
 ## Next known step
 
-M05 — Waiting and satisfaction (`docs/MILESTONES.md`, depends on M04 for tables/seats/`leaving`
-and on M03 for `reputation`): add a `waiting` state plus a per-customer wait reason and
-resettable patience data; define queue positions distinct from `ENTRY_TARGET`; a customer with
-no free table goes to `waiting` at a queue slot instead of staying `idle` forever; a pure FIFO
-function decides who takes the next table that frees up; a pure timeout function decides when a
-waiting customer gives up; an angry abandon reuses M04's `sendToExit`/`leaving` infrastructure
-(not duplicated) and applies a one-time reputation penalty (never per-frame); a customer that
-stays and leaves normally instead earns reputation once. Note: `docs/MILESTONES.md`'s M05 text
-still uses the pre-M03.5 `Npc`/`NpcState` naming — read it as `Customer`/`CustomerState`, the
-actual types in code today.
+M05 — Waiting and satisfaction is now broken into an M05.1–M05.5 incremental plan in
+`docs/MILESTONES.md`, same pattern as M04.1–M04.8 (its text no longer uses the stale
+`Npc`/`NpcState` naming — updated to `Customer`/`CustomerState`). Two architecture decisions
+were confirmed before starting implementation — see `.juntia/DECISIONS.md` for the full text:
+`GameState.reputationAdjustments` as the accumulator, and "Customer lifecycle events ownership"
+(`CustomerSystem` owns lifecycle transitions/events; `ReputationSystem` never inspects
+`state.customers`). Next: M05.1 — add `waiting` to `CustomerState` and `waitReason`/
+`waitRemainingMs` to `Customer` (data only, no real transition yet).

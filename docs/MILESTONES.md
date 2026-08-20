@@ -530,48 +530,153 @@ arriba — no forma parte de esa secuencia, se mantiene como registro histórico
 
 ## M05 — Waiting and satisfaction
 
-*Depende de: M04 (necesita mesas, asientos y la infraestructura de `leaving`) y M03
-(reutiliza `reputation`).*
+*Depende de: M04 (necesita mesas, asientos y la infraestructura de `leaving`/`sendToExit`) y
+M03 (reutiliza `reputation`). Arquitectura confirmada en `.juntia/DECISIONS.md` antes de
+empezar: `GameState.reputationAdjustments` como acumulador, y el principio de propiedad
+"Customer lifecycle events ownership" (`CustomerSystem` emite los eventos del ciclo de vida;
+`ReputationSystem` nunca inspecciona `state.customers`).*
 
-- [ ] Agregar estado `waiting` a `NpcState`.
-- [ ] Agregar motivo de espera y datos de paciencia reiniciables al `Npc` (p. ej.
-      `waitingReason: 'table' | 'order' | 'food'` + inicio/límite de espera). Es el único
-      concepto de espera del juego: M09/M11 reutilizan el mismo mecanismo para los otros
-      dos motivos.
-- [ ] Definir posiciones de cola (distintas de `entryTarget`), una por NPC en espera.
-- [ ] NPC sin mesa libre pasa a `waiting` con motivo `table`, ubicado en su posición de
-      cola, sin superponerse a otros.
-- [ ] Cola FIFO: función pura que, dada la lista de NPCs en `waiting` con motivo `table`,
-      determina cuál debe ocupar la próxima mesa disponible.
-- [ ] Test unitario puro de la función FIFO.
-- [ ] Timeout de espera de mesa: función pura que, dado el inicio de espera, el límite de
-      paciencia y el tiempo transcurrido, determina si corresponde abandonar.
-- [ ] Test unitario puro del timeout.
-- [ ] Abandono enfadado: al vencer el timeout de espera de mesa, el NPC dispara la
-      transición a `leaving` (reutiliza la infraestructura de M04, no la duplica).
-- [ ] Penalización única de reputación al abandonar por espera de mesa (reutiliza
-      `reputation` de M03): se aplica una sola vez al disparar el abandono, nunca de
-      forma acumulativa por frame/segundo.
-- [ ] Test unitario puro: un abandono resta reputación exactamente una vez.
-- [ ] Recompensa de reputación por cliente que completa el ciclo normalmente (llega a
-      `leaving` tras quedarse, no por abandono).
-- [ ] Test unitario puro: un cliente que se queda y se va suma reputación exactamente una
-      vez.
-- [ ] Si una mesa se libera y hay NPCs en `waiting` por mesa, el primero de la cola (FIFO)
-      la ocupa y deja de esperar (función pura + test con datos simulados).
-- [ ] Confirmar visualmente: con todas las mesas ocupadas, los NPCs siguientes esperan en
-      fila sin superponerse; un NPC que espera demasiado sale enfadado por la puerta y la
-      reputación baja exactamente una vez; un cliente que se queda y se va normalmente
-      sube la reputación.
+**Player-visible outcome (milestone completo):** el jugador puede llenar el restaurante y ver
+clientes esperando en fila; si esperan demasiado se van enfadados y la reputación baja; los que
+sí llegan a sentarse y se van normalmente suben la reputación.
 
-**Player-visible outcome:** el jugador puede llenar el restaurante y ver clientes
-esperando en fila; si esperan demasiado se van enfadados y la reputación baja; los que sí
-llegan a sentarse y se van normalmente suben la reputación.
+M05 es un plan incremental de tareas pequeñas, cada una testeable y verificable por separado —
+mismo patrón que M04 — trabajar siempre en la primera `M05.x` con estado pendiente, sin saltar
+pasos.
 
-**Completion criteria:** `pnpm test` cubre la cola FIFO, el timeout y ambas variaciones de
-reputación (penalización y recompensa, cada una aplicada exactamente una vez); en el
-navegador, con 2 mesas y 3+ clientes, se ve la cola, el abandono enfadado y ambos cambios
-de reputación.
+---
+
+### M05.1 — Customer waiting state
+
+**Objetivo:** preparar los datos de espera en `Customer`, sin activar todavía ninguna
+transición real.
+
+- [ ] Añadir `"waiting"` a `CustomerState` (`core/customers/customer-state.ts`).
+- [ ] Añadir `waitReason: "table" | null` a `Customer` — único motivo por ahora; el pedido
+      original lo describe como el único mecanismo de espera del juego, para que M09/M11
+      reutilicen el mismo campo con los otros dos motivos (`order`/`food`) en vez de duplicar
+      la infraestructura.
+- [ ] Añadir `waitRemainingMs: number | null` a `Customer` — mismo patrón que
+      `stayRemainingMs` (M04.8): cuenta regresiva reiniciable por `deltaMs`, no un timestamp de
+      inicio + límite por separado.
+- [ ] Tests unitarios puros de creación y valores por defecto (mismo patrón que
+      `customer.test.ts` para `target`/`tableId`/`stayRemainingMs`).
+
+**No implementar todavía:** la transición real `idle → waiting` (necesita las posiciones de
+cola de M05.2 para tener un `target` a dónde ir); posiciones de cola; FIFO; timeout de
+paciencia.
+
+**Player-visible outcome:** ninguno — mismo tipo de paso que M04.1/M04.2, solo prepara el
+terreno de datos.
+
+---
+
+### M05.2 — Table queue system
+
+**Objetivo:** un customer sin mesa libre espera en fila, sin superponerse a otros.
+
+- [ ] Definir posiciones de cola (`GridPosition[]`, distintas de `ENTRY_TARGET`) — junto a
+      `DOOR_POSITION`/`ENTRY_TARGET` en `core/customers/customer.ts`, mismo archivo por el
+      mismo motivo que ya viven ahí (geometría de pathing de customers, no de mobiliario).
+- [ ] Implementar `resolveTableQueue` — función pura y FIFO, deliberadamente separada de
+      `assignTables` para que M06 la reutilice desde `releaseTable` sin duplicarla (ver la
+      sección M06 de este documento: "`releaseTable` invoca la función FIFO de M05").
+- [ ] Extender `assignTables` para intentar primero a los customers `waiting` (en su orden FIFO
+      existente en el array) y recién después a los `idle` sin mesa — nadie que llegó después
+      corta la fila.
+- [ ] Activar la transición `idle → waiting`: un customer `idle` sin mesa libre pasa a
+      `waiting` con `waitReason: "table"`, `target` apuntando a su posición de cola (reutiliza
+      el campo `target` existente — sin campo nuevo), sin superponerse a otros customers ya en
+      cola (mismo patrón de `occupied`-tracking dentro de la misma pasada que `assignTables` ya
+      usa para mesas).
+- [ ] Tests unitarios puros: la función FIFO asigna la próxima mesa libre al primero en cola;
+      no hay doble asignación del mismo slot de cola dentro de una pasada; un customer en cola
+      pasa a `walking` hacia la mesa cuando le toca.
+
+**No implementar todavía:** timeout de paciencia (M05.3); eventos de reputación (M05.4).
+
+**Player-visible outcome:** con las mesas ocupadas, los customers siguientes esperan en fila
+sin superponerse, y el primero en cola ocupa la próxima mesa que se libera.
+
+---
+
+### M05.3 — Waiting patience
+
+**Objetivo:** un customer que espera demasiado abandona.
+
+- [ ] Implementar `advanceWait(customer, deltaMs)` — espejo exacto de `advanceStay` (M04.8):
+      cuenta regresiva de `waitRemainingMs` por `deltaMs`, sin mutar el original.
+- [ ] Transición `waiting → leaving` al agotar la paciencia — vía `sendToExit`, reutilizada tal
+      cual (sin modificar su firma ni su comportamiento, per la decisión ya confirmada de que
+      es infraestructura genérica de salida).
+- [ ] Registrar `advanceWait` en el pipeline de `CustomerSystem.update`.
+- [ ] Tests unitarios puros: cuenta regresiva correcta, transición a `leaving` con `target` a
+      la puerta al agotarse, no muta el `Customer` original (mismo patrón que los tests ya
+      existentes de `advanceStay`).
+
+**No implementar todavía:** eventos de reputación (M05.4) — esta pieza solo dispara la
+transición, no toca `state.reputation`.
+
+**Player-visible outcome:** un customer que espera demasiado abandona por la puerta, igual que
+un customer que termina su `stayRemainingMs` en M04.8.
+
+---
+
+### M05.4 — Customer reputation events
+
+**Objetivo:** el abandono penaliza reputación y el ciclo completo la recompensa, una sola vez
+cada uno.
+
+- [ ] Añadir `GameState.reputationAdjustments: number` (decisión de arquitectura confirmada,
+      ver `.juntia/DECISIONS.md`).
+- [ ] `ReputationSystem.update` pasa a `state.reputation = calculateTotalReputation(furniture,
+      catalog) + state.reputationAdjustments` — sin inspeccionar `state.customers` en ningún
+      momento (decisión confirmada: "Customer lifecycle events ownership").
+- [ ] `CustomerSystem.update` aplica el delta a `reputationAdjustments` exactamente una vez por
+      evento de salida, detectando qué paso del pipeline causó la transición: recompensa cuando
+      viene de `advanceStay` (ciclo completo), penalización cuando viene de `advanceWait`
+      (abandono por paciencia). Los valores concretos son `balancing_value` a confirmar antes
+      de escribirlos en código.
+- [ ] Tests unitarios puros: un abandono resta reputación exactamente una vez (nunca por
+      frame/segundo); un ciclo completado suma reputación exactamente una vez;
+      `ReputationSystem` no cambia su resultado si `state.customers` cambia sin que cambie
+      `reputationAdjustments`.
+
+**No implementar todavía:** nada nuevo del lado de clientes — esta pieza es puramente la
+conexión entre las transiciones ya construidas en M05.2/M05.3 y la reputación.
+
+**Player-visible outcome:** la reputación del HUD baja cuando un customer abandona por espera y
+sube cuando un customer completa el ciclo normalmente.
+
+---
+
+### M05.5 — Validation and integration
+
+**Objetivo:** cerrar M05 verificando el ciclo completo y la ausencia de responsabilidades
+duplicadas, mismo tipo de revisión que cerró M04 (ver PR #17).
+
+- [ ] Validar en navegador el ciclo completo con cola: `entering → walking → waiting → seated →
+      leaving → removed`, con 2 mesas y 3+ customers.
+- [ ] Validar que no existen responsabilidades duplicadas entre `CustomerSystem`,
+      `ReputationSystem` y `CustomerRenderer` — en particular, que `ReputationSystem` sigue sin
+      conocer clientes y que `CustomerRenderer` sigue sin conocer `state`/`waitReason`/
+      `reputationAdjustments`.
+- [ ] Confirmar visualmente: con todas las mesas ocupadas, los customers siguientes esperan en
+      fila sin superponerse; un customer que espera demasiado sale enfadado por la puerta y la
+      reputación baja exactamente una vez; un customer que se queda y se va normalmente sube la
+      reputación.
+
+**No implementar todavía:** nada nuevo — este paso es validación e integración, no
+funcionalidad nueva.
+
+**Player-visible outcome:** el mismo del milestone completo (ver arriba).
+
+---
+
+**Completion criteria (milestone completo):** `pnpm test` cubre la cola FIFO, el timeout de
+paciencia y ambas variaciones de reputación (penalización y recompensa, cada una aplicada
+exactamente una vez); en el navegador, con 2 mesas y 3+ customers, se ve la cola, el abandono
+enfadado y ambos cambios de reputación.
 
 ---
 
