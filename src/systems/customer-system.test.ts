@@ -34,4 +34,30 @@ describe("CustomerSystem", () => {
     const ids = state.customers.map((customer) => customer.id);
     expect(new Set(ids).size).toBe(3);
   });
+
+  it("moves a spawned customer toward its target on later updates", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+
+    system.update(state, SPAWN_INTERVAL_MS - 1);
+    system.update(state, 1);
+    const initialPosition = state.customers[0].position;
+
+    system.update(state, 500);
+
+    expect(state.customers[0].position).not.toEqual(initialPosition);
+    expect(state.customers[0].state).toBe("walking");
+    expect(state.customers[0].target).not.toBeNull();
+  });
+
+  it("moves a customer to idle once it reaches its target", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+
+    system.update(state, SPAWN_INTERVAL_MS);
+    system.update(state, 60_000);
+
+    expect(state.customers[0].state).toBe("idle");
+    expect(state.customers[0].target).toBeNull();
+  });
 });

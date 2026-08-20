@@ -17,14 +17,11 @@ simulation loop; milestone numbers below refer to that new order, not the old on
 M01 (furniture catalog/construction), M02 (economy foundation), M02.5 (core simulation
 foundation), M03 (reputation foundation), and M03.5 (customer architecture review) are done.
 M04 (basic customer lifecycle) is in progress — `docs/MILESTONES.md`'s M04 section is an
-M04.1–M04.8 incremental plan (plus an explicit "scope boundaries" list); M04.1–M04.4 are done.
-`pnpm test`: 40/40 passing (36, minus 2 for the removed `npc.test.ts`, plus 6 new for
-`customer-renderer.test.ts`); `tsc
---noEmit` clean; M01–M03 verified in-browser with Playwright screenshots; M04.3 and M04.4 also
-verified in-browser (6s run, 2+ spawn intervals, no console errors). M04.4 is a visual regression
-by design: the customer sprite that now renders just sits at the door (no movement yet), and the
-old `NpcController` walk-in/sit-down tween animation is gone — both are expected until M04.5–
-M04.7 give `Customer` real movement and seating.
+M04.1–M04.8 incremental plan (plus an explicit "scope boundaries" list); M04.1–M04.5 are done.
+`pnpm test`: 49/49 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with Playwright
+screenshots; M04.3–M04.5 also verified in-browser (no console errors). M04.4 was a visual
+regression by design (sprite sat at the door, no movement) — M04.5 resolves it: customers now
+visibly walk from the door toward the counter and settle once they arrive.
 
 **Architecture (M02.5 — see `.juntia/ARCHITECTURE.md` for the full picture):**
 
@@ -131,6 +128,27 @@ any id no longer present in the incoming `customers` list — dead code today (n
 existing sprite, destroys a sprite whose customer disappeared, never recreates a destroyed id,
 never mutates the `Customer` objects it reads.
 
+**M04.5 (Customer movement simulation) — done:** `Customer` gained `target: GridPosition |
+null` (`core/customers/customer.ts`); `spawnCustomer` now sets `target: ENTRY_TARGET` (the same
+point `NpcController.spawnNpc()` used to call `entryTarget`, now a real simulation destination
+instead of a Phaser tween). `CUSTOMER_SPEED_TILES_PER_SEC = 1.5` (confirmed decision, see
+`.juntia/DECISIONS.md` — a `balancing_value`, escalated via `.juntia/pending.json` and answered
+through `juntia confirm` before being written into code). `moveCustomer(customer, deltaMs)` is a
+new pure function: interpolates `position` toward `target` by speed × `deltaMs`, without
+mutating the input; on arrival (the reachable step in this `deltaMs` covers or exceeds the
+remaining distance), it snaps `position` to `target` exactly, clears `target` to `null`, and
+transitions a `walking` customer to `idle` (no table assignment yet — that's M04.6/M04.7).
+`CustomerSystem.update` now calls `moveCustomer` on every customer each frame, after the spawn
+loop. `CustomerRenderer` (M04.4) needed no changes — it already repositions sprites from
+`Customer.position` every frame. Tested in `customer.test.ts` (no-target no-op, partial
+movement without arriving, exact snap + target clear on arrival, `walking`→`idle` transition,
+non-walking state untouched on arrival, no mutation of the input) and `customer-system.test.ts`
+(a spawned customer's position changes on a later update while still `walking`; given enough
+time it reaches `idle` with `target: null`). Verified in-browser with Playwright (screenshots at
+1s/3s/6s/8s): a customer sprite appears near the door and visibly moves toward the counter
+across consecutive screenshots before settling once it arrives; HUD and furniture unaffected; no
+console errors.
+
 **Repository governance:** `main` is branch-protected on GitHub. `.github/workflows/ci.yml`
 (new) runs `pnpm install --frozen-lockfile` → `pnpm test` → `pnpm build` as the `build-and-test`
 check, required and kept up-to-date-with-`main` (`strict: true`) before merge. Merge policy on
@@ -150,10 +168,10 @@ it's a real judgment call, not an implementation detail.
 
 ## Next known step
 
-M04.5 — Customer movement simulation: add a `target` position and a speed to `Customer`, and
-move it by `deltaMs` inside `CustomerSystem` (arrival detected in the simulation itself, not via
-a Phaser tween `onComplete` — `docs/MILESTONES.md`'s M04 section has the full M04.1–M04.8 plan).
-`CustomerRenderer` from M04.4 already repositions a sprite from `Customer.position` every frame,
-so M04.5 shouldn't need renderer changes — just real position updates for it to draw. The
-stay-timer duration (needed once M04.8 "stay timer and leaving" is reached) is a separate new
-`balancing_value` decision to confirm before writing it into code — not needed yet.
+M04.6 — Find and reserve table: integrate `findFreeTable`/`getSeatForTable` into
+`CustomerSystem`, assign a `tableId` to the `Customer` once it arrives (`target: null`, `state:
+"idle"` after M04.5), and avoid double-assigning the same table (`docs/MILESTONES.md`'s M04
+section has the full M04.1–M04.8 plan). Not solving yet: the full reservation system or the
+definitive `occupiedTables` (that's M06's job). The stay-timer duration (needed once M04.8
+"stay timer and leaving" is reached) is a separate new `balancing_value` decision to confirm
+before writing it into code — not needed yet.
