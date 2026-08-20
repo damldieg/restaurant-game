@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { TILE_SIZE, gridToWorldCenter, worldToGridPosition, type GridPosition } from "./game/grid";
 import { RESTAURANT_COLS, RESTAURANT_ROWS, type Furniture } from "./core/restaurant";
-import { NpcController } from "./game/npc/controller";
+import { CustomerRenderer } from "./game/customers/customer-renderer";
 import { FURNITURE_CATALOG } from "./core/furniture-catalog";
 import { isValidPlacement } from "./core/placement";
 import { canAfford } from "./core/economy";
@@ -10,7 +10,6 @@ import { runSystems, type GameSystem } from "./systems/game-system";
 import { ReputationSystem } from "./systems/reputation-system";
 import { CustomerSystem } from "./systems/customer-system";
 
-const NPC_SPAWN_INTERVAL_MS = 2500;
 const INITIAL_MONEY = 500;
 const INITIAL_REPUTATION = 0;
 
@@ -34,7 +33,7 @@ class RestaurantScene extends Phaser.Scene {
 
   private originX = 0;
   private originY = 0;
-  private npcController!: NpcController;
+  private customerRenderer!: CustomerRenderer;
   private nextFurnitureId = 1;
   private placementActive = false;
   private previewRect!: Phaser.GameObjects.Rectangle;
@@ -47,14 +46,7 @@ class RestaurantScene extends Phaser.Scene {
   create() {
     this.createRestaurant();
 
-    this.npcController = new NpcController(
-      this,
-      this.originX,
-      this.originY,
-      RESTAURANT_COLS,
-      RESTAURANT_ROWS
-    );
-    this.npcController.startSpawning(NPC_SPAWN_INTERVAL_MS);
+    this.customerRenderer = new CustomerRenderer(this, this.originX, this.originY);
 
     this.createPlacementMode();
   }
@@ -62,6 +54,7 @@ class RestaurantScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     runSystems(this.gameState, delta, this.systems);
     this.updateReputationDisplay();
+    this.customerRenderer.update(this.gameState.customers);
   }
 
   private createPlacementMode() {
