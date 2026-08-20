@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementemo M03: reputation foundation","generatedAt":"2026-08-20T15:10:21.740Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M04.4: Customer rendering — CustomerRenderer que lee GameState.customers y crea/actualiza sprites, sin escribir a CustomerState","generatedAt":"2026-08-20T17:08:58.194Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,14 +7,11 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementemo M03: reputation foundation
+> Implementar M04.4: Customer rendering — CustomerRenderer que lee GameState.customers y crea/actualiza sprites, sin escribir a CustomerState
 
 ## Task Status
 
-READY_TO_CONTINUE
-
-A decision that was blocking part of this task has just been confirmed — see "Confirmed decisions"
-below for the real answer, then continue the work that was waiting on it.
+ACTIVE
 
 Task type: Feature
 Confidence: 0.9
@@ -55,6 +52,16 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
+None yet.
+
+Already known when this task started:
+
+- Q: "¿Qué precio tiene cada tipo de mueble en el catálogo de M01 (mesa, silla)?" -> CONFIRMED: Mesa 100 / Silla 25 (product decision, 2026-08-20)
+  (options on the table when asked: Mesa 50 / Silla 15, Mesa 100 / Silla 25, Mesa 40 / Silla 10)
+- Q: "¿Cuánto dinero inicial (money) tiene el jugador al arrancar la partida?" -> CONFIRMED: $500 (product decision, 2026-08-20)
+  (options on the table when asked: $300, $150, $500)
+- Q: "¿Qué arquitectura separa el core del juego de Phaser antes de M03 (M02.5)?" -> CONFIRMED: GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts). (architecture decision, 2026-08-20)
+  (options on the table when asked: GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts).)
 - Q: "¿Cuál es el valor inicial de reputación del restaurante al arrancar la partida?" -> CONFIRMED: 0 (product decision, 2026-08-20)
   (options on the table when asked: 0, 50, 100)
 - Q: "¿Qué valor de reputación aporta cada tipo de mueble del catálogo (mesa, silla) al colocarlo?" -> CONFIRMED: Mesa +3 / Silla +1 (product decision, 2026-08-20)
@@ -65,15 +72,6 @@ proposed or implemented:
   (options on the table when asked: La simulación (GameState/CustomerSystem, vía update(deltaMs)) es la única fuente de verdad del estado de los clientes; Phaser NO controla transiciones de estado mediante tweens, callbacks ni eventos visuales — solo representa el estado actual (sprites, animaciones, interpolación visual, efectos). Motivo: permite tests sin Phaser, simulación acelerada, guardado/carga futuro, y separación real entre lógica y visualización.)
 - Q: "¿M04.3 debe activar spawn automático de Customer en CustomerSystem.update(), y con qué intervalo?" -> CONFIRMED: Sí, spawn automático continuo en CustomerSystem.update(), mismo intervalo que NpcController hoy (2500ms) — mantiene el ritmo de llegada ya establecido en el juego, ahora simulado en paralelo sin renderizar todavía (product decision, 2026-08-20)
   (options on the table when asked: Sí, spawn automático continuo en CustomerSystem.update(), mismo intervalo que NpcController hoy (2500ms) — mantiene el ritmo de llegada ya establecido en el juego, ahora simulado en paralelo sin renderizar todavía, Sí, spawn automático continuo, pero con un intervalo propio distinto al de NpcController, No todavía — M04.3 solo expone spawnCustomer() como función pura y testeable; activar el timer real en CustomerSystem queda para un paso posterior)
-
-Already known when this task started:
-
-- Q: "¿Qué precio tiene cada tipo de mueble en el catálogo de M01 (mesa, silla)?" -> CONFIRMED: Mesa 100 / Silla 25 (product decision, 2026-08-20)
-  (options on the table when asked: Mesa 50 / Silla 15, Mesa 100 / Silla 25, Mesa 40 / Silla 10)
-- Q: "¿Cuánto dinero inicial (money) tiene el jugador al arrancar la partida?" -> CONFIRMED: $500 (product decision, 2026-08-20)
-  (options on the table when asked: $300, $150, $500)
-- Q: "¿Qué arquitectura separa el core del juego de Phaser antes de M03 (M02.5)?" -> CONFIRMED: GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts). (architecture decision, 2026-08-20)
-  (options on the table when asked: GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts).)
 
 ## Agent Context
 
@@ -129,7 +127,7 @@ The same information above, structured for programmatic use — navigation, neve
     ".juntia/context.md",
     ".juntia/governance/workflows/feature-development.md"
   ],
-  "taskStatus": "READY_TO_CONTINUE"
+  "taskStatus": "ACTIVE"
 }
 ```
 

@@ -298,16 +298,42 @@ Verificado: `pnpm test` (36/36) y `tsc --noEmit` limpios; `NpcController`/`Resta
 
 ### M04.4 — Customer rendering
 
+**Estado: completado.**
+
 **Objetivo:** representar clientes existentes en Phaser.
 
-- [ ] Crear renderer separado (`CustomerRenderer`, o `game/npc/controller.ts` reducido a esto).
-- [ ] Leer `GameState.customers`.
-- [ ] Crear sprite cuando existe un `Customer` nuevo.
-- [ ] Actualizar posición visual desde el estado.
+- [x] Crear renderer separado (`CustomerRenderer`, o `game/npc/controller.ts` reducido a esto).
+- [x] Leer `GameState.customers`.
+- [x] Crear sprite cuando existe un `Customer` nuevo.
+- [x] Actualizar posición visual desde el estado.
 
 **Regla:** el renderer nunca modifica `CustomerState` — solo lee `GameState` y dibuja.
 
-**Player-visible outcome:** el jugador puede ver clientes generados.
+`game/npc/` (`Npc`/`NpcState`/`NpcController`) se eliminó por completo — decisión de arquitectura
+ya confirmada en M03.5 (ver `.juntia/DECISIONS.md`: "`game/npc/controller.ts` reducido a lector
+puro de `state.customers`"). `CustomerRenderer` (`game/customers/customer-renderer.ts`) es su
+reemplazo directo: mismo estilo visual (rectángulo 22×28, color `0xc97a5b`), sin tweens ni
+`occupiedTables`/`findFreeTable` (esa lógica de asignación de mesa vuelve en M04.6, ya dentro de
+`CustomerSystem`). `main.ts` ya no instancia `NpcController` ni tiene su propio timer de spawn
+(`NPC_SPAWN_INTERVAL_MS`) — `RestaurantScene.update` llama `customerRenderer.update(state.
+customers)` cada frame, después de `runSystems`.
+
+**Player-visible outcome:** el jugador puede ver clientes generados — verificado en navegador
+(Playwright, 6s / 2+ intervalos de spawn): aparece un sprite de cliente sobre la puerta (todos
+los clientes se apilan en la misma posición, ya que `CustomerSystem` todavía no simula movimiento
+— eso llega en M04.5), HUD y muebles sin cambios, sin errores de consola. El caminar/sentarse
+animado que antes daba `NpcController` desaparece intencionalmente hasta que M04.5–M04.7 lo
+repongan simulado.
+
+`CustomerRenderer.update` también destruye y descarta el sprite de cualquier id que ya no esté
+en `state.customers` (evita memory leaks una vez que M04.8 empiece a despawnear clientes), y
+nunca muta los objetos `Customer` que lee. Tests en `customer-renderer.test.ts` (mock de
+`Phaser.Scene`, sin canvas/WebGL real): crea sprite nuevo, no duplica uno existente, actualiza
+posición, destruye el sprite de un cliente que desaparece, no lo recrea después, no muta
+`Customer`.
+
+Verificado: `pnpm test` (40/40 — 36 - 2 de `npc.test.ts` eliminado + 6 de
+`customer-renderer.test.ts`) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 

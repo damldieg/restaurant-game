@@ -6,6 +6,9 @@ Update only at a completed milestone or a material change — not after every sm
 
 Mark anything not yet determined as `UNKNOWN` rather than guessing or silently omitting it — cheaper to flag once than to re-derive or contradict it later.
 
+Every milestone/step close follows a mandatory workflow — validate → update docs → commit → push → open a PR
+→ wait — recorded as project policy in `.juntia/governance/rules/agent-rules.md`, not here.
+
 ## Current state
 
 `docs/MILESTONES.md` was reordered so construction/economy/reputation come before the customer
@@ -14,10 +17,14 @@ simulation loop; milestone numbers below refer to that new order, not the old on
 M01 (furniture catalog/construction), M02 (economy foundation), M02.5 (core simulation
 foundation), M03 (reputation foundation), and M03.5 (customer architecture review) are done.
 M04 (basic customer lifecycle) is in progress — `docs/MILESTONES.md`'s M04 section is an
-M04.1–M04.8 incremental plan (plus an explicit "scope boundaries" list); M04.1–M04.3 are done.
-`pnpm test`: 36/36 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with Playwright
-screenshots; M04.3 also verified in-browser (6s run, 2+ spawn intervals, no console errors, no
-visual regression — `Customer` isn't rendered yet by design).
+M04.1–M04.8 incremental plan (plus an explicit "scope boundaries" list); M04.1–M04.4 are done.
+`pnpm test`: 40/40 passing (36, minus 2 for the removed `npc.test.ts`, plus 6 new for
+`customer-renderer.test.ts`); `tsc
+--noEmit` clean; M01–M03 verified in-browser with Playwright screenshots; M04.3 and M04.4 also
+verified in-browser (6s run, 2+ spawn intervals, no console errors). M04.4 is a visual regression
+by design: the customer sprite that now renders just sits at the door (no movement yet), and the
+old `NpcController` walk-in/sit-down tween animation is gone — both are expected until M04.5–
+M04.7 give `Customer` real movement and seating.
 
 **Architecture (M02.5 — see `.juntia/ARCHITECTURE.md` for the full picture):**
 
@@ -37,10 +44,12 @@ GameState  →  Game Systems  →  Phaser Renderer
   is an empty array. `RestaurantScene.update(time, delta)` (Phaser's own per-frame hook) already
   calls `runSystems`, so the loop is real and wired, just a no-op until the first system lands.
 - `src/game/` still holds Phaser-coupled code not moved in M02.5: `grid.ts` (pixel/world
-  coordinate conversion — imported by `core/`, not the other way around), `main.ts`
-  (`RestaurantScene`), and `npc/` (`controller.ts` mixes sprite/tween rendering with NPC state
-  transitions — untangling that was out of scope for M02.5, since it risks changing M04's
-  existing NPC behavior).
+  coordinate conversion — imported by `core/`, not the other way around) and `main.ts`
+  (`RestaurantScene`). `game/npc/` (the original `controller.ts`, mixing sprite/tween rendering
+  with NPC state transitions) existed at the time — untangling it was out of scope for M02.5
+  since it risked changing M04's existing NPC behavior — but was removed in M04.4 once
+  `game/customers/customer-renderer.ts` (`CustomerRenderer`) took over as its confirmed
+  replacement.
 
 Furniture catalog: table $100 / chair $25 (confirmed decision). Interactive placement (key `1`,
 cursor preview green/red, Esc cancels, click confirms) only creates `table` instances — `chair`
@@ -103,6 +112,25 @@ spawn loops now run side by side (Phaser's visible NPCs via `NpcController`, and
 simulated `Customer`s via `CustomerSystem`), which is expected until M04.4 gives `Customer` a
 renderer.
 
+**M04.4 (Customer rendering) — done:** `src/game/npc/` (`npc.ts`, `controller.ts`,
+`npc.test.ts` — `Npc`/`NpcState`/`NpcController`) was deleted entirely and replaced by
+`src/game/customers/customer-renderer.ts` (`CustomerRenderer`), per M03.5's already-confirmed
+architecture decision that `game/npc/controller.ts` ends up "reducido a lector puro de
+`state.customers`". `CustomerRenderer.update(customers)` reads `GameState.customers` every
+frame — creates a rectangle sprite (same visual as the old NPCs: 22×28, `0xc97a5b`) the first
+time it sees a given `Customer.id`, and repositions the existing sprite via `gridToWorldCenter`
+otherwise; it never writes to `CustomerState` or `GameState`. `main.ts` no longer owns
+`NpcController` or its own spawn timer (`NPC_SPAWN_INTERVAL_MS`) — `RestaurantScene.update`
+calls `customerRenderer.update(state.customers)` right after `runSystems`, so `CustomerSystem`
+(spawning) and `CustomerRenderer` (drawing) are now the only two things producing customer
+behavior, both driven by the same `GameState`. `update` also destroys and drops the sprite for
+any id no longer present in the incoming `customers` list — dead code today (nothing removes a
+`Customer` from `state.customers` until M04.8), but written now so a sprite never outlives its
+`Customer` and leaks once despawning is real. Tested in `customer-renderer.test.ts` with a mock
+`Phaser.Scene` (no real canvas/WebGL): creates a sprite once per new id, updates position on an
+existing sprite, destroys a sprite whose customer disappeared, never recreates a destroyed id,
+never mutates the `Customer` objects it reads.
+
 **Repository governance:** `main` is branch-protected on GitHub. `.github/workflows/ci.yml`
 (new) runs `pnpm install --frozen-lockfile` → `pnpm test` → `pnpm build` as the `build-and-test`
 check, required and kept up-to-date-with-`main` (`strict: true`) before merge. Merge policy on
@@ -122,9 +150,10 @@ it's a real judgment call, not an implementation detail.
 
 ## Next known step
 
-M04.4 — Customer rendering: a dedicated renderer (`CustomerRenderer`, or `game/npc/controller.ts`
-reduced to this) reads `GameState.customers` and creates/updates a sprite per `Customer`, never
-writing back to `CustomerState` (`docs/MILESTONES.md`'s M04 section has the full M04.1–M04.8
-plan). The stay-timer duration (needed once M04.8 "stay timer and leaving" is reached) is a
-separate new `balancing_value` decision to confirm before writing it into code — not needed for
-M04.4.
+M04.5 — Customer movement simulation: add a `target` position and a speed to `Customer`, and
+move it by `deltaMs` inside `CustomerSystem` (arrival detected in the simulation itself, not via
+a Phaser tween `onComplete` — `docs/MILESTONES.md`'s M04 section has the full M04.1–M04.8 plan).
+`CustomerRenderer` from M04.4 already repositions a sprite from `Customer.position` every frame,
+so M04.5 shouldn't need renderer changes — just real position updates for it to draw. The
+stay-timer duration (needed once M04.8 "stay timer and leaving" is reached) is a separate new
+`balancing_value` decision to confirm before writing it into code — not needed yet.
