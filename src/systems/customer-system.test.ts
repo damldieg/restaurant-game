@@ -61,6 +61,18 @@ describe("CustomerSystem", () => {
     expect(state.customers[0].state).toBe("walking");
   });
 
+  it("sits a customer down once it reaches its assigned table", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+
+    system.update(state, SPAWN_INTERVAL_MS);
+    system.update(state, 60_000);
+
+    expect(state.customers[0].state).toBe("seated");
+    expect(state.customers[0].target).toBeNull();
+    expect(state.customers[0].tableId).not.toBeNull();
+  });
+
   it("assigns distinct tables to multiple customers arriving in the same update", () => {
     const state = createGameState(500, 0);
 

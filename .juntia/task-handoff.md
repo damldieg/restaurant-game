@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M04.6: Find and reserve table — integrar findFreeTable/getSeatForTable en CustomerSystem, asignar tableId al Customer, evitar doble asignación de la misma mesa","generatedAt":"2026-08-20T17:51:33.962Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M04.7: Sit down state — añadir la transición walking a seated en la simulación cuando el Customer llega a su mesa asignada","generatedAt":"2026-08-20T18:18:43.652Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,7 +7,7 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M04.6: Find and reserve table — integrar findFreeTable/getSeatForTable en CustomerSystem, asignar tableId al Customer, evitar doble asignación de la misma mesa
+> Implementar M04.7: Sit down state — añadir la transición walking a seated en la simulación cuando el Customer llega a su mesa asignada
 
 ## Task Status
 

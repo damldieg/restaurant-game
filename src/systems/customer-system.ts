@@ -3,10 +3,9 @@ import type { GameSystem } from "./game-system";
 import { assignTables, moveCustomer, spawnCustomer } from "../core/customers/customer";
 
 // Mismo ritmo que NPC_SPAWN_INTERVAL_MS en main.ts (NpcController) — decisión
-// confirmada en M04.3, ver .juntia/DECISIONS.md. Todavía sin transición
-// "walking → seated" — eso llega en M04.7, siguiendo el principio confirmado
-// en M03.5 (la simulación es la fuente de verdad; Phaser solo representa lo
-// que este sistema escriba en GameState).
+// confirmada en M04.3, ver .juntia/DECISIONS.md. Sigue el principio
+// confirmado en M03.5 (la simulación es la fuente de verdad; Phaser solo
+// representa lo que este sistema escriba en GameState).
 const SPAWN_INTERVAL_MS = 2500;
 
 export class CustomerSystem implements GameSystem {

@@ -412,16 +412,33 @@ Verificado: `pnpm test` (59/59) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ### M04.7 — Sit down state
 
+**Estado: completado.**
+
 **Objetivo:** cliente sentado.
 
-- [ ] Añadir transición `walking → seated` en la simulación (`CustomerSystem`/
-      `customer-state.ts`), no en un `onComplete` de tween.
-- [ ] Asociar el cliente con su mesa (`tableId`).
-- [ ] Liberar el movimiento (el cliente deja de tener `target` activo).
-- [ ] Preparar el terreno para estados futuros (`waiting`, `eating`, etc. de milestones
-      posteriores).
+- [x] Añadir transición `walking → seated` en la simulación — dentro de la rama de llegada de
+      `moveCustomer` (`core/customers/customer.ts`), no en un `onComplete` de tween. `Asociar
+      el cliente con su mesa (tableId)` y `liberar el movimiento (target a null)` ya estaban
+      resueltos por M04.6/M04.5 respectivamente, así que el único cambio real fue distinguir,
+      en esa rama de llegada, a qué llegó el customer: con `tableId` ya asignado (llegó a su
+      asiento, per `assignTables`/M04.6) pasa a `seated`; sin `tableId` (llegó a
+      `ENTRY_TARGET`) sigue pasando a `idle`, como antes.
+- [x] Asociar el cliente con su mesa (`tableId`) — ya resuelto en M04.6, sin cambios aquí.
+- [x] Liberar el movimiento (`target` a `null` al llegar) — ya resuelto en M04.5, sin cambios
+      aquí.
+- [x] Preparar el terreno para estados futuros (`waiting`, `eating`, etc.) — `CustomerState`
+      ya soporta `seated` desde M04.1; ningún cambio de forma de datos fue necesario.
 
-**Player-visible outcome:** el cliente llega y se sienta.
+Ningún archivo fuera de `moveCustomer` cambió de comportamiento — `CustomerSystem`,
+`assignTables` y `CustomerRenderer` quedaron intactos; el pipeline `spawn → move →
+assignTables` de `CustomerSystem.update` no se tocó.
+
+**Player-visible outcome:** el cliente llega y se sienta — verificado en navegador (Playwright,
+screenshots espaciados en una corrida de ~18s): los sprites de los clientes llegan a una de las
+dos sillas del layout inicial y se quedan quietos ahí (sin seguir desplazándose ni superponerse
+más allá de ese punto); HUD y muebles sin cambios; sin errores de consola.
+
+Verificado: `pnpm test` (61/61) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 

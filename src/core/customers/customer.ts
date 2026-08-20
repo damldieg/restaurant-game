@@ -53,10 +53,12 @@ export function spawnCustomer(id: string): Customer {
 // Mueve un customer hacia su target según deltaMs, dentro de la simulación
 // (nunca vía tween de Phaser — decisión confirmada en M03.5). Devuelve un
 // nuevo Customer; no muta el original. Sin target, no hay movimiento.
-// Al llegar (distancia recorrible en este paso >= distancia restante):
-// la posición se ajusta exactamente al target, el target se limpia, y un
-// customer "walking" pasa a "idle" (sin mesa asignada todavía — eso llega
-// en M04.6/M04.7).
+// Al llegar (distancia recorrible en este paso >= distancia restante): la
+// posición se ajusta exactamente al target y el target se limpia. Un
+// customer "walking" que llega con una mesa asignada (`tableId`, per
+// assignTables/M04.6) pasa a "seated" — llegó a su asiento; sin mesa
+// asignada (llegó a ENTRY_TARGET) pasa a "idle", en espera de que
+// assignTables le encuentre una.
 export function moveCustomer(customer: Customer, deltaMs: number): Customer {
   if (!customer.target) {
     return customer;
@@ -73,7 +75,8 @@ export function moveCustomer(customer: Customer, deltaMs: number): Customer {
       ...customer,
       position: customer.target,
       target: null,
-      state: customer.state === "walking" ? "idle" : customer.state,
+      state:
+        customer.state === "walking" ? (customer.tableId ? "seated" : "idle") : customer.state,
     };
   }
 
@@ -94,9 +97,9 @@ export function moveCustomer(customer: Customer, deltaMs: number): Customer {
 // misma pasada llevando una lista de posiciones ya ocupadas (las ya
 // asignadas + las que se van asignando en este mismo llamado). No muta los
 // Customer originales. Solo fija `tableId` y apunta `target` al asiento,
-// volviendo a `walking` para que `moveCustomer` lo lleve hasta ahí — la
-// transición `walking → seated` al llegar es responsabilidad de M04.7, no
-// de esta función.
+// volviendo a `walking` para que `moveCustomer` lo lleve hasta ahí y lo
+// siente al llegar (transición `walking → seated`, ver `moveCustomer`) —
+// esta función nunca sienta al customer directamente.
 export function assignTables(customers: Customer[], furnitureList: Furniture[]): Customer[] {
   const assignedTableIds = new Set(
     customers

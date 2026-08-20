@@ -17,13 +17,13 @@ simulation loop; milestone numbers below refer to that new order, not the old on
 M01 (furniture catalog/construction), M02 (economy foundation), M02.5 (core simulation
 foundation), M03 (reputation foundation), and M03.5 (customer architecture review) are done.
 M04 (basic customer lifecycle) is in progress — `docs/MILESTONES.md`'s M04 section is an
-M04.1–M04.8 incremental plan (plus an explicit "scope boundaries" list); M04.1–M04.6 are done.
-`pnpm test`: 59/59 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with Playwright
-screenshots; M04.3–M04.6 also verified in-browser (no console errors). M04.4 was a visual
+M04.1–M04.8 incremental plan (plus an explicit "scope boundaries" list); M04.1–M04.7 are done.
+`pnpm test`: 61/61 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with Playwright
+screenshots; M04.3–M04.7 also verified in-browser (no console errors). M04.4 was a visual
 regression by design (sprite sat at the door, no movement) — M04.5 resolved it (customers walk
-from the door toward the counter) and M04.6 extends it further: customers now split off toward
-one of the two tables and walk to their assigned seat, though they still just go `idle` there
-rather than visibly "sitting" — that's M04.7.
+from the door toward the counter), M04.6 extended it (customers split off toward one of the two
+tables and walk to their assigned seat), and M04.7 completes the loop so far: a customer that
+reaches its seat now stays `seated` there instead of just going `idle`.
 
 **Architecture (M02.5 — see `.juntia/ARCHITECTURE.md` for the full picture):**
 
@@ -176,6 +176,21 @@ run): customers walk to the entry point, then visibly split off toward one of th
 the default layout — settling at two distinct chairs, never stacking on the same one; HUD and
 furniture unaffected; no console errors.
 
+**M04.7 (Sit down state) — done:** the only real change was in `moveCustomer`'s arrival branch
+(`core/customers/customer.ts`) — `tableId`/`target` clearing were already solved by M04.6/M04.5,
+so the sole gap was that arrival unconditionally set `walking → idle` regardless of what the
+customer had just walked to. Now: arriving with a `tableId` already assigned (i.e. it walked to
+its seat, per `assignTables`/M04.6) sets `walking → seated`; arriving with no `tableId` (i.e. it
+walked to `ENTRY_TARGET`) still sets `walking → idle`, unchanged. `CustomerSystem`,
+`assignTables`, and `CustomerRenderer` are all untouched — the `spawn → move → assignTables`
+pipeline didn't need to change, and `CustomerState` already had `seated` since M04.1. Tested in
+`customer.test.ts` (arrival transitions to `seated` when `tableId` is set, still transitions to
+`idle` when it isn't) and `customer-system.test.ts` (a full spawn → walk to entry → get a table
+→ walk to the seat → arrive run ends with `state: "seated"`, `target: null`, `tableId` set).
+Verified in-browser with Playwright (screenshots across an ~18s run): a customer sprite reaches
+its assigned chair and stays exactly stationary there across later frames (no drift), instead of
+continuing to move or overshoot; HUD/furniture unaffected; no console errors.
+
 **Repository governance:** `main` is branch-protected on GitHub. `.github/workflows/ci.yml`
 (new) runs `pnpm install --frozen-lockfile` → `pnpm test` → `pnpm build` as the `build-and-test`
 check, required and kept up-to-date-with-`main` (`strict: true`) before merge. Merge policy on
@@ -195,11 +210,11 @@ it's a real judgment call, not an implementation detail.
 
 ## Next known step
 
-M04.7 — Sit down state: add the `walking → seated` transition in the simulation
-(`CustomerSystem`/`customer-state.ts`, not a Phaser `onComplete`) once a customer arrives at the
-seat `assignTables` (M04.6) already sends it to; associate it with its `tableId` (already set);
-release movement (`target` already clears on arrival, per M04.5); prepare the ground for future
-states (`waiting`, `eating`, etc. from later milestones) (`docs/MILESTONES.md`'s M04 section has
-the full M04.1–M04.8 plan). The stay-timer duration (needed once M04.8 "stay timer and leaving"
-is reached) is a separate new `balancing_value` decision to confirm before writing it into code —
-not needed yet.
+M04.8 — Stay timer and leaving (the last M04 sub-step): add a fixed placeholder "stay" timer (no
+food/order tied to it yet — its duration is a new `balancing_value` decision to confirm before
+writing it into code, not needed until this step); add a `leaving` state plus the generic
+walk-to-door-and-despawn infrastructure (meant to be reusable by M05, M09, and M15 later, not
+duplicated); reuse M04.5's movement for the walk to the exit; remove the customer from
+`GameState.customers` once it reaches the door (`docs/MILESTONES.md`'s M04 section has the full
+M04.1–M04.8 plan). Completing M04.8 closes M04 itself — the full loop (enter → find table → sit
+→ stay → leave) will run without manual intervention for the first time.
