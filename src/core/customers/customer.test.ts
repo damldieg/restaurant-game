@@ -4,9 +4,13 @@ import {
   spawnCustomer,
   moveCustomer,
   assignTables,
+  sendToExit,
+  advanceStay,
+  removeDepartedCustomers,
   DOOR_POSITION,
   ENTRY_TARGET,
   CUSTOMER_SPEED_TILES_PER_SEC,
+  STAY_DURATION_MS,
 } from "./customer";
 import type { CustomerState } from "./customer-state";
 import { furniture, getSeatForTable, type Table } from "../restaurant";
@@ -21,6 +25,7 @@ describe("createCustomer", () => {
       state: "walking",
       target: null,
       tableId: null,
+      stayRemainingMs: null,
     });
   });
 
@@ -62,6 +67,7 @@ describe("spawnCustomer", () => {
       state: "walking",
       target: ENTRY_TARGET,
       tableId: null,
+      stayRemainingMs: null,
     });
   });
 });
@@ -209,5 +215,112 @@ describe("assignTables", () => {
     assignTables([customer], furniture);
 
     expect(customer).toEqual(snapshot);
+  });
+});
+
+describe("sendToExit", () => {
+  it("sends a customer walking to the door, releasing its table", () => {
+    const customer = createCustomer(
+      "customer-1",
+      { col: 5, row: 6 },
+      "seated",
+      null,
+      "table-1",
+      4000
+    );
+
+    const leaving = sendToExit(customer);
+
+    expect(leaving.state).toBe("leaving");
+    expect(leaving.target).toEqual(DOOR_POSITION);
+    expect(leaving.tableId).toBeNull();
+    expect(leaving.stayRemainingMs).toBeNull();
+  });
+
+  it("does not mutate the original customer", () => {
+    const customer = createCustomer("customer-1", { col: 5, row: 6 }, "seated", null, "table-1");
+    const snapshot = structuredClone(customer);
+
+    sendToExit(customer);
+
+    expect(customer).toEqual(snapshot);
+  });
+});
+
+describe("advanceStay", () => {
+  it("leaves a non-seated customer unchanged", () => {
+    const customer = createCustomer("customer-1", { col: 0, row: 0 }, "walking", {
+      col: 5,
+      row: 5,
+    });
+
+    expect(advanceStay(customer, 1000)).toEqual(customer);
+  });
+
+  it("starts the countdown from STAY_DURATION_MS the first time it sees a seated customer", () => {
+    const customer = createCustomer("customer-1", { col: 5, row: 6 }, "seated", null, "table-1");
+
+    const advanced = advanceStay(customer, 1000);
+
+    expect(advanced.stayRemainingMs).toBe(STAY_DURATION_MS - 1000);
+    expect(advanced.state).toBe("seated");
+  });
+
+  it("keeps counting down on later calls", () => {
+    const customer = createCustomer(
+      "customer-1",
+      { col: 5, row: 6 },
+      "seated",
+      null,
+      "table-1",
+      3000
+    );
+
+    expect(advanceStay(customer, 1000).stayRemainingMs).toBe(2000);
+  });
+
+  it("sends the customer to the exit once the stay runs out", () => {
+    const customer = createCustomer(
+      "customer-1",
+      { col: 5, row: 6 },
+      "seated",
+      null,
+      "table-1",
+      500
+    );
+
+    const advanced = advanceStay(customer, 1000);
+
+    expect(advanced.state).toBe("leaving");
+    expect(advanced.target).toEqual(DOOR_POSITION);
+    expect(advanced.tableId).toBeNull();
+    expect(advanced.stayRemainingMs).toBeNull();
+  });
+
+  it("does not mutate the original customer", () => {
+    const customer = createCustomer("customer-1", { col: 5, row: 6 }, "seated", null, "table-1");
+    const snapshot = structuredClone(customer);
+
+    advanceStay(customer, 1000);
+
+    expect(customer).toEqual(snapshot);
+  });
+});
+
+describe("removeDepartedCustomers", () => {
+  it("removes a leaving customer that already reached the door", () => {
+    const departed = createCustomer("customer-1", DOOR_POSITION, "leaving", null);
+    const stillWalking = createCustomer("customer-2", { col: 5, row: 5 }, "leaving", DOOR_POSITION);
+    const seated = createCustomer("customer-3", { col: 5, row: 6 }, "seated", null, "table-1");
+
+    const result = removeDepartedCustomers([departed, stillWalking, seated]);
+
+    expect(result.map((customer) => customer.id)).toEqual(["customer-2", "customer-3"]);
+  });
+
+  it("does not remove a customer that is not leaving", () => {
+    const customer = createCustomer("customer-1", { col: 0, row: 0 }, "idle");
+
+    expect(removeDepartedCustomers([customer])).toEqual([customer]);
   });
 });

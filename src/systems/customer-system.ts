@@ -1,6 +1,12 @@
 import type { GameState } from "../state/game-state";
 import type { GameSystem } from "./game-system";
-import { assignTables, moveCustomer, spawnCustomer } from "../core/customers/customer";
+import {
+  advanceStay,
+  assignTables,
+  moveCustomer,
+  removeDepartedCustomers,
+  spawnCustomer,
+} from "../core/customers/customer";
 
 // Mismo ritmo que NPC_SPAWN_INTERVAL_MS en main.ts (NpcController) — decisión
 // confirmada en M04.3, ver .juntia/DECISIONS.md. Sigue el principio
@@ -22,5 +28,7 @@ export class CustomerSystem implements GameSystem {
 
     state.customers = state.customers.map((customer) => moveCustomer(customer, deltaMs));
     state.customers = assignTables(state.customers, state.furniture);
+    state.customers = state.customers.map((customer) => advanceStay(customer, deltaMs));
+    state.customers = removeDepartedCustomers(state.customers);
   }
 }

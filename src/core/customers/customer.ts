@@ -13,12 +13,20 @@ import {
 // .juntia/DECISIONS.md).
 export const CUSTOMER_SPEED_TILES_PER_SEC = 1.5;
 
+// Tiempo que un customer permanece "seated" antes de irse — placeholder fijo
+// sin comida/pedido real todavía (decisión confirmada en M04.8, ver
+// .juntia/DECISIONS.md).
+export const STAY_DURATION_MS = 10_000;
+
 export interface Customer {
   id: string;
   position: GridPosition;
   state: CustomerState;
   target: GridPosition | null;
   tableId: string | null;
+  // Cuenta regresiva de M04.8 mientras está "seated"; null en cualquier
+  // otro estado (todavía no se sentó, o ya se está yendo).
+  stayRemainingMs: number | null;
 }
 
 export function createCustomer(
@@ -26,9 +34,10 @@ export function createCustomer(
   position: GridPosition,
   state: CustomerState = "idle",
   target: GridPosition | null = null,
-  tableId: string | null = null
+  tableId: string | null = null,
+  stayRemainingMs: number | null = null
 ): Customer {
-  return { id, position, state, target, tableId };
+  return { id, position, state, target, tableId, stayRemainingMs };
 }
 
 // Posición lógica de la puerta del restaurante — mismo cálculo que usa
@@ -131,4 +140,51 @@ export function assignTables(customers: Customer[], furnitureList: Furniture[]):
       state: "walking" as CustomerState,
     };
   });
+}
+
+// Infraestructura genérica de salida (M04.8) — pone a un customer en camino
+// a la puerta. Reutilizable por cualquier motivo futuro de abandono (M05
+// paciencia, M09, M15), no solo por el timer de estadía de M04.8: nada acá
+// depende de por qué se va. Libera la mesa de inmediato (`tableId: null`)
+// para que `assignTables` pueda ofrecérsela a otro customer sin esperar a
+// que termine de caminar hasta la puerta. No despawnea por sí sola —
+// `moveCustomer` lo lleva a la puerta y `removeDepartedCustomers` lo saca
+// de `GameState.customers` al llegar.
+export function sendToExit(customer: Customer): Customer {
+  return {
+    ...customer,
+    state: "leaving",
+    target: DOOR_POSITION,
+    tableId: null,
+    stayRemainingMs: null,
+  };
+}
+
+// Cuenta regresiva del tiempo de estadía (M04.8) para customers "seated".
+// No muta el original. La cuenta arranca en STAY_DURATION_MS la primera vez
+// que ve a un customer "seated" sin `stayRemainingMs` todavía (se sienta
+// justo al llegar a la mesa, per moveCustomer — nunca antes), y no cuenta
+// el tiempo que pasó caminando. Al agotarse, envía al customer a la salida
+// vía sendToExit.
+export function advanceStay(customer: Customer, deltaMs: number): Customer {
+  if (customer.state !== "seated") {
+    return customer;
+  }
+
+  const remaining = (customer.stayRemainingMs ?? STAY_DURATION_MS) - deltaMs;
+
+  if (remaining > 0) {
+    return { ...customer, stayRemainingMs: remaining };
+  }
+
+  return sendToExit(customer);
+}
+
+// Elimina del array a cualquier customer que ya llegó a la puerta mientras
+// se iba ("leaving" sin target activo — moveCustomer ya lo dejó ahí).
+// Genérica: no le importa qué disparó el "leaving" en primer lugar.
+export function removeDepartedCustomers(customers: Customer[]): Customer[] {
+  return customers.filter(
+    (customer) => !(customer.state === "leaving" && customer.target === null)
+  );
 }

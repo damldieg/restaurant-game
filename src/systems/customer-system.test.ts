@@ -66,11 +66,53 @@ describe("CustomerSystem", () => {
     const system = new CustomerSystem();
 
     system.update(state, SPAWN_INTERVAL_MS);
-    system.update(state, 60_000);
+    system.update(state, 5000);
 
     expect(state.customers[0].state).toBe("seated");
     expect(state.customers[0].target).toBeNull();
     expect(state.customers[0].tableId).not.toBeNull();
+  });
+
+  it("runs the full lifecycle: spawns, walks in, sits, stays, leaves, and despawns", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+    const findCustomer1 = () => state.customers.find((customer) => customer.id === "customer-1");
+
+    system.update(state, SPAWN_INTERVAL_MS);
+    expect(findCustomer1()?.state).toBe("walking");
+
+    system.update(state, 5000);
+    expect(findCustomer1()?.state).toBe("seated");
+
+    system.update(state, 4000);
+    expect(findCustomer1()?.state).toBe("seated");
+    expect(findCustomer1()?.stayRemainingMs).toBeGreaterThan(0);
+
+    system.update(state, 2000);
+    expect(findCustomer1()?.state).toBe("leaving");
+    expect(findCustomer1()?.tableId).toBeNull();
+    expect(findCustomer1()).not.toBeUndefined();
+
+    system.update(state, 60_000);
+    expect(findCustomer1()).toBeUndefined();
+  });
+
+  it("frees a table once its customer starts leaving, so a waiting customer can take it", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+
+    system.update(state, SPAWN_INTERVAL_MS * 3);
+    system.update(state, 5000);
+
+    const waiting = state.customers.find((customer) => customer.tableId === null);
+    expect(waiting?.state).toBe("idle");
+
+    system.update(state, 5000);
+    system.update(state, 1);
+
+    const waitingCustomerId = waiting?.id;
+    const stillWaiting = state.customers.find((customer) => customer.id === waitingCustomerId);
+    expect(stillWaiting?.tableId).not.toBeNull();
   });
 
   it("assigns distinct tables to multiple customers arriving in the same update", () => {
