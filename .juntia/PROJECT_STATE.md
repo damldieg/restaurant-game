@@ -8,13 +8,18 @@ Mark anything not yet determined as `UNKNOWN` rather than guessing or silently o
 
 ## Current state
 
-M01–M03 done and verified (`pnpm test`: 13/13 passing): tables/chairs linked by explicit `id`/`tableId`,
-two independent tables, multiple simultaneous NPCs via `NpcController`. M04 (waiting/queue, abandonment,
-reputation) not started — `NpcState` still only has `walking | idle | seated`, no `waiting`/`leaving`; an
-NPC with no free table sits `idle` at the entry indefinitely with no queue, timeout, or penalty.
-`reputation` isn't real state yet — the HUD text is a fixed placeholder.
+`docs/MILESTONES.md` was reordered so construction/economy/reputation come before the customer
+simulation loop; milestone numbers below refer to that new order, not the old one.
+
+Groundwork done and verified (`pnpm test`: 13/13 passing), listed under M04's "Ya completado" section:
+tables/chairs linked by explicit `id`/`tableId`, two independent tables, multiple simultaneous NPCs via
+`NpcController`. M01 (furniture catalog/construction), M02 (economy), and M03 (reputation foundation) are
+not started — there is no purchasable furniture catalog, `money` isn't real state, and `reputation` isn't
+either (the HUD text is a fixed placeholder). M04's remaining tasks (stay timer, `leaving` state, walk to
+door and despawn) are also not started — `NpcState` still only has `walking | idle | seated`; an NPC that
+sits down stays there indefinitely.
 
 ## Next known step
 
-M04 — Espera / cola sin mesas libres, abandono y reputación (`docs/MILESTONES.md`). First unblocked task:
-add the `waiting` state to `NpcState`.
+M01 — Furniture data and construction (`docs/MILESTONES.md`). First unblocked task: "Crear catálogo de
+muebles comprables: `FurnitureDefinition { type, name, price }`".

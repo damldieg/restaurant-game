@@ -23,18 +23,16 @@ FACTS:
 - id:[technology:phaser] evidence:package.json
 - id:[technology:vite] evidence:package.json
 - id:[technology:tsconfig.json] evidence:config file
-- id:[dependency:@juntia/juntia] value:"^0.5.0" evidence:package.json
+- id:[dependency:@juntia/juntia] value:"^0.14.0" evidence:package.json
 - id:[dependency:latest] value:"link:@juntia/juntia/latest" evidence:package.json
 - id:[dependency:phaser] value:"^4.2.1" evidence:package.json
 - id:[dependency:typescript] value:"~6.0.2" evidence:package.json
 - id:[dependency:vite] value:"^8.2.0" evidence:package.json
 - id:[dependency:vitest] value:"^4.1.10" evidence:package.json
 - id:[structure.directory:.claude] evidence:scan
-- id:[structure.directory:dist] evidence:scan
 - id:[structure.directory:docs] evidence:scan
 - id:[structure.directory:public] evidence:scan
 - id:[structure.directory:src] evidence:scan
-- id:[structure.file:.DS_Store] evidence:scan
 - id:[structure.file:.gitignore] evidence:scan
 - id:[managed.file:CLAUDE.md] evidence:scan
 - id:[structure.file:README.md] evidence:scan
@@ -45,7 +43,7 @@ FACTS:
 - id:[structure.file:tsconfig.json] evidence:scan
 
 CHANGES:
-+ added: managed.file:CLAUDE.md
+No changes since the previous scan (or this is the first scan).
 
 EXISTING CONTEXT:
 (none persisted yet — Juntia has no confirmed decision for this project)
