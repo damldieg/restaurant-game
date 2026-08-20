@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { gridToWorldCenter, type GridPosition } from "../grid";
-import { findFreeTable, getSeatForTable } from "../restaurant";
+import { findFreeTable, getSeatForTable } from "../../core/restaurant";
 import { createNpc, type Npc } from "./npc";
 
 const NPC_WIDTH = 22;

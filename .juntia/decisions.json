@@ -34,6 +34,21 @@
       "source": "human",
       "confirmedAt": "2026-08-20T11:55:08.652Z",
       "status": "active"
+    },
+    {
+      "id": "eb069ceacd",
+      "type": "architecture",
+      "question": "¿Qué arquitectura separa el core del juego de Phaser antes de M03 (M02.5)?",
+      "context": "M02.5 prepara el terreno para reputación/clientes/cocina/empleados sin mezclar lógica de negocio con Phaser. Decisión especificada explícitamente por el usuario en la solicitud de M02.5.",
+      "options": [
+        "GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts)."
+      ],
+      "evidence": [],
+      "reason": "data_model_change / cross_module_boundary: reorganiza dónde vive el estado del juego (money, furniture) y establece el límite core↔Phaser para todos los sistemas futuros.",
+      "text": "GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts).",
+      "source": "human",
+      "confirmedAt": "2026-08-20T12:08:29.975Z",
+      "status": "active"
     }
   ]
 }

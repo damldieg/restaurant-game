@@ -15,3 +15,4 @@ this automatically) after a new decision is confirmed.
 
 - Mesa 100 / Silla 25 (product decision, confirmed 2026-08-20)
 - $500 (product decision, confirmed 2026-08-20)
+- GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts). (architecture decision, confirmed 2026-08-20)
