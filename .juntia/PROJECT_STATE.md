@@ -13,8 +13,9 @@ simulation loop; milestone numbers below refer to that new order, not the old on
 
 M01 (furniture catalog/construction), M02 (economy foundation), M02.5 (core simulation
 foundation), M03 (reputation foundation), and M03.5 (customer architecture review) are done.
-`pnpm test`: 27/27 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with Playwright
-screenshots. M03.5 was analysis/planning only — no `src/` file changed, no test count change.
+M04 (basic customer lifecycle) is in progress — step 1 of 5 of the confirmed incremental plan
+done. `pnpm test`: 32/32 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with
+Playwright screenshots (M04 step 1 has no visual surface — see below).
 
 **Architecture (M02.5 — see `.juntia/ARCHITECTURE.md` for the full picture):**
 
@@ -68,10 +69,18 @@ implemented — `NpcState` still only has `walking | idle | seated`; an NPC that
 there indefinitely; a table placed via construction mode is not yet picked up by
 `NpcController`/`findFreeTable` as seatable; `occupiedTables` is untouched (still M06's job).
 
+**M04 step 1 (Customer entity):** `src/core/customers/` (new subfolder, per M03.5's confirmed
+decision) holds `customer-state.ts` (`CustomerState = "walking" | "idle" | "seated"`, no
+transitions implemented yet) and `customer.ts` (`Customer { id, position, state }`,
+`createCustomer`) — a pure simulation entity with zero Phaser dependency, tested in
+`customer.test.ts` (creation + all three initial states). `target`/`tableId` are documented as
+future fields in a code comment, not implemented. Deliberately isolated: `Npc`/`NpcState`,
+`NpcController`, `RestaurantScene`, `GameState`, `occupiedTables`, and `findFreeTable` are all
+untouched — `Customer` doesn't connect to anything yet, by design; that wiring is steps 2–5.
+
 ## Next known step
 
-M04 — Basic customer lifecycle (`docs/MILESTONES.md`), following M03.5's confirmed architecture
-and its step-1 first: move `Npc`/`NpcState` into `core/customers/customer.ts` unchanged, migrate
-`npc.test.ts` with it, keep everything else exactly as it behaves today. The stay-timer duration
-(needed once "quedarse y salir" is reached) is a new `balancing_value` decision to confirm before
-writing it into code — not needed for step 1.
+M04 step 2 — add `customers: Customer[]` to `GameState`, empty in `createGameState`, same
+pattern as `reputation` in M03 (`docs/MILESTONES.md`'s M04 section has the full 5-step plan).
+The stay-timer duration (needed once "quedarse y salir" is reached, later in M04) is a separate
+new `balancing_value` decision to confirm before writing it into code — not needed for step 2.
