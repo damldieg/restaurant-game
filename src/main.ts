@@ -1,10 +1,11 @@
 import Phaser from "phaser";
 import { TILE_SIZE, gridToWorldCenter, worldToGridPosition, type GridPosition } from "./game/grid";
-import { RESTAURANT_COLS, RESTAURANT_ROWS, furniture, type Furniture } from "./core/restaurant";
+import { RESTAURANT_COLS, RESTAURANT_ROWS, type Furniture } from "./core/restaurant";
 import { NpcController } from "./game/npc/controller";
 import { FURNITURE_CATALOG } from "./core/furniture-catalog";
 import { isValidPlacement } from "./core/placement";
 import { canAfford } from "./core/economy";
+import { createGameState, type GameState } from "./state/game-state";
 
 const NPC_SPAWN_INTERVAL_MS = 2500;
 const INITIAL_MONEY = 500;
@@ -34,7 +35,7 @@ class RestaurantScene extends Phaser.Scene {
   private placementActive = false;
   private previewRect!: Phaser.GameObjects.Rectangle;
   private placementText!: Phaser.GameObjects.Text;
-  private money = INITIAL_MONEY;
+  private gameState: GameState = createGameState(INITIAL_MONEY);
   private moneyText!: Phaser.GameObjects.Text;
 
   create() {
@@ -102,10 +103,10 @@ class RestaurantScene extends Phaser.Scene {
     const withinGridAndFree = isValidPlacement(
       gridPosition,
       { cols: RESTAURANT_COLS, rows: RESTAURANT_ROWS },
-      furniture
+      this.gameState.furniture
     );
 
-    return withinGridAndFree && canAfford(this.money, PLACEABLE_DEFINITION.price);
+    return withinGridAndFree && canAfford(this.gameState.money, PLACEABLE_DEFINITION.price);
   }
 
   private confirmPlacement(pointer: Phaser.Input.Pointer) {
@@ -113,10 +114,10 @@ class RestaurantScene extends Phaser.Scene {
 
     if (!this.canPlaceAt(gridPosition)) return;
 
-    this.money -= PLACEABLE_DEFINITION.price;
+    this.gameState.money -= PLACEABLE_DEFINITION.price;
     this.updateMoneyDisplay();
 
-    furniture.push({
+    this.gameState.furniture.push({
       id: `table-${this.nextFurnitureId++}`,
       type: "table",
       position: gridPosition,
@@ -175,7 +176,7 @@ class RestaurantScene extends Phaser.Scene {
     this.add.rectangle(400, startY + restaurantHeight, 48, 12, 0x6b3f2a);
 
     // Muebles (mesas, sillas...) a partir de los datos del restaurante
-    for (const item of furniture) {
+    for (const item of this.gameState.furniture) {
       const { x, y } = gridToWorldCenter(item.position, startX, startY);
       const style = FURNITURE_STYLE[item.type];
 
@@ -204,7 +205,7 @@ class RestaurantScene extends Phaser.Scene {
   }
 
   private updateMoneyDisplay() {
-    this.moneyText.setText(`Dinero: $${this.money}`);
+    this.moneyText.setText(`Dinero: $${this.gameState.money}`);
   }
 }
 
