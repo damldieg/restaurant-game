@@ -79,6 +79,26 @@ soften/extend one of the ones below, edit it here directly; Juntia will not sile
   continue the affected implementation while status reads `WAITING_HUMAN_CONFIRMATION`. Once a human answers
   via `juntia confirm`, status returns to normal and the confirmed value appears in "Confirmed decisions" —
   continue only from there.
+- **Close every milestone, sub-step, or task the same way — validate, document, commit, push, open a PR, then
+  stop.** Never leave a completed step with uncommitted changes, or sitting only in the working tree. This is
+  project convention now, not situational judgment — do not skip it because a step feels too small.
+  1. **Verify before calling it done.** Run the project's own tests, type checking, and build (its real
+     equivalents, whatever they are) — same as "Validate changes before considering them done" above.
+     Confirm there are no failures, regressions, or critical warnings.
+  2. **Update `.juntia/PROJECT_STATE.md`.** What was completed, any architecture decision made along the way,
+     the main files/modules that changed, and the next known step. Update any other milestone-specific doc
+     this project keeps (e.g. a roadmap file) too, if it exists.
+  3. **Commit.** Never end a step with uncommitted changes. Use Conventional Commits (e.g.
+     `feat(customers): implement customer rendering system`).
+  4. **Push** the current branch to the remote and confirm the push actually succeeded.
+  5. **Open a Pull Request into `main`** summarizing the change, what was validated, its architectural impact,
+     and any known risk or open item. Never merge it yourself unless explicitly told to.
+  6. **Stop and wait.** Do not start the next milestone until this PR is merged, or a human explicitly says to
+     continue anyway.
+
+  This is what actually makes the branch-protection/required-PR setup this project already has (see
+  `.juntia/PROJECT_STATE.md`'s "Repository governance", if present) get followed every time a step finishes,
+  not only when asked.
 
 These rules describe what improves consistency and reduces contradictory or context-losing work across
 sessions — not a guarantee of correctness. A model can still make mistakes; the point is to reduce how often
