@@ -18,3 +18,4 @@ this automatically) after a new decision is confirmed.
 - GameState → Game Systems → Phaser Renderer; core/ (lógica pura, sin imports de 'phaser'), state/ (GameState central) y systems/ (contrato GameSystem.update(state, deltaMs), sin sistemas concretos todavía); sin Redux/Zustand/ECS completo; migración progresiva moviendo solo módulos ya libres de Phaser (restaurant.ts, furniture-catalog.ts, economy.ts, placement.ts). (architecture decision, confirmed 2026-08-20)
 - 0 (product decision, confirmed 2026-08-20)
 - Mesa +3 / Silla +1 (product decision, confirmed 2026-08-20)
+- core/customers/ (subcarpeta, como en el ejemplo del pedido original) con customer.ts + customer-state.ts separados, mismo resto (architecture decision, confirmed 2026-08-20)
