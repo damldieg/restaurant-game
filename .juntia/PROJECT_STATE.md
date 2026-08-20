@@ -11,15 +11,24 @@ Mark anything not yet determined as `UNKNOWN` rather than guessing or silently o
 `docs/MILESTONES.md` was reordered so construction/economy/reputation come before the customer
 simulation loop; milestone numbers below refer to that new order, not the old one.
 
-Groundwork done and verified (`pnpm test`: 13/13 passing), listed under M04's "Ya completado" section:
-tables/chairs linked by explicit `id`/`tableId`, two independent tables, multiple simultaneous NPCs via
-`NpcController`. M01 (furniture catalog/construction), M02 (economy), and M03 (reputation foundation) are
-not started — there is no purchasable furniture catalog, `money` isn't real state, and `reputation` isn't
-either (the HUD text is a fixed placeholder). M04's remaining tasks (stay timer, `leaving` state, walk to
-door and despawn) are also not started — `NpcState` still only has `walking | idle | seated`; an NPC that
-sits down stays there indefinitely.
+M01 (furniture catalog/construction) is done and verified (`pnpm test`: 18/18 passing;
+`tsc --noEmit` clean; verified in-browser with Playwright screenshots). `FurnitureDefinition`
+catalog lives in `src/game/furniture-catalog.ts` (table $100 / chair $25 — confirmed product
+decision, see `DECISIONS.md`). `isValidPlacement` (`src/game/placement.ts`) checks grid bounds
+and collision. Interactive placement (key `1`, cursor preview green/red, Esc cancels, click
+confirms) is wired in `src/main.ts` and only creates `table` instances — `chair` stays in the
+catalog with a defined price but has no placement mode yet, since it needs a `tableId` no M01
+task collects.
+
+M02 (economy) and M03 (reputation foundation) are not started — `money` isn't real state, and
+`reputation` isn't either (the HUD text is still a fixed placeholder). M04's remaining tasks
+(stay timer, `leaving` state, walk to door and despawn) are also not started — `NpcState` still
+only has `walking | idle | seated`; an NPC that sits down stays there indefinitely. A table
+placed via M01's construction mode is not yet picked up by `NpcController`/`findFreeTable` as
+seatable — that wiring isn't an M01 task either.
 
 ## Next known step
 
-M01 — Furniture data and construction (`docs/MILESTONES.md`). First unblocked task: "Crear catálogo de
-muebles comprables: `FurnitureDefinition { type, name, price }`".
+M02 — Economy foundation (`docs/MILESTONES.md`). First unblocked task: `money` as real game
+state (not just HUD text), with an initial value — that initial value is itself a new
+`balancing_value` decision to confirm before writing it into code.

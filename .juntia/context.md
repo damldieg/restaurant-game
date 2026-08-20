@@ -13,4 +13,4 @@ this automatically) after a new decision is confirmed.
 
 ## Confirmed decisions
 
-No decisions confirmed yet — run `juntia analyze --explain` then `juntia confirm`.
+- Mesa 100 / Silla 25 (product decision, confirmed 2026-08-20)
