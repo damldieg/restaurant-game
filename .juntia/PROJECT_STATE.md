@@ -13,10 +13,11 @@ simulation loop; milestone numbers below refer to that new order, not the old on
 
 M01 (furniture catalog/construction), M02 (economy foundation), M02.5 (core simulation
 foundation), M03 (reputation foundation), and M03.5 (customer architecture review) are done.
-M04 (basic customer lifecycle) is in progress — `docs/MILESTONES.md`'s M04 section is now an
-M04.1–M04.8 incremental plan (plus an explicit "scope boundaries" list); M04.1 and M04.2 are
-done. `pnpm test`: 33/33 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with
-Playwright screenshots (M04.1–M04.2 have no visual surface — see below).
+M04 (basic customer lifecycle) is in progress — `docs/MILESTONES.md`'s M04 section is an
+M04.1–M04.8 incremental plan (plus an explicit "scope boundaries" list); M04.1–M04.3 are done.
+`pnpm test`: 36/36 passing; `tsc --noEmit` clean; M01–M03 verified in-browser with Playwright
+screenshots; M04.3 also verified in-browser (6s run, 2+ spawn intervals, no console errors, no
+visual regression — `Customer` isn't rendered yet by design).
 
 **Architecture (M02.5 — see `.juntia/ARCHITECTURE.md` for the full picture):**
 
@@ -89,11 +90,24 @@ placeholder that does anything yet. Deliberately isolated: `Npc`/`NpcState`, `Np
 `occupiedTables`/`findFreeTable` are all untouched — nothing about existing NPC behavior changed;
 `main.ts`'s only change is the two-line system registration.
 
+**M04.3 (Customer spawning lógico) — done:** `core/customers/customer.ts` gained
+`DOOR_POSITION` (pure, derived from `RESTAURANT_COLS`/`RESTAURANT_ROWS` — same door tile
+`NpcController.spawnNpc()` already used) and `spawnCustomer(id)` (returns a `Customer` there,
+`state: "walking"`). `CustomerSystem` is no longer a no-op: it accumulates `deltaMs` and calls
+`spawnCustomer` every `SPAWN_INTERVAL_MS` (2500ms — confirmed decision, same cadence as
+`NpcController`'s `NPC_SPAWN_INTERVAL_MS`, kept in sync deliberately since both loops will need
+reconciling once M04.4 replaces `NpcController`'s own spawn), pushing into
+`state.customers`. No movement, tables, or new states beyond `walking` yet. `NpcController`,
+`RestaurantScene`, `GameState`, and `main.ts` are all untouched — two independent, non-interacting
+spawn loops now run side by side (Phaser's visible NPCs via `NpcController`, and invisible
+simulated `Customer`s via `CustomerSystem`), which is expected until M04.4 gives `Customer` a
+renderer.
+
 ## Next known step
 
-M04.3 — Customer spawning lógico: `spawnCustomer()`, adds a `Customer` to `GameState.customers`
-at a logical starting position, no sprites/Phaser/visual movement (`docs/MILESTONES.md`'s M04
-section has the full M04.1–M04.8 plan). The stay-timer duration (needed once M04.8 "stay timer
-and leaving" is reached) is a separate new `balancing_value` decision to confirm before writing
-it into code — not needed for M04.3. The spawn interval/cadence itself may also need a confirmed
-value once M04.3 starts.
+M04.4 — Customer rendering: a dedicated renderer (`CustomerRenderer`, or `game/npc/controller.ts`
+reduced to this) reads `GameState.customers` and creates/updates a sprite per `Customer`, never
+writing back to `CustomerState` (`docs/MILESTONES.md`'s M04 section has the full M04.1–M04.8
+plan). The stay-timer duration (needed once M04.8 "stay timer and leaving" is reached) is a
+separate new `balancing_value` decision to confirm before writing it into code — not needed for
+M04.4.

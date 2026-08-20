@@ -115,6 +115,23 @@
       "source": "human",
       "confirmedAt": "2026-08-20T15:35:06.059Z",
       "status": "active"
+    },
+    {
+      "id": "fea2095f5c",
+      "type": "product",
+      "question": "¿M04.3 debe activar spawn automático de Customer en CustomerSystem.update(), y con qué intervalo?",
+      "context": "M04.3 ('Customer spawning lógico') pide crear spawnCustomer() y añadir clientes a GameState.customers, pero no especifica si CustomerSystem debe spawnear automáticamente por deltaMs (como ya hace NpcController con NPC_SPAWN_INTERVAL_MS=2500 en Phaser) o si este paso solo expone la función sin activarla todavía. Si es automático, el intervalo es un valor de balance sin respuesta objetivamente correcta (trigger balancing_value).",
+      "options": [
+        "Sí, spawn automático continuo en CustomerSystem.update(), mismo intervalo que NpcController hoy (2500ms) — mantiene el ritmo de llegada ya establecido en el juego, ahora simulado en paralelo sin renderizar todavía",
+        "Sí, spawn automático continuo, pero con un intervalo propio distinto al de NpcController",
+        "No todavía — M04.3 solo expone spawnCustomer() como función pura y testeable; activar el timer real en CustomerSystem queda para un paso posterior"
+      ],
+      "evidence": [],
+      "reason": "scope + balancing_value: el spec de M04.3 no dice si el spawn es automático, y de serlo, el intervalo es un valor de balance que no debe adivinarse.",
+      "text": "Sí, spawn automático continuo en CustomerSystem.update(), mismo intervalo que NpcController hoy (2500ms) — mantiene el ritmo de llegada ya establecido en el juego, ahora simulado en paralelo sin renderizar todavía",
+      "source": "human",
+      "confirmedAt": "2026-08-20T16:13:40.052Z",
+      "status": "active"
     }
   ]
 }

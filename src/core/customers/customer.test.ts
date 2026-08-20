@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCustomer } from "./customer";
+import { createCustomer, spawnCustomer, DOOR_POSITION } from "./customer";
 import type { CustomerState } from "./customer-state";
 
 describe("createCustomer", () => {
@@ -25,4 +25,14 @@ describe("createCustomer", () => {
       expect(createCustomer("customer-3", { col: 1, row: 1 }, state).state).toBe(state);
     }
   );
+});
+
+describe("spawnCustomer", () => {
+  it("creates a customer at the door, walking in", () => {
+    expect(spawnCustomer("customer-4")).toEqual({
+      id: "customer-4",
+      position: DOOR_POSITION,
+      state: "walking",
+    });
+  });
 });

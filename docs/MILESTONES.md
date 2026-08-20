@@ -269,16 +269,30 @@ Verificado: `pnpm test` (33/33) y `tsc --noEmit` limpios; `NpcController` intact
 
 ### M04.3 — Customer spawning lógico
 
+**Estado: completado.**
+
 **Objetivo:** crear clientes dentro de la simulación.
 
-- [ ] Crear función `spawnCustomer()`.
-- [ ] Añadir cliente a `GameState.customers`.
-- [ ] Definir posición inicial lógica (puerta del restaurante).
-- [ ] Crear tests de spawn.
+- [x] Crear función `spawnCustomer(id)` (`core/customers/customer.ts`) — construye un
+      `Customer` en la puerta, estado `walking`.
+- [x] Añadir cliente a `GameState.customers` — `CustomerSystem.update` acumula `deltaMs` y
+      llama `spawnCustomer` cada `SPAWN_INTERVAL_MS` (2500ms, mismo ritmo que
+      `NpcController`/`NPC_SPAWN_INTERVAL_MS` — decisión confirmada, ver `.juntia/DECISIONS.md`).
+- [x] Definir posición inicial lógica (`DOOR_POSITION`, derivada de `RESTAURANT_COLS`/
+      `RESTAURANT_ROWS`, mismo cálculo que usaba `NpcController.spawnNpc()`, ahora puro).
+- [x] Crear tests de spawn (`customer.test.ts`: `spawnCustomer`; `customer-system.test.ts`: no
+      spawnea antes del intervalo, spawnea al alcanzarlo entre llamadas, spawnea varios con ids
+      únicos si pasa mucho `deltaMs` de una vez).
 
-**No:** sprites; Phaser; movimiento visual.
+**No:** sprites; Phaser; movimiento visual. (Ninguno de los dos se tocó.)
 
-**Player-visible outcome:** todavía no hay cambio visual necesariamente.
+**Player-visible outcome:** sin cambio visual — verificado en navegador (Playwright, 6s / 2+
+intervalos de spawn): mismo HUD, mismo NPC visible, sin errores de consola. `Customer` no se
+renderiza todavía (no existe `CustomerRenderer`), así que los clientes simulados son invisibles
+por diseño.
+
+Verificado: `pnpm test` (36/36) y `tsc --noEmit` limpios; `NpcController`/`RestaurantScene`/
+`GameState`/`main.ts` sin cambios.
 
 ---
 
