@@ -224,19 +224,25 @@ funcionar). Depende también de M03.5 (arquitectura de `Customer` confirmada).*
 **Estrategia incremental hacia `core/customers/`/`CustomerSystem` (M03.5), pasos pequeños y
 testeables, sin big-bang refactor:**
 
-1. Mover `Npc`/`NpcState` a `core/customers/customer.ts` sin cambiar su forma (test: el
-   `npc.test.ts` existente se muda y sigue en verde).
-2. Agregar `customers: Customer[]` a `GameState`, vacío en `createGameState` (test: mismo patrón
-   que `reputation` en `game-state.test.ts`).
-3. Crear `CustomerSystem` con responsabilidad de spawn únicamente (agrega un `Customer` en la
-   puerta cada N ms acumulados por `deltaMs`, sin mesa ni movimiento todavía; test puro sobre el
-   conteo tras N ms simulados).
-4. `NpcController` deja de crear el `Npc`: lee spawns nuevos en `state.customers` y sigue
-   animando la entrada con el tween actual — este paso resuelve, solo para el spawn, la pregunta
-   de qué reloj manda (sistema vs. tween).
-5. Mover la asignación de mesa (`findFreeTable`/`getSeatForTable`) a `CustomerSystem`; el
-   renderer reacciona a un cambio de `customer.state` (`walking`→`seated`) reproduciendo el tween
-   de sentarse existente, en vez de que el tween dispare el cambio de estado él mismo.
+- [x] **Paso 1 — Crear `Customer` como entidad de simulación nueva en `core/customers/`**
+      (`customer.ts` + `customer-state.ts`), sin mover ni modificar `Npc`/`NpcState`/
+      `NpcController` todavía. Mínimo `id`, `position`, `state`; `target`/`tableId` quedan
+      documentados como campos futuros (comentario en `customer.ts`), sin lógica de movimiento,
+      mesas ni comportamiento. Test: creación de `Customer` y sus tres estados iniciales
+      (`customer.test.ts`). Verificado: `pnpm test` (32/32) y `tsc --noEmit` limpios;
+      `NpcController`/`RestaurantScene`/rendering/`occupiedTables`/`findFreeTable` sin cambios.
+- [ ] Paso 2 — Agregar `customers: Customer[]` a `GameState`, vacío en `createGameState` (test:
+      mismo patrón que `reputation` en `game-state.test.ts`).
+- [ ] Paso 3 — Crear `CustomerSystem` con responsabilidad de spawn únicamente (agrega un
+      `Customer` en la puerta cada N ms acumulados por `deltaMs`, sin mesa ni movimiento todavía;
+      test puro sobre el conteo tras N ms simulados).
+- [ ] Paso 4 — `NpcController` deja de crear el `Npc`: lee spawns nuevos en `state.customers` y
+      sigue animando la entrada con el tween actual — este paso resuelve, solo para el spawn, la
+      pregunta de qué reloj manda (sistema vs. tween).
+- [ ] Paso 5 — Mover la asignación de mesa (`findFreeTable`/`getSeatForTable`) a
+      `CustomerSystem`; el renderer reacciona a un cambio de `customer.state`
+      (`walking`→`seated`) reproduciendo el tween de sentarse existente, en vez de que el tween
+      dispare el cambio de estado él mismo.
 
 Cada paso se prueba y el juego sigue jugable después de cada uno. Lo que **no** se toca en este
 proceso: `occupiedTables` (tarea de M06), las constantes de presentación del renderer, y
