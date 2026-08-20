@@ -164,6 +164,31 @@ visible horizontal line of distinct, non-overlapping positions next to the entry
 furniture unaffected; zero console errors. `pnpm test` (82/82) and `tsc --noEmit` clean; `pnpm
 build` clean.
 
-Next: M05.3 — waiting patience (`advanceWait`, mirroring `advanceStay`; `waiting → leaving` via
-the existing `sendToExit`, unmodified; register `advanceWait` in `CustomerSystem.update`'s
-pipeline).
+**M05.3 (Waiting patience) — done:** `core/customers/customer.ts` gained `WAIT_DURATION_MS =
+15_000` (confirmed product decision — same balancing-value pattern as `STAY_DURATION_MS`) and
+`advanceWait(customer, deltaMs)`, an exact mirror of `advanceStay`: lazily initializes
+`waitRemainingMs` the first time it sees a `waiting` customer, counts it down, and calls
+`sendToExit` once it runs out. `sendToExit` now also clears `waitReason`/`waitRemainingMs` (it
+already unconditionally cleared `stayRemainingMs`) — the exact follow-up M05.2 flagged as open,
+since M05.3 is the first case where a customer can reach `sendToExit` with those fields non-null.
+Real bug found and fixed during implementation: `CustomerSystem.update`'s pipeline order
+(inherited from M04, `assignTables` before `advanceStay`) let a table freed by an expiring stay
+sit unassigned for one extra tick — harmless with unlimited patience (M05.2), but with M05.3's
+finite patience that extra tick could be enough for the front-of-queue customer's own patience to
+expire in the same tick the table freed, sending it away one tick before it would have been
+seated. Fixed by reordering to `moveCustomer → advanceStay → assignTables → advanceWait →
+removeDepartedCustomers`, so a table freed this tick is reassigned this same tick, before
+`advanceWait` runs. Caught by an already-existing M05.2 test (`customer-system.test.ts`, "frees a
+table once its customer starts leaving...") that started failing once patience was added — the
+pipeline fix made it pass again unchanged. Tested in `customer.test.ts` (`advanceWait` countdown,
+lazy init, exit transition, no-mutation; `sendToExit` clears the wait fields). Verified in-browser
+with Playwright (~28s run, screenshots every 3-8s): zero console errors, M05.2's queue-line
+behavior intact, HUD/money unchanged, queue size stays bounded rather than growing unboundedly
+despite arrivals (1/2.5s) outpacing table turnover (~1/5s) in this 2-table layout — consistent
+with patience-abandonment actually removing customers from the queue (exact timing is covered
+directly by the unit tests, not re-derived visually). `pnpm test` (88/88) and `tsc --noEmit`
+clean; `pnpm build` clean.
+
+Next: M05.4 — customer reputation events (`GameState.reputationAdjustments`; `ReputationSystem`
+adds it to the furniture-derived total; `CustomerSystem` writes to it once per abandon/complete
+lifecycle event, per the confirmed M05 architecture decisions).

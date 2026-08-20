@@ -9,11 +9,13 @@ import {
   findFreeQueueSlot,
   sendToExit,
   advanceStay,
+  advanceWait,
   removeDepartedCustomers,
   DOOR_POSITION,
   ENTRY_TARGET,
   CUSTOMER_SPEED_TILES_PER_SEC,
   STAY_DURATION_MS,
+  WAIT_DURATION_MS,
 } from "./customer";
 import type { CustomerState } from "./customer-state";
 import { furniture, getSeatForTable, type Table } from "../restaurant";
@@ -391,6 +393,24 @@ describe("sendToExit", () => {
 
     expect(customer).toEqual(snapshot);
   });
+
+  it("clears waitReason and waitRemainingMs for a waiting customer", () => {
+    const customer = createCustomer(
+      "customer-1",
+      { col: 5, row: 6 },
+      "waiting",
+      null,
+      null,
+      null,
+      "table",
+      5000
+    );
+
+    const leaving = sendToExit(customer);
+
+    expect(leaving.waitReason).toBeNull();
+    expect(leaving.waitRemainingMs).toBeNull();
+  });
 });
 
 describe("advanceStay", () => {
@@ -448,6 +468,84 @@ describe("advanceStay", () => {
     const snapshot = structuredClone(customer);
 
     advanceStay(customer, 1000);
+
+    expect(customer).toEqual(snapshot);
+  });
+});
+
+describe("advanceWait", () => {
+  it("leaves a non-waiting customer unchanged", () => {
+    const customer = createCustomer("customer-1", { col: 0, row: 0 }, "idle");
+
+    expect(advanceWait(customer, 1000)).toEqual(customer);
+  });
+
+  it("starts the countdown from WAIT_DURATION_MS the first time it sees a waiting customer", () => {
+    const customer = createCustomer(
+      "customer-1",
+      { col: 5, row: 6 },
+      "waiting",
+      null,
+      null,
+      null,
+      "table"
+    );
+
+    const advanced = advanceWait(customer, 1000);
+
+    expect(advanced.waitRemainingMs).toBe(WAIT_DURATION_MS - 1000);
+    expect(advanced.state).toBe("waiting");
+  });
+
+  it("keeps counting down on later calls", () => {
+    const customer = createCustomer(
+      "customer-1",
+      { col: 5, row: 6 },
+      "waiting",
+      null,
+      null,
+      null,
+      "table",
+      3000
+    );
+
+    expect(advanceWait(customer, 1000).waitRemainingMs).toBe(2000);
+  });
+
+  it("sends the customer to the exit once the patience runs out", () => {
+    const customer = createCustomer(
+      "customer-1",
+      { col: 5, row: 6 },
+      "waiting",
+      null,
+      null,
+      null,
+      "table",
+      500
+    );
+
+    const advanced = advanceWait(customer, 1000);
+
+    expect(advanced.state).toBe("leaving");
+    expect(advanced.target).toEqual(DOOR_POSITION);
+    expect(advanced.tableId).toBeNull();
+    expect(advanced.waitReason).toBeNull();
+    expect(advanced.waitRemainingMs).toBeNull();
+  });
+
+  it("does not mutate the original customer", () => {
+    const customer = createCustomer(
+      "customer-1",
+      { col: 5, row: 6 },
+      "waiting",
+      null,
+      null,
+      null,
+      "table"
+    );
+    const snapshot = structuredClone(customer);
+
+    advanceWait(customer, 1000);
 
     expect(customer).toEqual(snapshot);
   });

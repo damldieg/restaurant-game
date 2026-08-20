@@ -18,6 +18,10 @@ export const CUSTOMER_SPEED_TILES_PER_SEC = 1.5;
 // .juntia/DECISIONS.md).
 export const STAY_DURATION_MS = 10_000;
 
+// Paciencia de un customer "waiting" por mesa antes de abandonar (decisión
+// confirmada en M05.3, ver .juntia/DECISIONS.md).
+export const WAIT_DURATION_MS = 15_000;
+
 // Único motivo de espera implementado por ahora (M05.1) — el pedido
 // original lo describe como el único mecanismo de espera del juego, para
 // que M09/M11 reutilicen el mismo campo con `"order"`/`"food"` en vez de
@@ -260,6 +264,8 @@ export function sendToExit(customer: Customer): Customer {
     target: DOOR_POSITION,
     tableId: null,
     stayRemainingMs: null,
+    waitReason: null,
+    waitRemainingMs: null,
   };
 }
 
@@ -278,6 +284,25 @@ export function advanceStay(customer: Customer, deltaMs: number): Customer {
 
   if (remaining > 0) {
     return { ...customer, stayRemainingMs: remaining };
+  }
+
+  return sendToExit(customer);
+}
+
+// Cuenta regresiva de paciencia (M05.3) para customers "waiting" — espejo
+// exacto de advanceStay. No muta el original. La cuenta arranca en
+// WAIT_DURATION_MS la primera vez que ve a un customer "waiting" sin
+// `waitRemainingMs` todavía. Al agotarse, envía al customer a la salida vía
+// sendToExit (motivo genérico, sin distinguir por qué se va).
+export function advanceWait(customer: Customer, deltaMs: number): Customer {
+  if (customer.state !== "waiting") {
+    return customer;
+  }
+
+  const remaining = (customer.waitRemainingMs ?? WAIT_DURATION_MS) - deltaMs;
+
+  if (remaining > 0) {
+    return { ...customer, waitRemainingMs: remaining };
   }
 
   return sendToExit(customer);
