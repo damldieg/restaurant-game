@@ -339,17 +339,40 @@ Verificado: `pnpm test` (40/40 — 36 - 2 de `npc.test.ts` eliminado + 6 de
 
 ### M04.5 — Customer movement simulation
 
+**Estado: completado.**
+
 **Objetivo:** mover clientes mediante simulación.
 
-- [ ] Añadir `target` position al `Customer`.
-- [ ] Añadir velocidad.
-- [ ] Actualizar posición mediante `deltaMs` en `CustomerSystem`.
-- [ ] Detectar llegada al objetivo (dentro de la simulación, no vía callback de Phaser).
-- [ ] Crear tests de movimiento lógico.
+- [x] Añadir `target: GridPosition | null` al `Customer` (`core/customers/customer.ts`).
+- [x] Añadir velocidad — `CUSTOMER_SPEED_TILES_PER_SEC = 1.5` tiles/seg (decisión confirmada,
+      ver `.juntia/DECISIONS.md`).
+- [x] Actualizar posición mediante `deltaMs` en `CustomerSystem` — `moveCustomer(customer,
+      deltaMs)`, función pura que interpola la posición hacia `target` según velocidad y
+      `deltaMs`, sin mutar el `Customer` original.
+- [x] Detectar llegada al objetivo dentro de la simulación: cuando el paso alcanzable en este
+      `deltaMs` cubre o supera la distancia restante, la posición se ajusta exactamente al
+      `target`, `target` se limpia (`null`), y un `Customer` en `walking` pasa a `idle` (sin
+      mesa asignada todavía — eso llega en M04.6/M04.7).
+- [x] Tests de movimiento lógico (`customer.test.ts`: sin target no se mueve, se mueve
+      proporcionalmente sin llegar, hace snap exacto al target y lo limpia al llegar, pasa de
+      `walking` a `idle` al llegar, no muta el `Customer` original; `customer-system.test.ts`:
+      un cliente recién spawneado se mueve en updates posteriores, llega a `idle` con `target`
+      en `null`).
 
-**No usar:** tween de Phaser como fuente de verdad de la posición.
+`spawnCustomer` ahora fija `target: ENTRY_TARGET` (mismo punto que usaba
+`NpcController.spawnNpc()` como `entryTarget`, ahora como destino real de la simulación en vez
+de un tween de Phaser). `CustomerRenderer` (M04.4) no cambió — ya reposicionaba el sprite desde
+`Customer.position` cada frame.
 
-**Player-visible outcome:** los clientes se desplazan correctamente.
+**No usar:** tween de Phaser como fuente de verdad de la posición. (No se usó — `moveCustomer`
+es una función pura sin dependencia de Phaser.)
+
+**Player-visible outcome:** los clientes se desplazan correctamente — verificado en navegador
+(Playwright, screenshots a 1s/3s/6s/8s): un cliente aparece cerca de la puerta y se lo ve
+avanzar claramente hacia el mostrador entre capturas consecutivas antes de quedar quieto
+(llegada + transición a `idle`); HUD y muebles sin cambios; sin errores de consola.
+
+Verificado: `pnpm test` (49/49) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 

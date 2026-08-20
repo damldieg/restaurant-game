@@ -132,6 +132,23 @@
       "source": "human",
       "confirmedAt": "2026-08-20T16:13:40.052Z",
       "status": "active"
+    },
+    {
+      "id": "ff840a3924",
+      "type": "product",
+      "question": "¿Qué velocidad de caminata deben tener los Customer en la simulación (M04.5)?",
+      "context": "M04.5 requiere agregar velocidad de movimiento a Customer y mover su posición vía deltaMs dentro de CustomerSystem. Es un valor de balance sin una respuesta objetivamente correcta (trigger balancing_value). El viejo NpcController recorría 3 tiles (puerta → entryTarget) en 1200ms con un tween de Phaser (2.5 tiles/s de referencia visual).",
+      "options": [
+        "2.5 tiles/seg (equivalente al ritmo visual anterior)",
+        "1.5 tiles/seg (más lento, más 'paseo')",
+        "4 tiles/seg (más rápido, más ágil)"
+      ],
+      "evidence": [],
+      "reason": "Valor numérico ajustable (balancing_value) sin respuesta objetivamente correcta — requiere confirmación humana antes de escribirlo en código.",
+      "text": "1.5 tiles/seg (más lento, más 'paseo')",
+      "source": "human",
+      "confirmedAt": "2026-08-20T17:27:28.590Z",
+      "status": "active"
     }
   ]
 }

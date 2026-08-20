@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M04.4: Customer rendering — CustomerRenderer que lee GameState.customers y crea/actualiza sprites, sin escribir a CustomerState","generatedAt":"2026-08-20T17:08:58.194Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M04.5: Customer movement simulation — agregar target y speed a Customer, mover por deltaMs dentro de CustomerSystem, detección de llegada en la simulación","generatedAt":"2026-08-20T17:25:21.416Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,11 +7,14 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M04.4: Customer rendering — CustomerRenderer que lee GameState.customers y crea/actualiza sprites, sin escribir a CustomerState
+> Implementar M04.5: Customer movement simulation — agregar target y speed a Customer, mover por deltaMs dentro de CustomerSystem, detección de llegada en la simulación
 
 ## Task Status
 
-ACTIVE
+READY_TO_CONTINUE
+
+A decision that was blocking part of this task has just been confirmed — see "Confirmed decisions"
+below for the real answer, then continue the work that was waiting on it.
 
 Task type: Feature
 Confidence: 0.9
@@ -52,7 +55,8 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-None yet.
+- Q: "¿Qué velocidad de caminata deben tener los Customer en la simulación (M04.5)?" -> CONFIRMED: 1.5 tiles/seg (más lento, más 'paseo') (product decision, 2026-08-20)
+  (options on the table when asked: 2.5 tiles/seg (equivalente al ritmo visual anterior), 1.5 tiles/seg (más lento, más 'paseo'), 4 tiles/seg (más rápido, más ágil))
 
 Already known when this task started:
 
@@ -127,7 +131,7 @@ The same information above, structured for programmatic use — navigation, neve
     ".juntia/context.md",
     ".juntia/governance/workflows/feature-development.md"
   ],
-  "taskStatus": "ACTIVE"
+  "taskStatus": "READY_TO_CONTINUE"
 }
 ```
 
