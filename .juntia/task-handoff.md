@@ -11,7 +11,10 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Task Status
 
-ACTIVE
+READY_TO_CONTINUE
+
+A decision that was blocking part of this task has just been confirmed — see "Confirmed decisions"
+below for the real answer, then continue the work that was waiting on it.
 
 Task type: Feature
 Confidence: 0.9
@@ -52,7 +55,8 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-None yet.
+- Q: "¿Cuánta paciencia (waitRemainingMs inicial) tiene un customer esperando mesa en cola antes de abandonar (M05.3)?" -> CONFIRMED: 15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa) (product decision, 2026-08-20)
+  (options on the table when asked: 15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa), 10_000 (10s — mismo valor que STAY_DURATION_MS, paciencia y estadía equivalentes), 20_000 (20s — más tolerante, reduce abandono mientras el layout inicial tiene pocas mesas))
 
 Already known when this task started:
 
@@ -135,7 +139,7 @@ The same information above, structured for programmatic use — navigation, neve
     ".juntia/context.md",
     ".juntia/governance/workflows/feature-development.md"
   ],
-  "taskStatus": "ACTIVE"
+  "taskStatus": "READY_TO_CONTINUE"
 }
 ```
 

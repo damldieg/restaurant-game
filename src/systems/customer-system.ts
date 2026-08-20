@@ -2,6 +2,7 @@ import type { GameState } from "../state/game-state";
 import type { GameSystem } from "./game-system";
 import {
   advanceStay,
+  advanceWait,
   assignTables,
   moveCustomer,
   removeDepartedCustomers,
@@ -27,8 +28,14 @@ export class CustomerSystem implements GameSystem {
     }
 
     state.customers = state.customers.map((customer) => moveCustomer(customer, deltaMs));
-    state.customers = assignTables(state.customers, state.furniture);
+    // advanceStay corre antes que assignTables (a diferencia del orden M04)
+    // para que una mesa liberada por un stay que se agota este mismo tick
+    // quede disponible para el primero en cola en el mismo tick, en vez de
+    // esperar al siguiente — evita que advanceWait le cuente ese tick de
+    // más a un customer que ya iba a ser asignado.
     state.customers = state.customers.map((customer) => advanceStay(customer, deltaMs));
+    state.customers = assignTables(state.customers, state.furniture);
+    state.customers = state.customers.map((customer) => advanceWait(customer, deltaMs));
     state.customers = removeDepartedCustomers(state.customers);
   }
 }

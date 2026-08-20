@@ -628,20 +628,53 @@ Verificado: `pnpm test` (82/82) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ### M05.3 — Waiting patience
 
+**Estado: completado.**
+
 **Objetivo:** un customer que espera demasiado abandona.
 
-- [ ] Implementar `advanceWait(customer, deltaMs)` — espejo exacto de `advanceStay` (M04.8):
-      cuenta regresiva de `waitRemainingMs` por `deltaMs`, sin mutar el original.
-- [ ] Transición `waiting → leaving` al agotar la paciencia — vía `sendToExit`, reutilizada tal
-      cual (sin modificar su firma ni su comportamiento, per la decisión ya confirmada de que
-      es infraestructura genérica de salida).
-- [ ] Registrar `advanceWait` en el pipeline de `CustomerSystem.update`.
-- [ ] Tests unitarios puros: cuenta regresiva correcta, transición a `leaving` con `target` a
+- [x] Implementar `advanceWait(customer, deltaMs)` — espejo exacto de `advanceStay` (M04.8):
+      cuenta regresiva de `waitRemainingMs` por `deltaMs`, sin mutar el original. Paciencia
+      inicial `WAIT_DURATION_MS = 15_000` (decisión de producto confirmada, ver
+      `.juntia/DECISIONS.md`).
+- [x] Transición `waiting → leaving` al agotar la paciencia — vía `sendToExit`, reutilizada como
+      infraestructura genérica de salida. Con una excepción respecto al plan original: `sendToExit`
+      ahora también limpia `waitReason`/`waitRemainingMs` (antes solo limpiaba `stayRemainingMs`) —
+      era el follow-up ya anotado al cerrar M05.2 ("inofensivo mientras nada llegue a `waiting` con
+      esos campos no nulos y pase por `sendToExit`"; M05.3 es exactamente el primer caso que sí lo
+      hace), no un cambio de comportamiento por caso especial: `sendToExit` ya limpiaba
+      incondicionalmente el campo equivalente del otro motivo de salida (`stayRemainingMs`), esto
+      solo completa la simetría.
+- [x] Registrar `advanceWait` en el pipeline de `CustomerSystem.update`.
+- [x] Tests unitarios puros: cuenta regresiva correcta, transición a `leaving` con `target` a
       la puerta al agotarse, no muta el `Customer` original (mismo patrón que los tests ya
-      existentes de `advanceStay`).
+      existentes de `advanceStay`), más un caso nuevo en `sendToExit` que verifica la limpieza de
+      `waitReason`/`waitRemainingMs`.
 
-**No implementar todavía:** eventos de reputación (M05.4) — esta pieza solo dispara la
-transición, no toca `state.reputation`.
+**Bug real encontrado y corregido durante la implementación:** con paciencia finita, el orden de
+pipeline heredado de M04 (`assignTables` antes que `advanceStay`) crea una condición de carrera:
+si el stay de un customer sentado se agota en el mismo tick en que un customer en cola agota su
+paciencia, `assignTables` ya corrió al principio del tick (con la mesa todavía ocupada) y no
+reasigna la mesa recién liberada hasta el tick siguiente — un tick de más que, con paciencia
+limitada, puede alcanzar para que `advanceWait` mande a ese mismo customer a la salida antes de
+que le toque la mesa. Corregido reordenando el pipeline a `moveCustomer → advanceStay →
+assignTables → advanceWait → removeDepartedCustomers`: las mesas liberadas por un stay agotado se
+reasignan en el mismo tick, y `advanceWait` solo cuenta paciencia contra quien siga efectivamente
+`waiting` después de esa reasignación. Detectado por un test ya existente de M05.2
+(`customer-system.test.ts`, "frees a table once its customer starts leaving...") que empezó a
+fallar al agregar la paciencia — no hizo falta cambiar el test, el reorden de pipeline lo corrige.
+
+**Player-visible outcome:** un customer que queda en cola sin que se libere una mesa a tiempo
+camina a la puerta y desaparece en vez de esperar para siempre — verificado en navegador
+(Playwright, ~28s de corrida, capturas cada 3-8s): cero errores de consola; la cola sigue
+formándose sin superposición (comportamiento de M05.2 intacto); HUD y dinero sin cambios; el
+tamaño de la cola se mantiene acotado (no crece de forma ininterrumpida pese a que la tasa de
+llegada de customers supera la de liberación de mesas en este layout de 2 mesas), consistente con
+que el abandono por paciencia efectivamente remueve customers de la cola. La corrida de 28s no
+permite aislar con certeza visual el trayecto completo puerta-a-puerta de un customer individual
+(varios customers comparten el mismo corredor vertical en direcciones opuestas); el timing exacto
+está cubierto de forma directa por los tests unitarios de `advanceWait`/`sendToExit`.
+
+Verificado: `pnpm test` (88/88) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 **Player-visible outcome:** un customer que espera demasiado abandona por la puerta, igual que
 un customer que termina su `stayRemainingMs` en M04.8.

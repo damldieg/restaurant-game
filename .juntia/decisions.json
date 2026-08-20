@@ -198,6 +198,23 @@
       "source": "human",
       "confirmedAt": "2026-08-20T20:00:31.634Z",
       "status": "active"
+    },
+    {
+      "id": "b8a95169f9",
+      "type": "product",
+      "question": "¿Cuánta paciencia (waitRemainingMs inicial) tiene un customer esperando mesa en cola antes de abandonar (M05.3)?",
+      "context": "M05.1 ya agregó Customer.waitRemainingMs (mismo patrón que stayRemainingMs, confirmado en 10_000ms para M04.8). M05.2 activa la transición idle→waiting pero todavía no fija ningún valor de paciencia. M05.3 necesita un WAIT_DURATION_MS constante para inicializar waitRemainingMs al entrar en waiting y para que advanceWait la cuente regresiva hasta 0 antes de disparar sendToExit.",
+      "options": [
+        "15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa)",
+        "10_000 (10s — mismo valor que STAY_DURATION_MS, paciencia y estadía equivalentes)",
+        "20_000 (20s — más tolerante, reduce abandono mientras el layout inicial tiene pocas mesas)"
+      ],
+      "evidence": [],
+      "reason": "balancing_value (decision-triggers.md): valor numérico ajustable sin respuesta objetivamente correcta; mismo tipo de decisión ya confirmada para STAY_DURATION_MS en M04.8.",
+      "text": "15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa)",
+      "source": "human",
+      "confirmedAt": "2026-08-20T22:35:42.646Z",
+      "status": "active"
     }
   ]
 }
