@@ -96,13 +96,29 @@ describe("moveCustomer", () => {
     expect(moved.target).toBeNull();
   });
 
-  it("transitions walking to idle on arrival", () => {
+  it("transitions walking to idle on arrival when no table is assigned", () => {
     const customer = createCustomer("customer-1", { col: 0, row: 0 }, "walking", {
       col: 0,
       row: 0,
     });
 
     expect(moveCustomer(customer, 100).state).toBe("idle");
+  });
+
+  it("transitions walking to seated on arrival when a table is assigned", () => {
+    const customer = createCustomer(
+      "customer-1",
+      { col: 0, row: 0 },
+      "walking",
+      { col: 0, row: 0 },
+      "table-1"
+    );
+
+    const arrived = moveCustomer(customer, 100);
+
+    expect(arrived.state).toBe("seated");
+    expect(arrived.target).toBeNull();
+    expect(arrived.tableId).toBe("table-1");
   });
 
   it("does not change a non-walking state on arrival", () => {
