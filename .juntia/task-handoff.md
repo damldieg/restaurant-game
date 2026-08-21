@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M06.5: Table release and reassignment. Agregar un test end-to-end puro que demuestre el ciclo mesa ocupada -> customer termina su ciclo (sendToExit via advanceStay) -> mesa libre en getOccupiedTableIds -> el siguiente customer en cola FIFO (resolveTableQueue) la ocupa en el mismo tick, ejercitando resolveTableQueue por primera vez fuera de sus propios tests unitarios.","generatedAt":"2026-08-21T18:14:07.169Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M06.6: Validation and integration, cerrando M06. Validar en el navegador el escenario completo: multiples clientes llegan, las mesas se llenan, clientes esperan en cola, algunos abandonan por paciencia, mesas se liberan, nuevos clientes entran y ocupan las mesas liberadas. Verificar que no existen dobles asignaciones de mesa, que ningun customer queda en un estado imposible, que la reputacion sigue funcionando correctamente, y que las responsabilidades siguen separadas entre CustomerSystem, ReputationSystem y CustomerRenderer. No implementar funcionalidad nueva.","generatedAt":"2026-08-21T23:26:25.680Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,7 +7,7 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M06.5: Table release and reassignment. Agregar un test end-to-end puro que demuestre el ciclo mesa ocupada -> customer termina su ciclo (sendToExit via advanceStay) -> mesa libre en getOccupiedTableIds -> el siguiente customer en cola FIFO (resolveTableQueue) la ocupa en el mismo tick, ejercitando resolveTableQueue por primera vez fuera de sus propios tests unitarios.
+> Implementar M06.6: Validation and integration, cerrando M06. Validar en el navegador el escenario completo: multiples clientes llegan, las mesas se llenan, clientes esperan en cola, algunos abandonan por paciencia, mesas se liberan, nuevos clientes entran y ocupan las mesas liberadas. Verificar que no existen dobles asignaciones de mesa, que ningun customer queda en un estado imposible, que la reputacion sigue funcionando correctamente, y que las responsabilidades siguen separadas entre CustomerSystem, ReputationSystem y CustomerRenderer. No implementar funcionalidad nueva.
 
 ## Task Status
 

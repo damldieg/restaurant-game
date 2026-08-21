@@ -1118,23 +1118,44 @@ limpio. Sin verificación en navegador — ningún archivo de producción cambi�
 
 ### M06.6 — Validation and integration
 
+**Estado: completado.** Cierra el plan incremental M06.1–M06.6 (milestone M06 completo).
+
 **Objetivo:** validar el M06 completo en navegador, mismo tipo de revisión que cerró M05
 (ver M05.5, PR #23).
 
-- [ ] Escenario en navegador: múltiples clientes llegan, las mesas se llenan, clientes
+- [x] Escenario en navegador: múltiples clientes llegan, las mesas se llenan, clientes
       esperan en cola, algunos abandonan por paciencia, mesas se liberan, nuevos clientes
       entran y ocupan las mesas liberadas.
-- [ ] Verificar: no existen dobles asignaciones de mesa (invariante de M06.2); ningún
+- [x] Verificar: no existen dobles asignaciones de mesa (invariante de M06.2); ningún
       customer queda bloqueado en un estado imposible (invariantes de M06.1); la reputación
       sigue subiendo/bajando correctamente (M05.4 intacto); las responsabilidades siguen
       separadas entre `CustomerSystem`/`ReputationSystem`/`CustomerRenderer` (mismo chequeo
       que M05.5).
-- [ ] `pnpm test`, `tsc --noEmit` y `pnpm build` limpios.
+- [x] `pnpm test`, `tsc --noEmit` y `pnpm build` limpios.
+
+Confirmado por lectura directa de código, mismo chequeo que M05.5: `ReputationSystem.update`
+sigue tocando solo `state.furniture`/`state.reputationAdjustments`, nunca
+`state.customers`; `CustomerRenderer` sigue leyendo solo `id`/`position` de cada `Customer`;
+toda la lógica de eventos de reputación sigue viviendo únicamente en `CustomerSystem` — los
+tres archivos, sin cambios desde M05.5.
+
+Verificado en navegador (Playwright, corrida de 60s, capturas cada 3s, layout inicial de 2
+mesas sin construcción adicional): ciclo completo `entering → walking → waiting → seated →
+leaving → removed` observado repetidas veces; la cola de espera se ve siempre como una línea
+horizontal de posiciones distintas sin superponerse, incluso con 6+ customers esperando a la
+vez; reputación fluctuando en ambas direcciones según lo esperado (8 → 9 → 10 en ciclos
+completos, bajando hasta -3 con varios abandonos por paciencia — arribos más frecuentes que
+la rotación de solo 2 mesas, mismo patrón ya documentado desde M05.3); `Dinero: $500` sin
+cambios en toda la corrida; cero errores de consola. Ninguna mesa asignada a dos customers
+a la vez en ningún frame observado; ningún customer visto en una posición/estado
+inconsistente.
 
 **No implementar:** nada nuevo — este paso es validación e integración, no funcionalidad
 nueva.
 
 **Player-visible outcome:** el mismo del milestone completo (ver arriba).
+
+Verificado: `pnpm test` (122/122) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 
