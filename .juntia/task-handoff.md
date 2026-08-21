@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M05.2: Table queue system — posiciones de cola, resolveTableQueue FIFO, extender assignTables para priorizar waiting antes que idle, activar la transicion idle a waiting","generatedAt":"2026-08-20T22:12:51.014Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M05.5: Validacion e integracion, cerrando M05. Verificar en el navegador el ciclo completo de clientes: entrando, caminando, esperando, sentado, saliendo, eliminado, con 2 mesas y 3+ clientes. Confirmar que no hay responsabilidades duplicadas entre CustomerSystem, ReputationSystem y CustomerRenderer. No se espera nueva funcionalidad.","generatedAt":"2026-08-21T10:48:57.439Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,14 +7,11 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M05.2: Table queue system — posiciones de cola, resolveTableQueue FIFO, extender assignTables para priorizar waiting antes que idle, activar la transicion idle a waiting
+> Implementar M05.5: Validacion e integracion, cerrando M05. Verificar en el navegador el ciclo completo de clientes: entrando, caminando, esperando, sentado, saliendo, eliminado, con 2 mesas y 3+ clientes. Confirmar que no hay responsabilidades duplicadas entre CustomerSystem, ReputationSystem y CustomerRenderer. No se espera nueva funcionalidad.
 
 ## Task Status
 
-READY_TO_CONTINUE
-
-A decision that was blocking part of this task has just been confirmed — see "Confirmed decisions"
-below for the real answer, then continue the work that was waiting on it.
+ACTIVE
 
 Task type: Feature
 Confidence: 0.9
@@ -55,10 +52,7 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-- Q: "¿Cuánta paciencia (waitRemainingMs inicial) tiene un customer esperando mesa en cola antes de abandonar (M05.3)?" -> CONFIRMED: 15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa) (product decision, 2026-08-20)
-  (options on the table when asked: 15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa), 10_000 (10s — mismo valor que STAY_DURATION_MS, paciencia y estadía equivalentes), 20_000 (20s — más tolerante, reduce abandono mientras el layout inicial tiene pocas mesas))
-- Q: "¿Cuánta reputación resta un abandono por paciencia agotada, y cuánta suma un ciclo completado normalmente (M05.4)?" -> CONFIRMED: Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal) (product decision, 2026-08-20)
-  (options on the table when asked: Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal), Abandono -1 / Ciclo completo +1 (simétrico — un abandono cancela exactamente un ciclo completo), Abandono -5 / Ciclo completo +2 (impacto fuerte — el abandono es un evento negativo grave comparado con el aporte de mobiliario))
+None yet.
 
 Already known when this task started:
 
@@ -86,6 +80,10 @@ Already known when this task started:
   (options on the table when asked: GameState.reputationAdjustments acumulador (recomendado): nuevo campo GameState.reputationAdjustments: number; ReputationSystem.update pasa a ser state.reputation = calculateTotalReputation(furniture) + reputationAdjustments; CustomerSystem escribe el acumulador una vez por evento de salida. Un solo número de reputación, HUD sin cambios., Dos números de reputación separados: GameState gana un campo aparte (p.ej. serviceReputation) para los eventos de clientes, sin fusionarlo con el reputation actual derivado de mobiliario., ReputationSystem pasa a conocer a los clientes: se extiende para leer state.customers directamente y detectar las salidas él mismo, quedando como dueño único de toda la lógica de reputación (mobiliario + clientes).)
 - Q: "¿Quién es dueño de los eventos del ciclo de vida del Customer (las transiciones que disparan cambios de reputación) y qué límite de responsabilidad separa a CustomerSystem de ReputationSystem en M05 y milestones futuros?" -> CONFIRMED: Customer lifecycle events ownership: los eventos del ciclo de vida del Customer son emitidos únicamente por las transiciones de CustomerSystem; ReputationSystem no inspecciona state.customers ni conoce clientes; CustomerSystem aplica reputationAdjustments solo cuando detecta una transición válida del ciclo de vida del cliente. Separación de responsabilidades: CustomerSystem es dueño de las transiciones y eventos del ciclo de vida del cliente; ReputationSystem es dueño exclusivamente del cálculo de reputación agregada (mobiliario + reputationAdjustments); GameState.reputationAdjustments es el acumulador de eventos dinámicos entre ambos. (architecture decision, 2026-08-20)
   (options on the table when asked: Customer lifecycle events ownership: los eventos del ciclo de vida del Customer son emitidos únicamente por las transiciones de CustomerSystem; ReputationSystem no inspecciona state.customers ni conoce clientes; CustomerSystem aplica reputationAdjustments solo cuando detecta una transición válida del ciclo de vida del cliente. Separación de responsabilidades: CustomerSystem es dueño de las transiciones y eventos del ciclo de vida del cliente; ReputationSystem es dueño exclusivamente del cálculo de reputación agregada (mobiliario + reputationAdjustments); GameState.reputationAdjustments es el acumulador de eventos dinámicos entre ambos.)
+- Q: "¿Cuánta paciencia (waitRemainingMs inicial) tiene un customer esperando mesa en cola antes de abandonar (M05.3)?" -> CONFIRMED: 15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa) (product decision, 2026-08-20)
+  (options on the table when asked: 15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa), 10_000 (10s — mismo valor que STAY_DURATION_MS, paciencia y estadía equivalentes), 20_000 (20s — más tolerante, reduce abandono mientras el layout inicial tiene pocas mesas))
+- Q: "¿Cuánta reputación resta un abandono por paciencia agotada, y cuánta suma un ciclo completado normalmente (M05.4)?" -> CONFIRMED: Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal) (product decision, 2026-08-20)
+  (options on the table when asked: Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal), Abandono -1 / Ciclo completo +1 (simétrico — un abandono cancela exactamente un ciclo completo), Abandono -5 / Ciclo completo +2 (impacto fuerte — el abandono es un evento negativo grave comparado con el aporte de mobiliario))
 
 ## Agent Context
 
@@ -141,7 +139,7 @@ The same information above, structured for programmatic use — navigation, neve
     ".juntia/context.md",
     ".juntia/governance/workflows/feature-development.md"
   ],
-  "taskStatus": "READY_TO_CONTINUE"
+  "taskStatus": "ACTIVE"
 }
 ```
 

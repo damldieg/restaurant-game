@@ -208,7 +208,23 @@ completed cycle) → 10 (another) → 8 (a patience abandon, dropping exactly 2)
 the HUD text; zero console errors throughout. `pnpm test` (95/95) and `tsc --noEmit` clean;
 `pnpm build` clean.
 
-Next: M05.5 — validation and integration (closes M05): verify the full queued lifecycle in-browser
-(`entering → walking → waiting → seated → leaving → removed`, 2 tables + 3+ customers), confirm no
-duplicated responsibilities between `CustomerSystem`/`ReputationSystem`/`CustomerRenderer`, no new
-functionality expected.
+**M05.5 (Validation and integration) — done, closing M05.** Pure validation, no source changes.
+Confirmed via direct code read: `ReputationSystem.update` still only touches
+`state.furniture`/`state.reputationAdjustments`, never `state.customers`; `CustomerRenderer`
+still only reads `id`/`position` off each `Customer`, never `waitReason`/`reputationAdjustments`;
+all reputation-event math stays solely in `CustomerSystem`. Verified in-browser with Playwright
+(45s run, screenshots every 3s, default starter layout of 2 tables/2 chairs, default 2500ms spawn
+rate — no construction needed): HUD reputation went 8 → 9 → 10 (two completed cycles, +1 each) →
+8 → 3 (patience abandons, -2 each, exact deltas each time), the overflow queue formed a visible
+horizontal line of distinct non-overlapping customers beside the entry point, `Dinero: $500`
+unaffected throughout, zero console errors across the whole run. `pnpm test` (95/95), `tsc
+--noEmit`, and `pnpm build` all clean on this branch. M05 (Waiting and satisfaction) is complete.
+
+## Next known step
+
+M06 (Reservas robustas / hardening) has a checklist already in `docs/MILESTONES.md`, but it
+predates M04's architecture change and references files that no longer exist —
+`game/reservations.ts` (never created) and `game/npc/controller.ts` (removed in M04.4, replaced
+by `core/customers/` + `CustomerSystem` + `CustomerRenderer`). That checklist needs a rewrite
+against the current shape before implementation starts, not a straight implementation as
+currently worded.
