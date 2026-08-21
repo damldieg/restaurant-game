@@ -927,30 +927,67 @@ observable cambió.
 
 ### M06.3 — Restaurant capacity management
 
-**Objetivo:** exponer como conceptos de dominio explícitos la detección de "restaurante
-lleno" y el tamaño de la cola de espera — hoy efectos secundarios implícitos dentro de
-`assignTables`. La cola en sí (`waiting`, `getQueueSlotPosition`, `findFreeQueueSlot`, orden
-FIFO vía `resolveTableQueue`) ya existe desde M05.2; este paso no la reimplementa, solo hace
-consultable su estado.
+**Objetivo:** dejar explícito, como principio de diseño de este paso, que **la cola de
+espera es estado lógico de la simulación — "customer queue is logical state"** — no una
+fila física que Phaser calcula o anima. Exponer como conceptos de dominio explícitos la
+detección de "restaurante lleno" y el orden/tamaño de la cola de espera, hoy efectos
+secundarios implícitos dentro de `assignTables`. La cola en sí (`waiting`,
+`getQueueSlotPosition`, `findFreeQueueSlot`, orden FIFO vía `resolveTableQueue`) ya existe
+desde M05.2; este paso no la reimplementa, solo hace consultable su estado.
+
+**Principio central — separación simulación/render (misma línea desde M03.5):** el dominio
+responde "¿qué lugar ocupa este cliente en la cola?" (un hecho lógico — *"el cliente está
+tercero en la cola"*); nunca responde "¿a qué casillero visual camina?" (*"el cliente
+camina hasta el tercer hueco"*) — eso es responsabilidad exclusiva de `CustomerRenderer`.
+En concreto:
+
+- **FIFO / orden de llegada:** ya garantizado desde M05.2 por el orden de array de
+  `state.customers` (nunca reordenado, ver `spawnCustomer`/`removeDepartedCustomers`) — este
+  paso lo expone como consulta explícita en vez de dejarlo como comportamiento emergente de
+  `assignTables`.
+- **Cliente esperando sin mesa:** en el dominio es, exactamente, `state === "waiting" &&
+  waitReason === "table"` — no depende de ninguna posición de grid para "ser" parte de la
+  cola.
+- **Posición visual derivada:** `Customer.target`/`position` (vía `getQueueSlotPosition`,
+  M05.2) es una proyección de esa posición lógica hacia una celda del grid — dato de
+  dominio que el renderer puede consumir, pero el dominio nunca depende de cómo se ve.
+- **Movimiento de fila = responsabilidad del renderer:** que un cliente "avance un lugar"
+  visualmente cuando el de adelante consigue mesa es trabajo exclusivo de
+  `CustomerRenderer`/Phaser — la simulación no anima nada, solo actualiza la posición lógica
+  cuando corresponde (mismo principio ya confirmado en M03.5: la simulación es la fuente de
+  verdad, Phaser solo representa).
 
 - [ ] Función pura `isRestaurantFull(customers, furnitureList)` que exprese la condición
       "no hay mesa libre" ya usada implícitamente dentro de `assignTables`, reutilizando
       `getOccupiedTableIds` (M06.2) y `findFreeTable` (`core/restaurant.ts`).
 - [ ] Test: `isRestaurantFull` responde correctamente con 0 mesas, todas ocupadas, y al
       menos una libre.
+- [ ] Función pura para el orden lógico de la cola — p.ej. `getTableQueuePosition(customerId,
+      customers): number | null` (posición 0-based de un cliente `waiting`/`"table"` dentro
+      de la cola, o `null` si no está esperando mesa) — generaliza `resolveTableQueue` (que
+      hoy solo devuelve el primero) sin cambiar su comportamiento ni el de `assignTables`.
+- [ ] Test: el orden lógico de cola coincide con el orden de llegada (FIFO) — mismo criterio
+      que ya usa `assignTables` implícitamente vía orden de array, ahora consultable de forma
+      explícita e independiente de cualquier posición de grid.
 - [ ] Función o selector puro para el tamaño actual de la cola (`customers.filter(c =>
       c.state === "waiting" && c.waitReason === "table").length`), consultable sin recorrer
       `assignTables`.
 - [ ] Test: el tamaño de cola crece con más llegadas que mesas libres y baja cuando
       `resolveTableQueue`/`assignTables` asigna una mesa o un cliente abandona.
 
-**No implementar todavía:** UI avanzada de cola (contador visible en HUD, etc.); animaciones
-complejas de la fila.
+**Fuera de alcance (pertenece a otros milestones o a la capa de renderer, no a este paso de
+dominio):**
+
+- animación de caminar en cola (ya existe como interpolación de `CustomerRenderer`/
+  `moveCustomer`; este paso no la toca);
+- UI de cola (contador visible en HUD, indicadores, etc.);
+- prioridad VIP;
+- reservas.
 
 **Player-visible outcome:** sin cambios de comportamiento — la cola visual ya existe desde
-M05.2. El estado "lleno"/tamaño de cola queda disponible como dato de dominio reutilizable
-(p.ej. por M07, que deriva el intervalo de spawn a partir de reputación y podría acotarlo
-también por capacidad).
+M05.2. El estado "lleno"/orden/tamaño de cola queda disponible como dato de dominio
+reutilizable (p.ej. por M07, que deriva el intervalo de spawn a partir de reputación y
+podría acotarlo también por capacidad).
 
 ---
 
