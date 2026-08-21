@@ -727,21 +727,29 @@ Verificado: `pnpm test` (95/95) y `tsc --noEmit` limpios; `pnpm build` limpio.
 **Objetivo:** cerrar M05 verificando el ciclo completo y la ausencia de responsabilidades
 duplicadas, mismo tipo de revisión que cerró M04 (ver PR #17).
 
-- [ ] Validar en navegador el ciclo completo con cola: `entering → walking → waiting → seated →
+- [x] Validar en navegador el ciclo completo con cola: `entering → walking → waiting → seated →
       leaving → removed`, con 2 mesas y 3+ customers.
-- [ ] Validar que no existen responsabilidades duplicadas entre `CustomerSystem`,
+- [x] Validar que no existen responsabilidades duplicadas entre `CustomerSystem`,
       `ReputationSystem` y `CustomerRenderer` — en particular, que `ReputationSystem` sigue sin
       conocer clientes y que `CustomerRenderer` sigue sin conocer `state`/`waitReason`/
       `reputationAdjustments`.
-- [ ] Confirmar visualmente: con todas las mesas ocupadas, los customers siguientes esperan en
+- [x] Confirmar visualmente: con todas las mesas ocupadas, los customers siguientes esperan en
       fila sin superponerse; un customer que espera demasiado sale enfadado por la puerta y la
       reputación baja exactamente una vez; un customer que se queda y se va normalmente sube la
       reputación.
 
-**No implementar todavía:** nada nuevo — este paso es validación e integración, no
-funcionalidad nueva.
+**No se implementó nada nuevo** — paso de validación e integración pura. Código fuente sin
+cambios; solo se leyeron `reputation-system.ts`, `customer-renderer.ts` y `customer-system.ts`
+para confirmar los límites de responsabilidad, y se corrió la app en navegador.
 
-**Player-visible outcome:** el mismo del milestone completo (ver arriba).
+**Player-visible outcome:** el mismo del milestone completo (ver arriba) — confirmado en
+navegador (Playwright, corrida de 45s, capturas cada 3s): reputación 8 → 9 → 10 (dos ciclos
+completos, +1 cada uno) → 8 → 3 (abandonos por paciencia, -2 cada uno, cola de espera visible
+como línea horizontal de customers en posiciones distintas sin superponerse); cero errores de
+consola en toda la corrida; `Dinero: $500` sin cambios. Lectura de código confirmó los límites:
+`ReputationSystem` solo lee `state.furniture`/`state.reputationAdjustments`, nunca
+`state.customers`; `CustomerRenderer` solo lee `id`/`position` de cada `Customer`; toda la
+lógica de eventos de reputación vive únicamente en `CustomerSystem`.
 
 ---
 
