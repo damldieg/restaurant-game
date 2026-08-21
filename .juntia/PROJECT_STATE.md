@@ -251,9 +251,21 @@ tick (the false-transition-with-a-genuinely-free-table case is already covered a
 level in `customer.test.ts`, M06.3). `pnpm test` (121/121 — 117 + 4 new) and `tsc --noEmit`
 clean; `pnpm build` clean. No browser check needed — zero production code changed.
 
+**Future design vision documented (2026-08-21, planning-only — no `src/` changes).**
+`docs/MILESTONES.md` gained a "Visión futura — demanda dinámica y economía de gestión"
+section plus short forward-looking notes on M07 (Demand), M10 (Recipes), M14 (Payment), and
+M16 (First employee): capacity-aware customer demand (not just reputation-driven), recipe
+costs/margins, configurable pricing with strategic trade-offs, and continuous employee costs
+(salary/speed/capacity), on top of M02's existing `money`/`canAfford` economy. Confirmed as
+a product decision via `juntia confirm` — see `.juntia/DECISIONS.md`, "Restaurant simulation
+economy model." Explicitly **not** part of M06, which stays scoped to
+clients/queues/tables/capacity/lifecycle (see M06 scope boundaries in `docs/MILESTONES.md`)
+— this is future-roadmap documentation only, nothing implemented, no architecture changed.
+
 ## Next known step
 
 M06 is in progress: M06.1–M06.4 done, M06.5–M06.6 pending in `docs/MILESTONES.md` (M06 —
 Customer flow robustness). **Next real task: M06.5 (Table release and reassignment)** — an
 end-to-end test proving the release→reassignment cycle, finally exercising M05.2's
-`resolveTableQueue` outside its own tests. Not started yet.
+`resolveTableQueue` outside its own tests. Not started yet. (Unchanged by the future-vision
+documentation above.)

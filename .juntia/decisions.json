@@ -232,6 +232,21 @@
       "source": "human",
       "confirmedAt": "2026-08-20T23:04:12.937Z",
       "status": "active"
+    },
+    {
+      "id": "cb5b740b65",
+      "type": "product",
+      "question": "¿Qué modelo económico y de demanda usará el juego a futuro, más allá de M06 (Customer flow robustness)?",
+      "context": "M06 está enfocado exclusivamente en clientes/colas/mesas/capacidad/ciclo de vida. El roadmap futuro (M07 Demand, M09 Orders, M10 Recipes, M14 Payment, M16 First employee) todavía no contempla explícitamente: demanda que reaccione a la capacidad/saturación del restaurante (no solo a reputación), costes variables por receta, costes fijos diarios, costes de empleados, precios configurables por el jugador con trade-offs estratégicos, ni contabilidad/rentabilidad diaria. Se pide documentar esta visión en docs/MILESTONES.md antes de que esos milestones se implementen, sin implementar nada todavía.",
+      "options": [
+        "Restaurant simulation economy model: el juego se basará en un modelo económico de gestión donde el jugador controla precios, capacidad y costes operativos. La rentabilidad dependerá del equilibrio entre demanda, servicio y gastos."
+      ],
+      "evidence": [],
+      "reason": "Es una decisión de producto de largo alcance (dirección del modelo económico completo del juego) que condiciona varios milestones futuros (M07, M09, M10, M14, M16 y milestones no desglosados todavía) — no es un detalle de implementación que se pueda decidir solo al llegar a cada uno por separado.",
+      "text": "Restaurant simulation economy model: el juego se basará en un modelo económico de gestión donde el jugador controla precios, capacidad y costes operativos. La rentabilidad dependerá del equilibrio entre demanda, servicio y gastos.",
+      "source": "human",
+      "confirmedAt": "2026-08-21T17:56:43.594Z",
+      "status": "active"
     }
   ]
 }
