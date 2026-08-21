@@ -791,32 +791,61 @@ visual) antes de marcarlo `[x]`.
 
 ### M06.1 — Customer lifecycle state hardening
 
+**Estado: completado.**
+
 **Objetivo:** consolidar `CustomerState` (`core/customers/customer-state.ts`:
 `"walking" | "idle" | "seated" | "leaving" | "waiting"`) y sus transiciones — hoy repartidas
 implícitamente entre `moveCustomer`, `assignTables`, `advanceStay`, `advanceWait` y
 `sendToExit` (`core/customers/customer.ts`) — en una fuente única, documentada y testeada.
 
-- [ ] Documentar explícitamente, junto a `CustomerState`, la tabla de transiciones válidas
+- [x] Documentar explícitamente, junto a `CustomerState`, la tabla de transiciones válidas
       hoy vigentes (`walking → idle`, `walking → seated`, `idle → waiting`, `waiting →
       walking`, cualquier estado no-`leaving` → `leaving` vía `sendToExit`, `leaving →`
       eliminado por `removeDepartedCustomers`) — sin cambiar ninguna transición existente,
       solo hacerla citable en un solo lugar.
-- [ ] Documentar los invariantes que cada estado sostiene hoy por construcción pero nunca de
+- [x] Documentar los invariantes que cada estado sostiene hoy por construcción pero nunca de
       forma explícita: `idle` ⇒ `tableId === null`; `seated` ⇒ `tableId !== null` &&
       `stayRemainingMs !== null`; `waiting` ⇒ `waitReason !== null`; `leaving` ⇒
       `tableId === null` && `stayRemainingMs === null` && `waitReason === null`.
-- [ ] Test: cada función pura de transición (`moveCustomer`, `assignTables`, `advanceStay`,
+- [x] Test: cada función pura de transición (`moveCustomer`, `assignTables`, `advanceStay`,
       `advanceWait`, `sendToExit`) devuelve siempre un `Customer` que cumple estos
       invariantes, no solo el campo puntual que ya cubre su test actual.
-- [ ] Test: una transición imposible no ocurre — p.ej. `waiting` nunca pasa directo a
+- [x] Test: una transición imposible no ocurre — p.ej. `waiting` nunca pasa directo a
       `seated` sin pasar por `walking`; ningún `idle` queda con `tableId` no nulo.
+
+Toda la documentación vive como comentario junto a `CustomerState`
+(`core/customers/customer-state.ts`) — sin ningún nuevo tipo, validador en tiempo de
+ejecución ni cambio de forma de datos; `CustomerState` sigue siendo el mismo union de 5
+strings. Hallazgo real durante la implementación, ya documentado explícitamente: el
+invariante de `seated` (`tableId !== null && stayRemainingMs !== null`) **no** lo garantiza
+`moveCustomer` por sí solo — al hacer `walking → seated` en la llegada, deja
+`stayRemainingMs` en `null` (inicializarlo no es su responsabilidad); es `advanceStay`,
+corriendo inmediatamente después en el mismo pipeline de `CustomerSystem.update`, quien lo
+completa en el mismo tick. Por eso los tests quedaron en dos niveles: por función, en
+`customer.test.ts` (`describe("state invariants")`) — cada invariante contra la función que
+realmente lo produce, incluyendo el caso imposible explícito (`waiting` que llega a su slot
+de cola nunca pasa a `seated` vía `moveCustomer`); y como invariante completo tras un tick
+real, en `customer-system.test.ts` — 20 ticks de 1s con cola, asignación, estadía y
+abandono por paciencia, verificando que todo `Customer` en `state.customers` cumple el
+invariante de su estado en cada checkpoint (el único lugar donde el invariante de `seated`
+está garantizado). El caso "ningún `idle` queda con `tableId` no nulo" no se testeó como
+unit test aislado porque no es una transición que ningún camino real de `assignTables`
+pueda producir (`idle` solo lo produce `moveCustomer`, siempre con `tableId` en `null` por
+construcción de su propio ternario) — queda cubierto igual por el invariante completo del
+test de sistema, que solo observa `Customer` reales.
 
 **No implementar:** pedidos; camareros; cocina; ningún estado nuevo. Este paso es hardening
 y tests — no cambia ninguna transición ni ningún archivo fuera de tests/documentación
-inline.
+inline. Ningún archivo de `core/customers/customer.ts`, `systems/customer-system.ts` ni
+Phaser cambió.
 
 **Player-visible outcome:** sin cambios visuales. Mejora la estabilidad interna del sistema
 de clientes.
+
+Verificado: `pnpm test` (104/104 — 95 + 9 nuevos) y `tsc --noEmit` limpios; `pnpm build`
+limpio. Sin verificación en navegador — mismo criterio que M04.2/M05.1: ningún camino de
+código nuevo produce un estado o transición distinta a la ya existente, así que no hay nada
+nuevo que observar visualmente.
 
 ---
 

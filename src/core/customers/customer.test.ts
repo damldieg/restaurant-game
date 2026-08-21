@@ -605,3 +605,129 @@ describe("removeDepartedCustomers", () => {
     expect(removeDepartedCustomers([customer])).toEqual([customer]);
   });
 });
+
+// M06.1 — formaliza los invariantes documentados junto a CustomerState
+// (customer-state.ts) contra las funciones de transición que los producen.
+// No prueba combinaciones sintéticas de campos que la simulación real nunca
+// genera (p.ej. un "idle" construido a mano con tableId) — esas quedan
+// cubiertas, si corresponde, por el test de invariante completo tras ticks
+// reales en customer-system.test.ts.
+describe("state invariants", () => {
+  it("moveCustomer: arriving without a table satisfies the idle invariant (tableId === null)", () => {
+    const customer = createCustomer("customer-1", { col: 0, row: 0 }, "walking", {
+      col: 0,
+      row: 0,
+    });
+
+    const arrived = moveCustomer(customer, 100);
+
+    expect(arrived.state).toBe("idle");
+    expect(arrived.tableId).toBeNull();
+  });
+
+  it("moveCustomer: a waiting customer reaching its queue slot does not become seated (impossible transition)", () => {
+    const queueSlot = getQueueSlotPosition(0);
+    const customer = createCustomer(
+      "customer-1",
+      { col: queueSlot.col - 1, row: queueSlot.row },
+      "waiting",
+      queueSlot,
+      null,
+      null,
+      "table",
+      5000
+    );
+
+    const arrived = moveCustomer(customer, 10_000);
+
+    expect(arrived.position).toEqual(queueSlot);
+    expect(arrived.state).toBe("waiting");
+  });
+
+  it("assignTables: an idle customer sent to the queue satisfies the waiting invariant (waitReason !== null)", () => {
+    const [tableA, tableB] = furniture.filter((item): item is Table => item.type === "table");
+    const full1 = createCustomer("customer-1", { col: 0, row: 0 }, "idle", null, tableA.id);
+    const full2 = createCustomer("customer-2", { col: 0, row: 0 }, "idle", null, tableB.id);
+    const overflow = createCustomer("customer-3", { col: 0, row: 0 }, "idle");
+
+    const [, , assignedOverflow] = assignTables([full1, full2, overflow], furniture);
+
+    expect(assignedOverflow.state).toBe("waiting");
+    expect(assignedOverflow.waitReason).not.toBeNull();
+  });
+
+  it("advanceStay: a seated customer with time remaining satisfies the seated invariant (tableId and stayRemainingMs both non-null)", () => {
+    const customer = createCustomer("customer-1", { col: 5, row: 6 }, "seated", null, "table-1");
+
+    const advanced = advanceStay(customer, 1000);
+
+    expect(advanced.state).toBe("seated");
+    expect(advanced.tableId).not.toBeNull();
+    expect(advanced.stayRemainingMs).not.toBeNull();
+  });
+
+  it("advanceStay: a seated customer whose stay expires satisfies the leaving invariant", () => {
+    const customer = createCustomer(
+      "customer-1",
+      { col: 5, row: 6 },
+      "seated",
+      null,
+      "table-1",
+      500
+    );
+
+    const left = advanceStay(customer, 1000);
+
+    expect(left.state).toBe("leaving");
+    expect(left.tableId).toBeNull();
+    expect(left.stayRemainingMs).toBeNull();
+    expect(left.waitReason).toBeNull();
+  });
+
+  it("advanceWait: a waiting customer whose patience expires satisfies the leaving invariant", () => {
+    const customer = createCustomer(
+      "customer-1",
+      { col: 5, row: 6 },
+      "waiting",
+      null,
+      null,
+      null,
+      "table",
+      500
+    );
+
+    const left = advanceWait(customer, 1000);
+
+    expect(left.state).toBe("leaving");
+    expect(left.tableId).toBeNull();
+    expect(left.stayRemainingMs).toBeNull();
+    expect(left.waitReason).toBeNull();
+  });
+
+  it.each([
+    [
+      "seated",
+      createCustomer("customer-1", { col: 5, row: 6 }, "seated", null, "table-1", 4000),
+    ],
+    [
+      "waiting",
+      createCustomer(
+        "customer-2",
+        { col: 5, row: 6 },
+        "waiting",
+        null,
+        null,
+        null,
+        "table",
+        5000
+      ),
+    ],
+  ] as const)("sendToExit: from %s, always satisfies the leaving invariant", (_label, customer) => {
+    const left = sendToExit(customer);
+
+    expect(left.state).toBe("leaving");
+    expect(left.tableId).toBeNull();
+    expect(left.stayRemainingMs).toBeNull();
+    expect(left.waitReason).toBeNull();
+  });
+});
