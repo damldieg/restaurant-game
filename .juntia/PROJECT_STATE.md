@@ -196,12 +196,26 @@ one-second ticks with queueing/seating/patience-abandonment, asserting every `Cu
 and `tsc --noEmit` clean; `pnpm build` clean. No browser check needed (same precedent as
 M04.2/M05.1) — no new code path produces a different state or transition.
 
+**M06.2 (Table assignment as domain state) — done.** Confirmed ownership decision before
+implementing (now also recorded in `.juntia/ARCHITECTURE.md`): `Customer.tableId` is the
+sole source of truth for table occupancy — no `occupiedTables`, no `Table.isOccupied`, no
+`releaseTable` function; Phaser never maintains table state. `core/customers/customer.ts`
+gained `getOccupiedTableIds(customers): Set<string>`, extracting the exact `assignedTableIds`
+derivation that used to live inline at the top of `assignTables` — behavior-identical, same
+filter+map logic, now named and reused. Two stale comments in `customer.ts` (near
+`assignTables` and `resolveTableQueue`) that still promised a future `releaseTable` were
+updated to match the confirmed decision. New tests in `customer.test.ts`: `getOccupiedTableIds`
+itself (dedup, ignores tableless customers, empty case), the single-assignment invariant
+formalized explicitly (no duplicate `tableId` across `assignTables`' output, occupancy
+unchanged when every table is already taken), and confirmation that `sendToExit` frees a
+table immediately (visible via `getOccupiedTableIds`, before `removeDepartedCustomers` runs).
+`pnpm test` (110/110 — 104 + 6 new) and `tsc --noEmit` clean; `pnpm build` clean. No browser
+check needed — zero behavior change, only a named extraction.
+
 ## Next known step
 
-**M06.2 (Table assignment as domain state)** — extract the table-occupancy derivation that
-lives inline at the top of `assignTables` (`core/customers/customer.ts`) into a named, pure
-function (`getOccupiedTableIds` or equivalent), formalize the single-assignment invariant as
-an explicit test, and confirm `sendToExit` remains the sole table-release point — no
-`releaseTable` function, no separate occupancy structure (see `.juntia/ARCHITECTURE.md`'s
-"Ocupación de mesas como estado de dominio" note). Full spec in `docs/MILESTONES.md` (M06 —
-Customer flow robustness).
+M06 is in progress: M06.1 and M06.2 done, M06.3–M06.6 pending in `docs/MILESTONES.md` (M06 —
+Customer flow robustness). **Next real task: M06.3 (Restaurant capacity management)** —
+expose "restaurant full"/queue-size as explicit domain queries (`isRestaurantFull` or
+equivalent, reusing M06.2's `getOccupiedTableIds`), consolidating what M05.2's queue already
+does implicitly. Not started yet.

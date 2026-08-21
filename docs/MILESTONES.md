@@ -851,32 +851,77 @@ nuevo que observar visualmente.
 
 ### M06.2 — Table assignment as domain state
 
-**Objetivo:** convertir en función de dominio explícita, nombrada y testeada la derivación
-de ocupación de mesas que hoy vive inline al principio de `assignTables`
+**Estado: completado.**
+
+**Objetivo:** la relación cliente-mesa pasa a formar parte explícita del estado del
+dominio: convertir en función de dominio explícita, nombrada y testeada la derivación de
+ocupación de mesas que hoy vive inline al principio de `assignTables`
 (`core/customers/customer.ts`) — sin crear una estructura de ocupación separada ni un
 módulo de reservas.
 
-- [ ] Extraer esa derivación a una función pura nombrada — p.ej. `getOccupiedTableIds(
-      customers)` — reutilizada por `assignTables` en vez de recalculada inline, para que
-      M06.3+ y milestones futuros (M07 demanda, M15 exit/release) tengan un punto único al
-      que apuntar en vez de reimplementarla.
-- [ ] Test: `getOccupiedTableIds` devuelve exactamente los `tableId` no nulos presentes en
-      `Customer[]`, sin duplicados.
-- [ ] Formalizar como test explícito (hoy solo cubierto indirectamente) el invariante de
-      asignación única: en cualquier `Customer[]` producido por `assignTables`, ningún
-      `tableId` no nulo se repite.
-- [ ] Test/confirmación: `sendToExit` sigue siendo el único punto que libera una mesa
-      (`tableId → null`) — deliberadamente no se introduce una función `releaseTable`
-      independiente ni una lista de ocupación aparte, para no reintroducir el problema de
-      `occupiedTables` desincronizado que M04.4 ya eliminó (ver `.juntia/ARCHITECTURE.md`).
+**Decisión de ownership (confirmada antes de implementar, ver
+`.juntia/ARCHITECTURE.md`):** `Customer.tableId` es la única fuente de verdad de qué mesa
+ocupa cada cliente. No existe, ni se crea acá, un `occupiedTables` ni un `Table.isOccupied`
+independientes — cualquier código que necesite saber qué mesas están libres deriva la
+respuesta de `state.customers` a través de `getOccupiedTableIds`, nunca mantiene su propia
+copia. Esto ya era cierto desde M04.4/M04.6; M06.2 lo hace explícito como función nombrada
+en vez de dejarlo como lógica inline dentro de `assignTables`.
 
-**No solucionar todavía:** sistema completo de reservas con estado propio; refactor de
-`occupiedTables` como lista aparte — decisión ya tomada de no tenerla (la ocupación siempre
-se deriva de `state.customers`).
+- [x] `Customer.tableId` — ya existía desde M04.6, sin cambios de forma; sigue siendo el
+      único campo que representa la relación cliente-mesa (cuándo se asigna: `assignTables`
+      encuentra mesa libre; cuándo se libera: `sendToExit`, ver abajo).
+- [x] Extraer la derivación de ocupación a una función pura nombrada —
+      `getOccupiedTableIds(customers)` (`core/customers/customer.ts`) — reutilizada por
+      `assignTables` en vez de recalculada inline, para que M06.3+ y milestones futuros
+      (M07 demanda, M15 exit/release) tengan un punto único al que apuntar en vez de
+      reimplementarla.
+- [x] Test: `getOccupiedTableIds` devuelve exactamente los `tableId` no nulos presentes en
+      `Customer[]`, sin duplicados (usa `Set`, dedupe estructural); ignora customers sin
+      mesa; devuelve conjunto vacío sin customers.
+- [x] Formalizar como test explícito (antes solo cubierto indirectamente, comparando de a
+      dos) el invariante de asignación única: en cualquier `Customer[]` producido por
+      `assignTables`, ningún `tableId` no nulo se repite — y, con todas las mesas ya
+      ocupadas, la ocupación no cambia al intentar asignar un customer de más (sin "mesa
+      fantasma").
+- [x] Test/confirmación: `sendToExit` sigue siendo el único punto que libera una mesa
+      (`tableId → null`) — verificado con `getOccupiedTableIds`, que deja de listar la mesa
+      apenas corre `sendToExit`, sin esperar a `removeDepartedCustomers`. Deliberadamente no
+      se introduce una función `releaseTable` independiente ni una lista de ocupación
+      aparte, para no reintroducir el problema de `occupiedTables` desincronizado que M04.4
+      ya eliminó (ver `.juntia/ARCHITECTURE.md`). Los dos comentarios de `customer.ts` que
+      todavía prometían un `releaseTable` futuro (junto a `assignTables` y
+      `resolveTableQueue`) quedaron actualizados para reflejar esta confirmación.
+
+Transiciones relacionadas revisadas (sin cambios de comportamiento, ya garantizadas desde
+M04.6/M04.7 y formalizadas como invariante en M06.1): un customer nunca llega a `seated` sin
+`tableId` — `moveCustomer` solo produce `seated` cuando `tableId` ya es no nulo, y
+`assignTables` solo asigna `tableId` desde una mesa realmente libre
+(`findFreeTable(occupiedTables)`, derivado ahora de `getOccupiedTableIds`). "Mesa
+disponible" en el sentido de "existe en el catálogo real" no cambió en este paso — sigue
+siendo la lista de `Table` de `core/restaurant.ts`, fuera de alcance de M06.2.
+
+**No solucionar todavía:** cola de espera; posiciones de fila; movimiento de cola;
+paciencia; pedidos; camareros; cocina; pagos; sistema completo de reservas con estado
+propio; refactor de `occupiedTables` como lista aparte — decisión ya tomada de no tenerla
+(la ocupación siempre se deriva de `state.customers`).
+
+**Nota para M06.3+:** la cola ya construida en M05.2 (`getQueueSlotPosition`,
+`findFreeQueueSlot`) guarda posiciones de grid en `Customer.target`/`position` — son datos
+de dominio (`GridPosition`), no objetos de Phaser, y el renderer (`CustomerRenderer`) sigue
+siendo un lector puro que nunca decide esas posiciones. Al consolidar capacidad/cola en
+M06.3, mantener ese mismo principio: la cola es lógica (derivada de `state.customers`,
+igual que la ocupación de mesas de este paso), la representación visual sigue siendo
+responsabilidad exclusiva del renderer — no agregar aquí un nuevo tipo de estado "físico"
+que Phaser deba interpretar.
 
 **Player-visible outcome:** sin cambios visuales. Los clientes tienen una relación clara y
 citable con su mesa (`Customer.tableId` + `getOccupiedTableIds`), en vez de lógica de
 ocupación implícita dentro de `assignTables`.
+
+Verificado: `pnpm test` (110/110 — 104 + 6 nuevos) y `tsc --noEmit` limpios; `pnpm build`
+limpio. Sin verificación en navegador — `getOccupiedTableIds` es la misma lógica de
+`assignedTableIds` que ya existía, solo extraída y nombrada; ningún comportamiento
+observable cambió.
 
 ---
 
