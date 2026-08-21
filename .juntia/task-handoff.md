@@ -57,6 +57,8 @@ proposed or implemented:
 
 - Q: "¿Cuánta paciencia (waitRemainingMs inicial) tiene un customer esperando mesa en cola antes de abandonar (M05.3)?" -> CONFIRMED: 15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa) (product decision, 2026-08-20)
   (options on the table when asked: 15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa), 10_000 (10s — mismo valor que STAY_DURATION_MS, paciencia y estadía equivalentes), 20_000 (20s — más tolerante, reduce abandono mientras el layout inicial tiene pocas mesas))
+- Q: "¿Cuánta reputación resta un abandono por paciencia agotada, y cuánta suma un ciclo completado normalmente (M05.4)?" -> CONFIRMED: Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal) (product decision, 2026-08-20)
+  (options on the table when asked: Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal), Abandono -1 / Ciclo completo +1 (simétrico — un abandono cancela exactamente un ciclo completo), Abandono -5 / Ciclo completo +2 (impacto fuerte — el abandono es un evento negativo grave comparado con el aporte de mobiliario))
 
 Already known when this task started:
 
