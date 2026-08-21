@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { CustomerSystem } from "./customer-system";
 import { createGameState } from "../state/game-state";
-import type { Customer } from "../core/customers/customer";
+import {
+  getTableQueuePosition,
+  isRestaurantFull,
+  type Customer,
+} from "../core/customers/customer";
 
 const SPAWN_INTERVAL_MS = 2500;
 
@@ -223,5 +227,91 @@ describe("CustomerSystem", () => {
       system.update(state, 1000);
       state.customers.forEach(expectValidCustomerState);
     }
+  });
+
+  // M06.4 — confirma que el sistema de paciencia (M05.3/M05.4) sigue
+  // integrado correctamente con los invariantes de M06.1 y las queries de
+  // dominio de M06.3, sin que ninguno de esos pasos haya cambiado su
+  // comportamiento.
+  it("patience abandonment removes the customer from the logical queue and leaves it state-invariant-consistent (M06.1/M06.3 integration)", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+
+    system.update(state, SPAWN_INTERVAL_MS * 3);
+    const waitingCustomerId = state.customers.find((customer) => customer.state === "waiting")?.id;
+    expect(waitingCustomerId).toBeDefined();
+    expect(getTableQueuePosition(waitingCustomerId!, state.customers)).toBe(0);
+
+    // Mismo timing que el test de M05.4 más abajo: agota la paciencia del
+    // customer en cola sin agotar también el stay recién iniciado de los
+    // que se acaban de sentar en este mismo tick. No se compara el tamaño
+    // de cola contra un valor absoluto porque en esta ventana también
+    // siguen llegando customers nuevos (cada SPAWN_INTERVAL_MS) que se
+    // suman a la cola — se verifica en cambio que este customer puntual ya
+    // no forma parte de ella.
+    system.update(state, 8000);
+
+    const abandoned = state.customers.find((customer) => customer.id === waitingCustomerId);
+    expect(abandoned?.state).toBe("leaving");
+    expect(abandoned?.tableId).toBeNull();
+    expect(abandoned?.stayRemainingMs).toBeNull();
+    expect(abandoned?.waitReason).toBeNull();
+    expect(getTableQueuePosition(waitingCustomerId!, state.customers)).toBeNull();
+  });
+
+  it("isRestaurantFull correctly tracks table occupancy through a real run, empty to full (M06.3 integration)", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+
+    expect(isRestaurantFull(state.customers, state.furniture)).toBe(false);
+
+    system.update(state, SPAWN_INTERVAL_MS * 3);
+
+    expect(state.customers).toHaveLength(3);
+    expect(isRestaurantFull(state.customers, state.furniture)).toBe(true);
+  });
+
+  it("isRestaurantFull stays true when a table freed by a completed stay is immediately reclaimed by the queue in the same tick (M06.3 integration)", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+
+    system.update(state, SPAWN_INTERVAL_MS * 3);
+    system.update(state, 5000);
+
+    const waiting = state.customers.find((customer) => customer.tableId === null);
+    expect(waiting?.state).toBe("waiting");
+    expect(isRestaurantFull(state.customers, state.furniture)).toBe(true);
+
+    system.update(state, 5000);
+    system.update(state, 1);
+
+    // La mesa liberada por advanceStay se reasigna al customer en cola
+    // dentro del mismo tick (M05.3) — isRestaurantFull nunca "ve" el hueco;
+    // por eso M06.3's "restaurant full" solo baja cuando nadie está en
+    // cola para reclamar la mesa liberada (ver test anterior, y
+    // customer.test.ts para el caso aislado con una mesa libre).
+    expect(isRestaurantFull(state.customers, state.furniture)).toBe(true);
+    const stillWaiting = state.customers.find((customer) => customer.id === waiting?.id);
+    expect(stillWaiting?.tableId).not.toBeNull();
+  });
+
+  it("still penalizes reputation exactly once for a patience abandonment, with every customer state-invariant-consistent throughout (M06.1-M06.3 integration)", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+
+    system.update(state, SPAWN_INTERVAL_MS * 3);
+    const waiting = state.customers.find((customer) => customer.state === "waiting");
+    expect(waiting).toBeDefined();
+    expect(state.reputationAdjustments).toBe(0);
+
+    system.update(state, 8000);
+    state.customers.forEach(expectValidCustomerState);
+
+    const stillThere = state.customers.find((customer) => customer.id === waiting?.id);
+    expect(stillThere?.state).toBe("leaving");
+    expect(state.reputationAdjustments).toBe(-2);
+
+    system.update(state, 1000);
+    expect(state.reputationAdjustments).toBe(-2);
   });
 });

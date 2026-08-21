@@ -1018,26 +1018,59 @@ cambios en ningún test preexistente.
 
 ### M06.4 — Customer patience system
 
+**Estado: completado.**
+
 **Objetivo:** confirmar que el sistema de paciencia ya construido en M05.3/M05.4
 (`WAIT_DURATION_MS`, `advanceWait`, penalización de reputación) queda correctamente
 integrado con los conceptos formalizados en M06.1–M06.3, sin duplicar ni modificar su
 comportamiento.
 
-- [ ] Test de integración: un customer que abandona por paciencia (`advanceWait` →
+- [x] Test de integración: un customer que abandona por paciencia (`advanceWait` →
       `sendToExit`) deja los invariantes de M06.1 consistentes (sin `tableId`/`waitReason`/
-      `waitRemainingMs` colgantes).
-- [ ] Test de integración: un abandono por paciencia reduce correctamente el resultado de
-      `isRestaurantFull`/el tamaño de cola de M06.3 — la mesa o el slot de cola liberado
-      queda disponible para el siguiente customer en el mismo tick.
-- [ ] Confirmar (test) que `REPUTATION_PENALTY_ABANDONED_WAIT` (M05.4,
+      `waitRemainingMs` colgantes) y deja de aparecer en la cola lógica de M06.3
+      (`getTableQueuePosition` devuelve `null` para ese customer).
+- [x] Test de integración: `isRestaurantFull` (M06.3) refleja correctamente la ocupación a
+      lo largo de una corrida real, de vacío a lleno.
+- [x] Confirmar (test) que `REPUTATION_PENALTY_ABANDONED_WAIT` (M05.4,
       `systems/customer-system.ts`) sigue aplicándose exactamente una vez por abandono tras
-      los cambios de M06.1–M06.3.
+      los cambios de M06.1–M06.3 — mismo timing que el test original de M05.4, ahora
+      combinado con un barrido completo de invariantes de M06.1 sobre todos los customers.
+
+Ningún archivo de producción cambió — solo `systems/customer-system.test.ts` ganó 4 tests
+nuevos. Hallazgo real durante la implementación: el checklist original planteaba verificar
+que un abandono por paciencia "reduce correctamente... `isRestaurantFull`/el tamaño de
+cola... la mesa o el slot de cola liberado queda disponible... en el mismo tick" — en la
+práctica esto no se pudo testear como una única transición limpia, por dos razones
+descubiertas al escribir los tests:
+
+1. Un abandono por paciencia libera un **slot de cola**, no una mesa — nunca hizo bajar
+   `isRestaurantFull` (eso lo hace `advanceStay`, no `advanceWait`). El test correspondiente
+   verifica en cambio que el customer específico desaparece de `getTableQueuePosition`, sin
+   asumir un tamaño de cola absoluto (durante la ventana de tiempo necesaria para agotar la
+   paciencia, `CustomerSystem` sigue spawneando customers nuevos que también se suman a la
+   cola, así que el tamaño absoluto no es predecible — solo la ausencia de ese customer
+   puntual sí lo es).
+2. Con alguien en cola, una mesa liberada por `advanceStay` se reasigna dentro del mismo
+   tick (M05.3) — `isRestaurantFull` nunca "ve" el hueco, confirmado con un test dedicado.
+   Intentar un escenario "sin nadie en cola" para forzar la transición a `false` resultó
+   imposible de lograr de forma realista a través de `CustomerSystem`: para que el
+   `STAY_DURATION_MS` (10s) de los primeros 2 customers termine de agotarse, pasa tiempo
+   más que suficiente para que `SPAWN_INTERVAL_MS` (2.5s) genere varios customers nuevos que
+   ya están esperando mesa — la cola nunca está genuinamente vacía en una corrida real de
+   esa duración. `isRestaurantFull`'s transición limpia a `false` con una mesa realmente
+   libre ya está cubierta a nivel unitario en `customer.test.ts` (M06.3); a nivel de
+   sistema, se testeó en cambio lo que sí ocurre de verdad: `isRestaurantFull` sigue
+   correctamente la ocupación real vacío→lleno, y se mantiene `true` cuando la cola
+   reclama una mesa liberada en el mismo tick.
 
 **No implementar:** satisfacción avanzada; pedidos; ningún cambio a `WAIT_DURATION_MS` ni a
 `advanceWait`.
 
 **Player-visible outcome:** ninguno nuevo — el comportamiento visible de M05.3/M05.4 (un
 customer que espera demasiado se va y la reputación baja) se mantiene igual.
+
+Verificado: `pnpm test` (121/121 — 117 + 4 nuevos) y `tsc --noEmit` limpios; `pnpm build`
+limpio. Sin verificación en navegador — ningún archivo de producción cambió.
 
 ---
 

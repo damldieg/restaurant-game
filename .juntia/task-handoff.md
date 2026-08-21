@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M06.3: Restaurant capacity management. Exponer isRestaurantFull, getTableQueuePosition y el tamaño de cola como funciones de dominio puras y testeadas, consolidando la deteccion de restaurante lleno y el orden FIFO de la cola que ya existen implicitamente desde M05.2. La cola sigue siendo estado logico, sin nueva UI ni animacion.","generatedAt":"2026-08-21T17:30:52.104Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M06.4: Customer patience system. Añadir tests de integracion que confirmen que el sistema de paciencia (WAIT_DURATION_MS, advanceWait, penalizacion de reputacion) sigue funcionando correctamente junto con los invariantes de M06.1 y las queries de dominio de M06.2/M06.3 (isRestaurantFull, getTableQueueSize), sin cambiar ningun comportamiento existente.","generatedAt":"2026-08-21T17:40:34.842Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,7 +7,7 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M06.3: Restaurant capacity management. Exponer isRestaurantFull, getTableQueuePosition y el tamaño de cola como funciones de dominio puras y testeadas, consolidando la deteccion de restaurante lleno y el orden FIFO de la cola que ya existen implicitamente desde M05.2. La cola sigue siendo estado logico, sin nueva UI ni animacion.
+> Implementar M06.4: Customer patience system. Añadir tests de integracion que confirmen que el sistema de paciencia (WAIT_DURATION_MS, advanceWait, penalizacion de reputacion) sigue funcionando correctamente junto con los invariantes de M06.1 y las queries de dominio de M06.2/M06.3 (isRestaurantFull, getTableQueueSize), sin cambiar ningun comportamiento existente.
 
 ## Task Status
 
