@@ -4,6 +4,7 @@ import {
   spawnCustomer,
   moveCustomer,
   assignTables,
+  getOccupiedTableIds,
   resolveTableQueue,
   getQueueSlotPosition,
   findFreeQueueSlot,
@@ -178,6 +179,37 @@ describe("moveCustomer", () => {
   });
 });
 
+describe("getOccupiedTableIds", () => {
+  const [table1, table2] = furniture.filter((item): item is Table => item.type === "table");
+
+  it("returns the tableId of every customer that has one, deduplicated", () => {
+    const seated1 = createCustomer("customer-1", { col: 0, row: 0 }, "seated", null, table1.id);
+    const seated2 = createCustomer("customer-2", { col: 0, row: 0 }, "seated", null, table2.id);
+
+    expect(getOccupiedTableIds([seated1, seated2])).toEqual(new Set([table1.id, table2.id]));
+  });
+
+  it("ignores customers without a table", () => {
+    const idle = createCustomer("customer-1", { col: 0, row: 0 }, "idle");
+    const waiting = createCustomer(
+      "customer-2",
+      { col: 0, row: 0 },
+      "waiting",
+      null,
+      null,
+      null,
+      "table"
+    );
+    const seated = createCustomer("customer-3", { col: 0, row: 0 }, "seated", null, table1.id);
+
+    expect(getOccupiedTableIds([idle, waiting, seated])).toEqual(new Set([table1.id]));
+  });
+
+  it("returns an empty set when no customer has a table", () => {
+    expect(getOccupiedTableIds([])).toEqual(new Set());
+  });
+});
+
 describe("assignTables", () => {
   const [table1, table2] = furniture.filter((item): item is Table => item.type === "table");
 
@@ -316,6 +348,33 @@ describe("assignTables", () => {
 
     expect(customer).toEqual(snapshot);
   });
+
+  // M06.2 — formaliza como test explícito el invariante de asignación única
+  // (antes solo cubierto indirectamente por tests que comparan tableId de a
+  // dos): ningún tableId no nulo se repite en el resultado de assignTables,
+  // sin importar cuántos customers compitan por las mismas mesas.
+  it("never assigns the same table to two different customers (uniqueness invariant)", () => {
+    const first = createCustomer("customer-1", { col: 0, row: 0 }, "idle");
+    const second = createCustomer("customer-2", { col: 0, row: 0 }, "idle");
+    const third = createCustomer("customer-3", { col: 0, row: 0 }, "idle");
+
+    const assigned = assignTables([first, second, third], furniture);
+    const assignedTableIds = assigned
+      .map((customer) => customer.tableId)
+      .filter((tableId): tableId is string => tableId !== null);
+
+    expect(getOccupiedTableIds(assigned).size).toBe(assignedTableIds.length);
+  });
+
+  it("with every table already occupied, occupancy stays exactly the same after assignment (no phantom extra table)", () => {
+    const occupied1 = createCustomer("customer-1", { col: 0, row: 0 }, "idle", null, table1.id);
+    const occupied2 = createCustomer("customer-2", { col: 0, row: 0 }, "idle", null, table2.id);
+    const overflow = createCustomer("customer-3", { col: 0, row: 0 }, "idle");
+
+    const assigned = assignTables([occupied1, occupied2, overflow], furniture);
+
+    expect(getOccupiedTableIds(assigned)).toEqual(new Set([table1.id, table2.id]));
+  });
 });
 
 describe("getQueueSlotPosition / findFreeQueueSlot", () => {
@@ -411,6 +470,18 @@ describe("sendToExit", () => {
 
     expect(leaving.waitReason).toBeNull();
     expect(leaving.waitRemainingMs).toBeNull();
+  });
+
+  // M06.2 — confirma que sendToExit sigue siendo el único punto que libera
+  // una mesa: apenas corre, la mesa deja de aparecer en getOccupiedTableIds,
+  // sin necesidad de una función releaseTable ni una lista de ocupación
+  // aparte (ver .juntia/ARCHITECTURE.md).
+  it("frees the table immediately, before removeDepartedCustomers runs", () => {
+    const seated = createCustomer("customer-1", { col: 5, row: 6 }, "seated", null, "table-1");
+
+    const leaving = sendToExit(seated);
+
+    expect(getOccupiedTableIds([leaving]).has("table-1")).toBe(false);
   });
 });
 

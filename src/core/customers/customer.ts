@@ -162,9 +162,12 @@ export function moveCustomer(customer: Customer, deltaMs: number): Customer {
 // así que un customer que ya estaba `waiting` (llegó antes) siempre aparece
 // antes que uno recién `idle` en esta misma pasada, y por lo tanto siempre
 // se evalúa primero para cualquier mesa que se libere. `resolveTableQueue`
-// expresa este mismo criterio como función standalone para que M06 la
-// llame desde `releaseTable` (un evento puntual de "esta mesa se liberó",
-// fuera del recorrido por frame que ya hace esta función).
+// expresa este mismo criterio como función standalone y testeada por
+// separado, aunque hoy sin uso real fuera de sus propios tests — M06.2
+// confirmó que no habrá una función `releaseTable` independiente que la
+// invoque (ver `.juntia/ARCHITECTURE.md`); la liberación sigue siendo un
+// efecto de `sendToExit` (`tableId → null`), recogido por esta misma
+// función en el siguiente pase de `assignTables`.
 //
 // Sin mesa libre: un customer `idle` pasa a `waiting` con `waitReason:
 // "table"` y `target` al primer slot de cola libre (mismo patrón de
@@ -177,12 +180,24 @@ export function moveCustomer(customer: Customer, deltaMs: number): Customer {
 // para que `moveCustomer` lo lleve hasta ahí y lo siente al llegar
 // (transición `walking → seated`, ver `moveCustomer`) — esta función nunca
 // sienta al customer directamente.
-export function assignTables(customers: Customer[], furnitureList: Furniture[]): Customer[] {
-  const assignedTableIds = new Set(
+
+// Deriva qué mesas están ocupadas ahora mismo, a partir de `Customer.tableId`
+// (M06.2 — antes vivía inline al principio de `assignTables`). `Customer` es
+// la única fuente de verdad de ocupación (decisión confirmada en M04.4/M04.6,
+// ver `.juntia/ARCHITECTURE.md`): no existe un `occupiedTables` ni un
+// `Table.isOccupied` aparte que pueda desincronizarse — cualquier código que
+// necesite saber qué mesas están libres pasa por acá en vez de recorrer
+// `state.customers` a mano.
+export function getOccupiedTableIds(customers: Customer[]): Set<string> {
+  return new Set(
     customers
       .filter((customer): customer is Customer & { tableId: string } => customer.tableId !== null)
       .map((customer) => customer.tableId)
   );
+}
+
+export function assignTables(customers: Customer[], furnitureList: Furniture[]): Customer[] {
+  const assignedTableIds = getOccupiedTableIds(customers);
 
   const occupiedTables: GridPosition[] = furnitureList
     .filter((item): item is Table => item.type === "table" && assignedTableIds.has(item.id))
@@ -239,10 +254,12 @@ export function assignTables(customers: Customer[], furnitureList: Furniture[]):
 // Cola FIFO (M05.2): dada la lista de customers, determina cuál debe
 // ocupar la próxima mesa que se libere. `assignTables` ya logra este mismo
 // orden de forma implícita procesando `customers` en su propio orden de
-// array; esta función existe como criterio standalone y testeado para que
-// M06 la reutilice desde `releaseTable` (evento de una mesa puntual
-// liberándose, fuera del recorrido por frame de `assignTables`) sin
-// duplicar el criterio de orden.
+// array; esta función existe como criterio standalone y testeado, aunque
+// M06.2 confirmó que no habrá una función `releaseTable` separada que la
+// invoque fuera del recorrido por frame — queda disponible para M06.5
+// (Table release and reassignment) o cualquier caso futuro que sí necesite
+// resolver la cola fuera de ese recorrido, sin duplicar el criterio de
+// orden.
 export function resolveTableQueue(customers: Customer[]): Customer | undefined {
   return customers.find(
     (customer) => customer.state === "waiting" && customer.waitReason === "table"

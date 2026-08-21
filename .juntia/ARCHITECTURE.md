@@ -111,13 +111,30 @@ funciones sueltas que ya vivían en `core/`.
 de M04 (`occupiedTables` es tarea de M06). Ver `.juntia/DECISIONS.md` para las decisiones
 formales y `docs/MILESTONES.md` (M03.5) para el plan de pasos incrementales hacia M04.
 
-## Ocupación de mesas como estado de dominio (M06, sin código todavía)
+## Ocupación de mesas como estado de dominio (M06.2, confirmado)
 
 `game/npc/` ya no existe (eliminado en M04.4) y con él cualquier `occupiedTables` como lista
 aparte. Desde M04.6, la ocupación de mesas se deriva de `state.customers` en cada lectura
 (`tableId` no nulo por customer) en vez de mantenerse en una estructura propia que pudiera
-desincronizarse. M06 formaliza ese criterio como función de dominio nombrada y testeada
-(`getOccupiedTableIds`, `core/customers/customer.ts`) en vez de dejarlo inline dentro de
-`assignTables` — pero no introduce un módulo de reservas ni una estructura de ocupación
-separada: sigue siendo el mismo criterio derivado, solo citable en un solo lugar. Ver
-`docs/MILESTONES.md` (M06 — Customer flow robustness) para el plan de pasos.
+desincronizarse. M06.2 formalizó ese criterio como decisión de ownership explícita, además
+de como función de dominio:
+
+- **`Customer.tableId` es la única fuente de verdad de ocupación de mesas.** No existe, ni
+  se introduce, un `occupiedTables` ni un `Table.isOccupied` — ni como campo de `GameState`
+  ni como estado propio de ningún `GameSystem`.
+- **Phaser no mantiene ningún estado de mesas.** `CustomerRenderer` solo lee `Customer` para
+  dibujar sprites; nunca decide ni almacena qué mesa está ocupada (mismo principio general
+  de M03.5: la simulación es la única fuente de verdad, Phaser solo representa).
+- **La ocupación no se duplica entre capas.** `getOccupiedTableIds(customers)`
+  (`core/customers/customer.ts`) es el único punto que deriva "qué mesas están ocupadas
+  ahora mismo" a partir de `state.customers`; `assignTables` lo usa en vez de recalcularlo
+  inline, y cualquier código futuro (M06.3 capacidad, M07 demanda, M15 exit/release) debe
+  reutilizarlo en vez de mantener su propia copia.
+- **No hay una función `releaseTable` independiente.** La liberación de una mesa sigue
+  siendo un efecto de `sendToExit` (`tableId → null`), recogido por `getOccupiedTableIds`/
+  `assignTables` en el siguiente pase — introducir una función de liberación aparte
+  reintroduciría el mismo riesgo de desincronización que M04.4 ya eliminó al quitar
+  `occupiedTables`.
+
+Ver `docs/MILESTONES.md` (M06.2 — Table assignment as domain state) para el detalle de
+implementación y tests.

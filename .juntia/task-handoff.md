@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M06.1: Customer lifecycle state hardening. Añadir documentación de la tabla de transiciones válidas y los invariantes de cada CustomerState, y crear tests nuevos que verifiquen esos invariantes en las funciones de transición existentes. Sin cambiar gameplay ni comportamiento visible.","generatedAt":"2026-08-21T11:09:53.405Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M06.2: Customer.tableId como fuente de verdad de ocupacion de mesas. Añadir getOccupiedTableIds y tests que verifiquen la asignacion unica de mesas y la liberacion via sendToExit.","generatedAt":"2026-08-21T11:38:09.238Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,7 +7,7 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M06.1: Customer lifecycle state hardening. Añadir documentación de la tabla de transiciones válidas y los invariantes de cada CustomerState, y crear tests nuevos que verifiquen esos invariantes en las funciones de transición existentes. Sin cambiar gameplay ni comportamiento visible.
+> Implementar M06.2: Customer.tableId como fuente de verdad de ocupacion de mesas. Añadir getOccupiedTableIds y tests que verifiquen la asignacion unica de mesas y la liberacion via sendToExit.
 
 ## Task Status
 
