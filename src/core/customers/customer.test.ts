@@ -5,7 +5,10 @@ import {
   moveCustomer,
   assignTables,
   getOccupiedTableIds,
+  isRestaurantFull,
   resolveTableQueue,
+  getTableQueuePosition,
+  getTableQueueSize,
   getQueueSlotPosition,
   findFreeQueueSlot,
   sendToExit,
@@ -377,6 +380,30 @@ describe("assignTables", () => {
   });
 });
 
+// M06.3 — "restaurant full" como consulta de dominio explícita, reutilizando
+// getOccupiedTableIds (M06.2). No reimplementa la condición que ya evaluaba
+// assignTables implícitamente vía findFreeTable, solo la expone.
+describe("isRestaurantFull", () => {
+  const [table1, table2] = furniture.filter((item): item is Table => item.type === "table");
+
+  it("is false when at least one table is free", () => {
+    const oneOccupied = createCustomer("customer-1", { col: 0, row: 0 }, "seated", null, table1.id);
+
+    expect(isRestaurantFull([oneOccupied], furniture)).toBe(false);
+  });
+
+  it("is true when every table is occupied", () => {
+    const first = createCustomer("customer-1", { col: 0, row: 0 }, "seated", null, table1.id);
+    const second = createCustomer("customer-2", { col: 0, row: 0 }, "seated", null, table2.id);
+
+    expect(isRestaurantFull([first, second], furniture)).toBe(true);
+  });
+
+  it("is false with no customers and at least one table", () => {
+    expect(isRestaurantFull([], furniture)).toBe(false);
+  });
+});
+
 describe("getQueueSlotPosition / findFreeQueueSlot", () => {
   it("returns positions distinct from ENTRY_TARGET and from each other", () => {
     expect(getQueueSlotPosition(0)).not.toEqual(ENTRY_TARGET);
@@ -423,6 +450,52 @@ describe("resolveTableQueue", () => {
     const customer = createCustomer("customer-1", { col: 0, row: 0 }, "idle");
 
     expect(resolveTableQueue([customer])).toBeUndefined();
+  });
+});
+
+// M06.3 — la cola es estado lógico: getTableQueuePosition/getTableQueueSize
+// se derivan del mismo predicado que resolveTableQueue (waiting +
+// waitReason "table"), nunca de una posición de grid.
+describe("getTableQueuePosition / getTableQueueSize", () => {
+  const waitingCustomer = (id: string) =>
+    createCustomer(id, { col: 0, row: 0 }, "waiting", null, null, null, "table");
+
+  it("returns each waiting customer's 0-based position, in arrival order", () => {
+    const notWaiting = createCustomer("customer-0", { col: 0, row: 0 }, "idle");
+    const first = waitingCustomer("customer-1");
+    const second = waitingCustomer("customer-2");
+    const customers = [notWaiting, first, second];
+
+    expect(getTableQueuePosition("customer-1", customers)).toBe(0);
+    expect(getTableQueuePosition("customer-2", customers)).toBe(1);
+  });
+
+  it("matches resolveTableQueue: the customer at position 0 is the one resolveTableQueue returns", () => {
+    const first = waitingCustomer("customer-1");
+    const second = waitingCustomer("customer-2");
+    const customers = [first, second];
+
+    expect(getTableQueuePosition(resolveTableQueue(customers)!.id, customers)).toBe(0);
+  });
+
+  it("returns null for a customer not waiting for a table", () => {
+    const idle = createCustomer("customer-1", { col: 0, row: 0 }, "idle");
+
+    expect(getTableQueuePosition("customer-1", [idle])).toBeNull();
+  });
+
+  it("getTableQueueSize grows with more arrivals than free tables and shrinks when one is assigned or abandons", () => {
+    expect(getTableQueueSize([])).toBe(0);
+
+    const first = waitingCustomer("customer-1");
+    const second = waitingCustomer("customer-2");
+    expect(getTableQueueSize([first, second])).toBe(2);
+
+    const [assignedFirst] = assignTables([first], furniture);
+    expect(getTableQueueSize([assignedFirst, second])).toBe(1);
+
+    const abandoned = sendToExit(second);
+    expect(getTableQueueSize([assignedFirst, abandoned])).toBe(0);
   });
 });
 

@@ -138,3 +138,15 @@ de como función de dominio:
 
 Ver `docs/MILESTONES.md` (M06.2 — Table assignment as domain state) para el detalle de
 implementación y tests.
+
+**Hallazgo pre-existente (M06.3, no corregido — fuera de alcance):**
+`findFreeTable`/`getSeatForTable` (`core/restaurant.ts`) buscan sobre el `furniture`
+exportado a nivel de módulo, no sobre el `furnitureList`/`state.furniture` que reciben como
+parámetro `assignTables`/`isRestaurantFull` (`core/customers/customer.ts`). Hoy esto no
+causa bugs porque `GameState.furniture` es literalmente esa misma referencia de array
+(`createGameState`, `state/game-state.ts`) — nunca una copia — así que ambos quedan en sync
+por esa alias, no por diseño explícito. Si `state.furniture` alguna vez dejara de ser esa
+misma referencia (p.ej. al inicializar `GameState` desde una partida guardada), estas
+funciones dejarían de reflejarlo correctamente. Documentado para que quien lo toque lo sepa
+de antemano — arreglarlo (pasar `furnitureList` explícitamente a `findFreeTable`/
+`getSeatForTable`) queda para cuando haga falta de verdad, no como limpieza preventiva.
