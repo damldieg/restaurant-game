@@ -1172,8 +1172,9 @@ Fuera de alcance — pertenecen a milestones posteriores:
 - eventos especiales;
 - VIP;
 - decoración avanzada;
-- demanda dinámica de clientes (reaccionar a capacidad/saturación — ver nota de diseño en
-  M07 y la sección "Visión futura" al final de este documento);
+- demanda dinámica de clientes (reaccionar a capacidad/saturación — ver M07 — Demand
+  system foundation, en particular M07.3, y la sección "Visión futura" al final de este
+  documento);
 - economía avanzada (costes de recetas, costes fijos, costes de empleados, precios
   configurables, contabilidad diaria — ver "Visión futura" al final de este documento).
 
@@ -1189,42 +1190,181 @@ bloqueados.
 
 ---
 
-## M07 — Demand
+## M07 — Demand system foundation
 
-*Depende de: M03 (reputación) y M06 (flujo de clientes y capacidad consolidados).*
+*Depende de: M03 (reputación) y M06 (flujo de clientes y capacidad consolidados). Renombrado
+el 2026-08-22 de "M07 — Demand" a "M07 — Demand system foundation" para reflejar mejor el
+objetivo real: cómo llegan nuevos clientes al restaurante, no una lista suelta de tareas de
+spawn. Redefinido por completo (planning-only, sin código todavío) en el mismo estilo
+incremental de M04/M05/M06 — dividido en pasos pequeños, cada uno testeable y verificable
+por separado.*
 
-**Nota de diseño futura (no implementar en este paso — ver "Visión futura" al final de este
-documento):** la generación de nuevos clientes no debe ser, a largo plazo, un spawn fijo
-independiente del estado del restaurante. Este primer incremento de M07 solo deriva el
-intervalo de spawn a partir de la reputación (`M03`); una vez que el juego tenga presión
-real de capacidad (mesas limitadas, colas largas), la demanda deberá reaccionar también a
-esa saturación — reutilizando `isRestaurantFull`/`getTableQueueSize` (M06.3) — y no solo a
-la reputación. Regla conceptual a aplicar cuando corresponda: un restaurante completamente
-saturado no debería seguir generando clientes al mismo ritmo indefinidamente, para evitar
-colas infinitas, clientes entrando sin posibilidad real de servicio, y una simulación poco
-realista. Sin tareas nuevas en este documento todavía — se registra acá para que quien
-retome este milestone (o lo extienda más adelante) no lo pase por alto.
+**Objetivo general:** crear un sistema de generación de clientes donde la llegada de nuevos
+clientes dependa de la situación del restaurante — reputación primero, capacidad/saturación
+después. La demanda no debe ser un spawn fijo independiente del estado del mundo (hoy
+`SPAWN_INTERVAL_MS`, una constante fija dentro de `CustomerSystem`,
+`systems/customer-system.ts`).
 
-- [ ] Función pura que, dada la reputación actual, deriva el intervalo de spawn (o tasa
-      de llegada) de NPCs.
+M07 es un plan incremental de tareas pequeñas, mismo patrón que M04/M05/M06 — trabajar
+siempre en la primera `M07.x` con estado pendiente, sin saltar pasos.
+
+---
+
+### M07.1 — Demand model foundation
+
+**Objetivo:** crear la base conceptual del sistema de demanda — dónde vive la lógica, cómo
+se separa del ciclo de vida del cliente, y qué forma tendrá antes de calcular nada real.
+
+- [ ] Decidir y documentar dónde vive la lógica de demanda: un módulo puro nuevo en
+      `core/` (p.ej. `core/demand.ts`), sin `phaser`, mismo patrón que `core/reputation.ts`
+      — separado de `core/customers/customer.ts` (ciclo de vida del cliente) y de
+      `systems/customer-system.ts` (ejecución mecánica del spawn).
+- [ ] Definir la firma de la futura función de demanda (p.ej. `deriveSpawnIntervalMs(...):
+      number`), sin implementar todavía la fórmula real — solo el contrato de entrada/salida
+      que M07.2/M07.3 completarán.
+- [ ] Documentar que `SPAWN_INTERVAL_MS` (hoy una constante fija dentro de `CustomerSystem`)
+      será reemplazada por el resultado de esta función una vez exista — sin tocarla
+      todavía en este paso.
+- [ ] Confirmar el límite de responsabilidad: `CustomerSystem` sigue siendo responsable
+      solo de *ejecutar* el spawn (llamar `spawnCustomer` cuando corresponda); *calcular*
+      cuándo corresponde vive en `core/demand.ts` — mismo split ya establecido entre
+      `ReputationSystem` y `core/reputation.ts`.
+
+**No implementar todavía:** reputación (M07.2); capacidad (M07.3); precios; empleados.
+
+**Player-visible outcome:** sin cambios visibles. Preparación interna del sistema.
+
+---
+
+### M07.2 — Reputation-based demand
+
+**Objetivo:** la reputación afecta a la frecuencia potencial de llegada de clientes — más
+reputación, mayor interés y más clientes potenciales; menos reputación, menor llegada.
+
+- [ ] Función pura `deriveSpawnIntervalMs(reputation: number): number` en `core/demand.ts`
+      (M07.1): a mayor `state.reputation`, menor intervalo (llegan más clientes); a menor
+      reputación, mayor intervalo.
 - [ ] Límite de demanda mínima: intervalo máximo acotado, con llegada mínima garantizada
       incluso con reputación muy baja, para poder recuperarse tras una mala racha.
 - [ ] Límite de demanda máxima: el intervalo no baja de un mínimo, para no desbordar el
-      juego con NPCs ilimitados.
+      juego con clientes ilimitados.
+- [ ] Valores de balance iniciales (mínimo/máximo de intervalo, y cómo escala entremedio)
+      — valores de balance sin una respuesta objetivamente correcta, a confirmar como
+      decisión de producto antes de fijarlos en código (mismo patrón que otros valores de
+      balance ya confirmados: precios M01, dinero inicial M02, `STAY_DURATION_MS` M04.8,
+      etc. — ver `.juntia/DECISIONS.md`).
 - [ ] Test: valores límite de reputación (mínimo y máximo) devuelven el intervalo
       mínimo/máximo esperado.
 - [ ] Test: valores representativos de reputación intermedia devuelven un intervalo
-      coherente.
-- [ ] Reemplazar `NPC_SPAWN_INTERVAL_MS` fijo por esta función, evaluada contra la
-      reputación actual.
+      coherente (monótono: a mayor reputación, intervalo igual o menor).
+- [ ] Reemplazar el `SPAWN_INTERVAL_MS` fijo de `CustomerSystem` por esta función, evaluada
+      contra `state.reputation` en cada spawn.
 - [ ] Confirmar visualmente: con reputación alta llegan más clientes que con reputación
-      baja, sin generar NPCs sin límite.
+      baja, sin generar clientes sin límite.
 
-**Player-visible outcome:** el jugador ve que, a medida que sube la reputación del
-restaurante, llegan más clientes con más frecuencia (dentro de un límite).
+**No implementar todavía:** economía; precios; calidad de platos; capacidad/saturación
+(M07.3).
 
-**Completion criteria:** `pnpm test` cubre los límites y valores representativos de la
-función de demanda; en el navegador, el intervalo de spawn responde a la reputación.
+**Player-visible outcome:** el restaurante recibe más o menos clientes según su reputación.
+
+---
+
+### M07.3 — Capacity pressure and saturation
+
+**Objetivo:** la demanda debe reaccionar también a la capacidad del restaurante, no solo a
+la reputación (M07.2) — la nota de diseño futura que traía la versión anterior de M07 se
+formaliza acá como tareas reales.
+
+- [ ] Extender (o componer) `deriveSpawnIntervalMs` (M07.2) para considerar la capacidad
+      del restaurante, reutilizando `isRestaurantFull`/`getTableQueueSize`
+      (`core/customers/customer.ts`, M06.3) — sin recorrer `state.customers` de nuevo por
+      fuera de esas funciones ya existentes.
+- [ ] Detectar saturación: mesas ocupadas (`isRestaurantFull`) combinado con una cola de
+      espera larga (`getTableQueueSize`).
+- [ ] Reducir la frecuencia de llegada (intervalo mayor) cuando el restaurante está
+      saturado, en vez de mantener el ritmo derivado solo de la reputación.
+- [ ] Test: con el restaurante lleno y cola larga, el intervalo resultante es mayor que con
+      el mismo nivel de reputación y el restaurante con capacidad libre.
+- [ ] Test: un restaurante con capacidad libre no se ve afectado por este factor (mismo
+      resultado que M07.2 sola).
+- [ ] Confirmar visualmente: un restaurante saturado (mesas llenas + cola larga) recibe
+      clientes con menor frecuencia que uno con capacidad libre, a igual reputación.
+
+**Regla conceptual:** un restaurante completamente saturado no debería seguir generando
+clientes al mismo ritmo indefinidamente — evita colas infinitas, clientes entrando sin
+posibilidad real de servicio, y una simulación poco realista.
+
+**No implementar todavía:** marketing; eventos; clientes VIP.
+
+**Player-visible outcome:** un restaurante saturado deja de recibir clientes al mismo
+ritmo.
+
+---
+
+### M07.4 — Demand balancing foundation
+
+**Objetivo:** preparar el sistema para futuros modificadores de demanda, sin implementar
+ninguno todavía.
+
+- [ ] Documentar (comentario junto a `core/demand.ts`, o en este mismo documento) los
+      factores futuros identificados que podrían modificar la demanda más adelante:
+      precios, calidad del servicio, recetas, decoración, empleados, eventos, zonas
+      especiales.
+- [ ] Confirmar que la forma actual de `deriveSpawnIntervalMs` (M07.1–M07.3) admite agregar
+      factores nuevos sin romper los ya existentes (p.ej. como argumentos adicionales
+      opcionales o una función compuesta) — sin implementar ninguno de esos factores
+      todavía.
+
+**No implementar estos factores todavía** — pertenecen a milestones posteriores (ver "M07
+scope boundaries" abajo y "Visión futura" al final de este documento).
+
+**Player-visible outcome:** sin cambio obligatorio — este paso es documentación/preparación,
+no funcionalidad nueva.
+
+---
+
+### M07.5 — Validation and integration
+
+**Objetivo:** validar el sistema completo de demanda en navegador, mismo tipo de revisión
+que cerró M05/M06 (M05.5 PR #23, M06.6 PR #31).
+
+- [ ] Escenario en navegador: restaurante con baja reputación → pocos clientes.
+- [ ] Escenario en navegador: restaurante con buena reputación → más clientes.
+- [ ] Escenario en navegador: restaurante saturado (mesas llenas + cola larga) → reducción
+      de la frecuencia de llegada.
+- [ ] Verificar: no hay spawn infinito sin límite (respeta el límite máximo de M07.2); no
+      hay conflicto con `CustomerSystem` (sigue siendo el único responsable de *ejecutar*
+      el spawn); no hay responsabilidades duplicadas entre `core/demand.ts` (cálculo) y
+      `CustomerSystem` (ejecución) — mismo tipo de chequeo de separación que M05.5/M06.6.
+- [ ] `pnpm test`, `tsc --noEmit` y `pnpm build` limpios.
+
+**No implementar:** nada nuevo — este paso es validación e integración.
+
+**Player-visible outcome:** el mismo del milestone completo (ver arriba).
+
+---
+
+### M07 scope boundaries
+
+Fuera de alcance — pertenecen a milestones posteriores:
+
+- menú;
+- recetas;
+- precios;
+- costes de producción;
+- salarios;
+- empleados;
+- cocina;
+- camareros;
+- pagos;
+- marketing avanzado;
+- eventos especiales.
+
+**Completion criteria (milestone completo):** `pnpm test` cubre los límites y valores
+representativos de la demanda basada en reputación (M07.2) y su reacción a la capacidad
+(M07.3); en el navegador, el intervalo de spawn responde a la reputación y se reduce cuando
+el restaurante está saturado, sin spawn infinito ni responsabilidades duplicadas entre
+`core/demand.ts` y `CustomerSystem`.
 
 ---
 
@@ -1481,8 +1621,10 @@ clientes al mismo ritmo indefinidamente. La demanda debe reducirse cuando la cap
 superada, para evitar colas infinitas, clientes entrando sin posibilidad real de servicio, y
 una simulación poco realista.
 
-Este sistema pertenece a un milestone futuro de demanda/equilibrio (extensión de M07 una vez
-que M06 esté cerrado y haya presión real de capacidad), no a M06.
+Este sistema es precisamente M07 (Demand system foundation) — ya dividido en M07.1–M07.5
+(reputación en M07.2, capacidad/saturación en M07.3) tras el cierre de M06 — no algo a
+inventar más adelante. Los modificadores de demanda basados en precio o calidad de servicio
+siguen siendo futuros (ver M07.4).
 
 ### 2. Sistema económico avanzado
 

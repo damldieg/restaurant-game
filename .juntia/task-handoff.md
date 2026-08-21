@@ -11,7 +11,10 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Task Status
 
-ACTIVE
+READY_TO_CONTINUE
+
+A decision that was blocking part of this task has just been confirmed — see "Confirmed decisions"
+below for the real answer, then continue the work that was waiting on it.
 
 Task type: Feature
 Confidence: 0.9
@@ -52,7 +55,8 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-None yet.
+- Q: "¿La generación de nuevos clientes (demanda) debe depender del estado del restaurante, o puede seguir siendo un spawn fijo independiente del mundo?" -> CONFIRMED: Customer demand depends on restaurant state: la generación de clientes debe depender progresivamente de variables del restaurante como reputación, capacidad y saturación, evitando un spawn fijo independiente del mundo. (product decision, 2026-08-21)
+  (options on the table when asked: Customer demand depends on restaurant state: la generación de clientes debe depender progresivamente de variables del restaurante como reputación, capacidad y saturación, evitando un spawn fijo independiente del mundo.)
 
 Already known when this task started:
 
@@ -141,7 +145,7 @@ The same information above, structured for programmatic use — navigation, neve
     ".juntia/context.md",
     ".juntia/governance/workflows/feature-development.md"
   ],
-  "taskStatus": "ACTIVE"
+  "taskStatus": "READY_TO_CONTINUE"
 }
 ```
 

@@ -204,20 +204,28 @@ for demand/economy was documented in `docs/MILESTONES.md` ("Visión futura — d
 dinámica y economía de gestión") and confirmed as a product decision via `juntia confirm` —
 see `.juntia/DECISIONS.md`, "Restaurant simulation economy model."
 
+**M07 (Demand system foundation) redefined (2026-08-22, planning-only — no `src/`
+changes).** Renamed from "M07 — Demand" to "M07 — Demand system foundation" and split into
+five small, independently-verifiable sub-steps in `docs/MILESTONES.md` (M07.1–M07.5, same
+incremental pattern as M04–M06), replacing what used to be a single flat checklist:
+M07.1 (foundation — decide `core/demand.ts` as the pure-logic home, separate from
+`core/customers/customer.ts` and `systems/customer-system.ts`, define the future function's
+signature, no computation yet), M07.2 (reputation-based spawn interval, with min/max
+bounds), M07.3 (capacity/saturation awareness, reusing M06.3's `isRestaurantFull`/
+`getTableQueueSize`), M07.4 (documents future demand modifiers — pricing, service quality,
+recipes, decoration, employees, events — without implementing any), M07.5 (in-browser
+validation closing M07, same kind of review as M05.5/M06.6). Added an "M07 scope
+boundaries" list (menu, recipes, pricing, production costs, salaries, employees, kitchen,
+waiters, payments, advanced marketing, special events — all out of scope). Confirmed as a
+product decision via `juntia confirm` — see `.juntia/DECISIONS.md`, "Customer demand
+depends on restaurant state." No architecture change recorded in `.juntia/ARCHITECTURE.md`
+— M07.1's `core/` (pure logic) + `systems/` (execution) split is a direct application of
+the pattern already documented there (same as `core/reputation.ts`/`ReputationSystem`), not
+a new principle.
+
 ## Next known step
 
-M06 is fully closed. **Next milestone: M07 (Demand)** — a pure function that derives NPC
-spawn interval from current reputation, with min/max bounds, per `docs/MILESTONES.md`. Not
-yet broken into sub-steps like M04–M06 (it's a small, single-milestone checklist, same
-pattern as M01–M03). `docs/MILESTONES.md` already carries a forward-looking design note on
-M07: this first increment is reputation-only: capacity/queue-awareness (reusing M06.3's
-`isRestaurantFull`/`getTableQueueSize`) is a known future extension, not part of this first
-pass. Not started yet.
-
-M06 is in progress: M06.1–M06.5 done, only M06.6 pending in `docs/MILESTONES.md` (M06 —
-Customer flow robustness). **Next real task: M06.6 (Validation and integration)** —
-in-browser validation closing M06, same kind of review as M05.5 (PR #23): multiple
-customers, tables filling up, queueing, patience abandonment, table release/reassignment,
-confirm no double-assignments, no impossible states, reputation still correct, and
-responsibilities still separated between `CustomerSystem`/`ReputationSystem`/
-`CustomerRenderer`. Not started yet.
+M06 is fully closed. **Next real task: M07.1 (Demand model foundation)** — decide and
+document where the demand logic lives (`core/demand.ts`), define its future function
+signature, and confirm the `core`/`systems` responsibility split, before M07.2 computes
+anything real. Not started yet.

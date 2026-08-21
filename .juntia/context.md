@@ -28,3 +28,4 @@ this automatically) after a new decision is confirmed.
 - 15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa) (product decision, confirmed 2026-08-20)
 - Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal) (product decision, confirmed 2026-08-20)
 - Restaurant simulation economy model: el juego se basará en un modelo económico de gestión donde el jugador controla precios, capacidad y costes operativos. La rentabilidad dependerá del equilibrio entre demanda, servicio y gastos. (product decision, confirmed 2026-08-21)
+- Customer demand depends on restaurant state: la generación de clientes debe depender progresivamente de variables del restaurante como reputación, capacidad y saturación, evitando un spawn fijo independiente del mundo. (product decision, confirmed 2026-08-21)
