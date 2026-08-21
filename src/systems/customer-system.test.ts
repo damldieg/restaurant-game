@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { CustomerSystem } from "./customer-system";
 import { createGameState } from "../state/game-state";
 import {
+  getOccupiedTableIds,
   getTableQueuePosition,
   isRestaurantFull,
+  resolveTableQueue,
   type Customer,
 } from "../core/customers/customer";
 
@@ -313,5 +315,46 @@ describe("CustomerSystem", () => {
 
     system.update(state, 1000);
     expect(state.reputationAdjustments).toBe(-2);
+  });
+
+  // M06.5 — cierra el ciclo mesa ocupada → liberada → reasignada como una
+  // secuencia explícita de punta a punta, usando las funciones de dominio
+  // de M06.1–M06.4 en vez de inferirlo de tests parciales. Ejercita
+  // resolveTableQueue (existente desde M05.2) fuera de sus propios tests
+  // por primera vez, cumpliendo el propósito para el que se creó: predecir
+  // contra el estado real quién debe ocupar la próxima mesa que se libere.
+  //
+  // Nota: el checklist original de M06.5 menciona "customer abandona
+  // (paciencia) o termina su ciclo normal" como disparadores equivalentes
+  // de "la mesa aparece libre" — pero el hallazgo de M06.4 ya estableció
+  // que un abandono por paciencia libera un slot de cola, no una mesa (el
+  // customer en espera nunca tuvo una). Este test cubre el disparador que
+  // sí libera una mesa real: el fin de una estadía (advanceStay →
+  // sendToExit).
+  it("resolveTableQueue predicts exactly who gets a table freed by a completed stay, and it happens in the same tick (M06.5)", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+
+    system.update(state, SPAWN_INTERVAL_MS * 3);
+    system.update(state, 5000);
+
+    const waitingBeforeRelease = state.customers.find((customer) => customer.state === "waiting");
+    expect(waitingBeforeRelease).toBeDefined();
+    expect(getOccupiedTableIds(state.customers).size).toBe(2);
+
+    // Predicción contra el estado real, justo antes de que se libere
+    // ninguna mesa: quién debería ocuparla a continuación.
+    const predictedNext = resolveTableQueue(state.customers);
+    expect(predictedNext?.id).toBe(waitingBeforeRelease?.id);
+
+    // Agota el stayRemainingMs de los customers sentados (mismo timing que
+    // el resto de los tests de este archivo) — la mesa se libera y se
+    // reasigna dentro de este mismo tick (M05.3), sin intervención manual.
+    system.update(state, 5000);
+    system.update(state, 1);
+
+    const reassigned = state.customers.find((customer) => customer.id === predictedNext?.id);
+    expect(reassigned?.tableId).not.toBeNull();
+    expect(getOccupiedTableIds(state.customers).has(reassigned!.tableId!)).toBe(true);
   });
 });

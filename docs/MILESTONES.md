@@ -1076,19 +1076,32 @@ limpio. Sin verificación en navegador — ningún archivo de producción cambi�
 
 ### M06.5 — Table release and reassignment
 
+**Estado: completado.**
+
 **Objetivo:** cerrar el ciclo de uso de mesa como una secuencia explícita y testeada de
 principio a fin, usando las funciones de dominio formalizadas en M06.1–M06.4 en vez de
 lógica implícita repartida entre varios archivos.
 
-- [ ] Test end-to-end puro (sin Phaser, sin mocks): mesa ocupada → customer abandona
-      (paciencia) o termina su ciclo normal (`sendToExit`) → la mesa aparece libre en
-      `getOccupiedTableIds` (M06.2) → el siguiente customer en cola FIFO
-      (`resolveTableQueue`, ya existente desde M05.2) la ocupa en el mismo tick, sin
-      intervención manual — mismo comportamiento que ya fija el orden de pipeline de M05.3,
-      ahora verificado explícitamente contra las funciones de dominio nuevas.
-- [ ] Confirmar que `resolveTableQueue` — existente desde M05.2 pero sin uso real fuera de
+- [x] Test end-to-end puro (sin Phaser, sin mocks): mesa ocupada → customer termina su ciclo
+      normal (`advanceStay` → `sendToExit`) → la mesa aparece libre en `getOccupiedTableIds`
+      (M06.2) → el siguiente customer en cola FIFO (`resolveTableQueue`, ya existente desde
+      M05.2) la ocupa en el mismo tick, sin intervención manual — mismo comportamiento que ya
+      fija el orden de pipeline de M05.3, ahora verificado explícitamente contra las
+      funciones de dominio nuevas.
+- [x] Confirmar que `resolveTableQueue` — existente desde M05.2 pero sin uso real fuera de
       sus propios tests hasta ahora — queda efectivamente ejercitada por este test,
-      cumpliendo el propósito para el que se creó.
+      cumpliendo el propósito para el que se creó: el test llama a `resolveTableQueue`
+      directamente contra el estado real justo antes de la liberación para *predecir* qué
+      customer debería ocupar la próxima mesa libre, y después confirma que ese mismo
+      customer (y no otro) es quien efectivamente la ocupa en el tick siguiente.
+
+Hallazgo real durante la implementación: el checklist original mencionaba "customer abandona
+(paciencia) o termina su ciclo normal" como disparadores equivalentes de "la mesa aparece
+libre" — pero M06.4 ya había establecido que un abandono por paciencia libera un **slot de
+cola**, no una mesa (el customer en espera nunca llegó a tener una). El test de este paso
+cubre en cambio el disparador que sí libera una mesa real: el fin de una estadía
+(`advanceStay` → `sendToExit`). El caso de abandono por paciencia y su efecto sobre la cola
+ya quedó cubierto en M06.4, no se duplica acá.
 
 **No implementar todavía:** eventos de liberación por motivos nuevos (cocina, pagos, M14/
 M15) — solo los dos ya existentes (ciclo completo vía `advanceStay`, abandono vía
@@ -1097,6 +1110,9 @@ M15) — solo los dos ya existentes (ciclo completo vía `advanceStay`, abandono
 **Player-visible outcome:** ninguno nuevo — el restaurante ya mantenía flujo continuo de
 clientes desde M05; este paso lo deja demostrado con un test explícito de punta a punta en
 vez de solo inferido de tests parciales.
+
+Verificado: `pnpm test` (122/122 — 121 + 1 nuevo) y `tsc --noEmit` limpios; `pnpm build`
+limpio. Sin verificación en navegador — ningún archivo de producción cambió.
 
 ---
 

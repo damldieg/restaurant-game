@@ -262,10 +262,26 @@ economy model." Explicitly **not** part of M06, which stays scoped to
 clients/queues/tables/capacity/lifecycle (see M06 scope boundaries in `docs/MILESTONES.md`)
 — this is future-roadmap documentation only, nothing implemented, no architecture changed.
 
+**M06.5 (Table release and reassignment) — done.** Test-only, no production file changed —
+`systems/customer-system.test.ts` gained 1 test closing the release→reassignment cycle
+end-to-end: calls `resolveTableQueue` directly against the real state just before a table
+frees up to *predict* who should get it next, then confirms that exact customer (and only
+that one) is reassigned the table in the same tick — the first real exercise of
+`resolveTableQueue` outside its own M05.2 unit tests, fulfilling the purpose it was built
+for. Real finding: the original checklist treated "patience abandonment" and "completed
+stay" as equivalent table-freeing triggers, but M06.4 had already established patience
+abandonment frees a queue slot, not a table (a waiting customer never had one) — so this
+test covers only the trigger that actually frees a table (`advanceStay` → `sendToExit`);
+the queue-slot-release case stays covered by M06.4, not duplicated here. `pnpm test`
+(122/122 — 121 + 1 new) and `tsc --noEmit` clean; `pnpm build` clean. No browser check
+needed — zero production code changed.
+
 ## Next known step
 
-M06 is in progress: M06.1–M06.4 done, M06.5–M06.6 pending in `docs/MILESTONES.md` (M06 —
-Customer flow robustness). **Next real task: M06.5 (Table release and reassignment)** — an
-end-to-end test proving the release→reassignment cycle, finally exercising M05.2's
-`resolveTableQueue` outside its own tests. Not started yet. (Unchanged by the future-vision
-documentation above.)
+M06 is in progress: M06.1–M06.5 done, only M06.6 pending in `docs/MILESTONES.md` (M06 —
+Customer flow robustness). **Next real task: M06.6 (Validation and integration)** —
+in-browser validation closing M06, same kind of review as M05.5 (PR #23): multiple
+customers, tables filling up, queueing, patience abandonment, table release/reassignment,
+confirm no double-assignments, no impossible states, reputation still correct, and
+responsibilities still separated between `CustomerSystem`/`ReputationSystem`/
+`CustomerRenderer`. Not started yet.
