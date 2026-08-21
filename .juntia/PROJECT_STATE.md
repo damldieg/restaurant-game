@@ -108,6 +108,36 @@ Full loop verified in-browser with Playwright across every sub-step, including a
 that observed a complete enter → find table → sit → stay 10s → leave → despawn cycle (customer
 count visibly dropping) with zero console errors throughout.
 
+**M05 (waiting and satisfaction) — done.** Built incrementally as M05.1–M05.5 (full detail in
+`docs/MILESTONES.md` and PR history #19–#23), same pattern as M04. Two architecture decisions
+confirmed before starting (see `.juntia/DECISIONS.md`): `GameState.reputationAdjustments` as an
+accumulator, and "Customer lifecycle events ownership" (`CustomerSystem` owns lifecycle
+transitions/events; `ReputationSystem` never inspects `state.customers`). Resulting shape:
+
+- `CustomerState` gained `"waiting"`; `Customer` gained `waitReason: WaitReason | null`
+  (`WaitReason = "table"` for now) and `waitRemainingMs: number | null` (same countdown pattern
+  as `stayRemainingMs`).
+- `core/customers/customer.ts` gained `getQueueSlotPosition(index)`/`findFreeQueueSlot`
+  (open-ended queue line beside `ENTRY_TARGET`, no fixed cap) and `resolveTableQueue` (standalone
+  FIFO, built for M06 to reuse). `assignTables` tries `waiting` customers before `idle` ones (free
+  via array-order processing) and sends a tableless `idle` customer to `waiting` when no table is
+  free.
+- `WAIT_DURATION_MS = 15_000` and `advanceWait` (mirrors `advanceStay`) send an expired-patience
+  customer to exit via `sendToExit`, which now also clears `waitReason`/`waitRemainingMs`.
+  `CustomerSystem.update`'s pipeline order is `moveCustomer → advanceStay → assignTables →
+  advanceWait → removeDepartedCustomers` (reordered from M04 so a table freed this tick can be
+  reassigned this same tick, before patience is evaluated).
+- `GameState.reputationAdjustments: number` (initial `0`); `ReputationSystem.update =
+  calculateTotalReputation(...) + reputationAdjustments`, still never touching
+  `state.customers`. `CustomerSystem` applies the delta exactly once per exit event via
+  `countTransitionsToLeaving(before, after, fromState)`: `+1` per completed stay (`seated →
+  leaving`), `-2` per patience abandon (`waiting → leaving`) — both confirmed product decisions.
+
+Verified in-browser with Playwright across every sub-step, culminating in M05.5's 45s run: full
+queued lifecycle observed, non-overlapping queue line, HUD reputation moving exactly as expected
+on each event type, zero console errors throughout. `pnpm test`: 95/95 passing; `tsc --noEmit`/
+`pnpm build` clean.
+
 **Repository governance:** `main` is branch-protected on GitHub. `.github/workflows/ci.yml`
 (new) runs `pnpm install --frozen-lockfile` → `pnpm test` → `pnpm build` as the `build-and-test`
 check, required and kept up-to-date-with-`main` (`strict: true`) before merge. Merge policy on
@@ -127,104 +157,28 @@ it's a real judgment call, not an implementation detail.
 
 ## Next known step
 
-M05 (Waiting and satisfaction) is broken into an M05.1–M05.5 incremental plan in
-`docs/MILESTONES.md`, same pattern as M04.1–M04.8. Two architecture decisions were confirmed
-before starting — see `.juntia/DECISIONS.md`: `GameState.reputationAdjustments` as the
-accumulator, and "Customer lifecycle events ownership" (`CustomerSystem` owns lifecycle
-transitions/events; `ReputationSystem` never inspects `state.customers`).
+M06 was renamed **"Customer flow robustness"** and fully rewritten in `docs/MILESTONES.md`
+(2026-08-21, planning-only — no `src/` changes) to drop its stale "Reservas robustas" framing,
+which predated M04's architecture change and referenced files that never existed as planned
+(`game/reservations.ts`) or were already removed (`game/npc/controller.ts`, gone since M04.4).
+It is **not** a traditional reservation system — table occupancy keeps being derived from
+`state.customers` on every read (the M04.4/M04.6 decision), never a separate tracked structure.
+Split into six small, independently-verifiable sub-steps (M06.1–M06.6, same pattern as
+M04.1–M04.8/M05.1–M05.5), consolidating and formalizing what M04–M05 already built rather than
+adding new player-visible behavior in most steps: M06.1 (lifecycle state hardening — document
+and test the invariants each `CustomerState` already holds implicitly), M06.2 (table assignment
+as an explicit, named domain function — `getOccupiedTableIds`, extracted from inline logic in
+`assignTables`), M06.3 (capacity/queue-size as explicit domain queries — `isRestaurantFull`,
+consolidating what M05.2's queue already does implicitly), M06.4 (confirm M05.3/M05.4's patience
+system integrates cleanly with M06.1–M06.3's new invariants, no behavior change), M06.5
+(end-to-end test proving the release→reassignment cycle, finally exercising M05.2's
+`resolveTableQueue` outside its own tests), M06.6 (in-browser validation closing M06, same kind
+of review as M05.5/PR #23). Fixed two stale forward-references to the old "M06 reservas" framing
+in `docs/MILESTONES.md`'s M07 and M15 sections (dependency lines + M15's `releaseTable`
+mention, which this redesign deliberately does not introduce as a standalone function).
 
-**M05.1 (Customer waiting state) — done:** `CustomerState` gained `"waiting"`; `Customer`
-gained `waitReason: WaitReason | null` (`WaitReason = "table"` for now, room for `order`/`food`
-later) and `waitRemainingMs: number | null` (same countdown pattern as `stayRemainingMs`). Pure
-data — no code path sets `state: "waiting"` yet, so `pnpm test` (74/74)/`tsc --noEmit`/`pnpm
-build` are the only verification needed (no browser check, nothing new to observe).
-
-**M05.2 (Table queue system) — done:** `core/customers/customer.ts` gained
-`getQueueSlotPosition(index)` (an open-ended formula — a horizontal line beside `ENTRY_TARGET`,
-not a fixed-size array, so there's no arbitrary queue-length cap) and `findFreeQueueSlot`.
-`assignTables` now handles `waiting` customers too, trying them before `idle` ones — achieved
-for free by processing `customers` in their existing (never-reordered) array order, since a
-customer that started waiting earlier is always earlier in the array than one that just went
-idle. An `idle` customer with no free table now transitions to `waiting` (`waitReason: "table"`,
-`target` = first free queue slot) instead of getting stuck `idle` forever; `assignTables` itself
-now clears `waitReason`/`waitRemainingMs` when a waiting customer finally gets a table. M05.1's
-noted `sendToExit` follow-up (it doesn't clear those same two fields) is still open — harmless
-for now since `sendToExit` still only fires from `advanceStay`, never on a `waiting` customer;
-still needs fixing once M05.3's `advanceWait` starts calling `sendToExit` on one. New standalone
-`resolveTableQueue` (FIFO) exists for M06's future `releaseTable` to
-reuse, even though `assignTables`'s own array-order processing already achieves the same
-ordering internally. Real bug found and fixed during implementation: initial queue-slot-occupancy
-tracking only checked `customer.target`, but an already-arrived waiting customer has `target:
-null` (like any arrival) while still standing at the slot — fixed with `target ?? position`.
-Tested in `customer.test.ts` (FIFO order, slot-skipping, waiting-before-idle priority, no
-double-assigned slots, wait-field clearing) and `customer-system.test.ts` (updated two
-now-outdated M04.6-era tests that assumed a tableless customer stays `idle` forever). Verified
-in-browser with Playwright (~18s run): with more customers than tables, the overflow forms a
-visible horizontal line of distinct, non-overlapping positions next to the entry point; HUD and
-furniture unaffected; zero console errors. `pnpm test` (82/82) and `tsc --noEmit` clean; `pnpm
-build` clean.
-
-**M05.3 (Waiting patience) — done:** `core/customers/customer.ts` gained `WAIT_DURATION_MS =
-15_000` (confirmed product decision — same balancing-value pattern as `STAY_DURATION_MS`) and
-`advanceWait(customer, deltaMs)`, an exact mirror of `advanceStay`: lazily initializes
-`waitRemainingMs` the first time it sees a `waiting` customer, counts it down, and calls
-`sendToExit` once it runs out. `sendToExit` now also clears `waitReason`/`waitRemainingMs` (it
-already unconditionally cleared `stayRemainingMs`) — the exact follow-up M05.2 flagged as open,
-since M05.3 is the first case where a customer can reach `sendToExit` with those fields non-null.
-Real bug found and fixed during implementation: `CustomerSystem.update`'s pipeline order
-(inherited from M04, `assignTables` before `advanceStay`) let a table freed by an expiring stay
-sit unassigned for one extra tick — harmless with unlimited patience (M05.2), but with M05.3's
-finite patience that extra tick could be enough for the front-of-queue customer's own patience to
-expire in the same tick the table freed, sending it away one tick before it would have been
-seated. Fixed by reordering to `moveCustomer → advanceStay → assignTables → advanceWait →
-removeDepartedCustomers`, so a table freed this tick is reassigned this same tick, before
-`advanceWait` runs. Caught by an already-existing M05.2 test (`customer-system.test.ts`, "frees a
-table once its customer starts leaving...") that started failing once patience was added — the
-pipeline fix made it pass again unchanged. Tested in `customer.test.ts` (`advanceWait` countdown,
-lazy init, exit transition, no-mutation; `sendToExit` clears the wait fields). Verified in-browser
-with Playwright (~28s run, screenshots every 3-8s): zero console errors, M05.2's queue-line
-behavior intact, HUD/money unchanged, queue size stays bounded rather than growing unboundedly
-despite arrivals (1/2.5s) outpacing table turnover (~1/5s) in this 2-table layout — consistent
-with patience-abandonment actually removing customers from the queue (exact timing is covered
-directly by the unit tests, not re-derived visually). `pnpm test` (88/88) and `tsc --noEmit`
-clean; `pnpm build` clean.
-
-**M05.4 (Customer reputation events) — done:** `GameState.reputationAdjustments: number` (initial
-`0`), and `ReputationSystem.update` now sets `state.reputation = calculateTotalReputation(...) +
-reputationAdjustments` — still never inspects `state.customers` (confirmed "Customer lifecycle
-events ownership" decision). `CustomerSystem.update` applies the delta exactly once per exit
-event by comparing `state.customers` snapshots before/after each pipeline step, via a new pure
-`countTransitionsToLeaving(before, after, fromState)` in `core/customers/customer.ts`: `+1` per
-`seated → leaving` right after `advanceStay` (completed cycle), `-2` per `waiting → leaving`
-right after `advanceWait` (patience abandon) — both confirmed product decisions.
-`advanceStay`/`advanceWait`/`sendToExit` are unchanged from M05.3; the attribution lives entirely
-in `CustomerSystem`, keeping `sendToExit` generic. Tested in `customer.test.ts`
-(`countTransitionsToLeaving`), `customer-system.test.ts` (reward/penalty applied exactly once,
-no double-counting on a later tick — required working out real elapsed-distance/spawn-timing
-numbers so a second, unrelated customer wouldn't also complete a cycle in the same test tick),
-and `reputation-system.test.ts` (adjustments added regardless of `state.customers`). Verified
-in-browser with Playwright (~36s run, screenshots every 3-5s): HUD reputation went 8 → 9 (a
-completed cycle) → 10 (another) → 8 (a patience abandon, dropping exactly 2), directly visible in
-the HUD text; zero console errors throughout. `pnpm test` (95/95) and `tsc --noEmit` clean;
-`pnpm build` clean.
-
-**M05.5 (Validation and integration) — done, closing M05.** Pure validation, no source changes.
-Confirmed via direct code read: `ReputationSystem.update` still only touches
-`state.furniture`/`state.reputationAdjustments`, never `state.customers`; `CustomerRenderer`
-still only reads `id`/`position` off each `Customer`, never `waitReason`/`reputationAdjustments`;
-all reputation-event math stays solely in `CustomerSystem`. Verified in-browser with Playwright
-(45s run, screenshots every 3s, default starter layout of 2 tables/2 chairs, default 2500ms spawn
-rate — no construction needed): HUD reputation went 8 → 9 → 10 (two completed cycles, +1 each) →
-8 → 3 (patience abandons, -2 each, exact deltas each time), the overflow queue formed a visible
-horizontal line of distinct non-overlapping customers beside the entry point, `Dinero: $500`
-unaffected throughout, zero console errors across the whole run. `pnpm test` (95/95), `tsc
---noEmit`, and `pnpm build` all clean on this branch. M05 (Waiting and satisfaction) is complete.
-
-## Next known step
-
-M06 (Reservas robustas / hardening) has a checklist already in `docs/MILESTONES.md`, but it
-predates M04's architecture change and references files that no longer exist —
-`game/reservations.ts` (never created) and `game/npc/controller.ts` (removed in M04.4, replaced
-by `core/customers/` + `CustomerSystem` + `CustomerRenderer`). That checklist needs a rewrite
-against the current shape before implementation starts, not a straight implementation as
-currently worded.
+**Prepared, not started.** First real task: **M06.1**, first unchecked item — document the
+`CustomerState` transition table and per-state invariants next to `core/customers/customer-
+state.ts`. No architecture decision was required for this rewrite (it only formalizes
+principles `.juntia/ARCHITECTURE.md` already states); see that file for a short new note on
+where table-occupancy-as-domain-state now lives.

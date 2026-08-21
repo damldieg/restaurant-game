@@ -760,35 +760,225 @@ enfadado y ambos cambios de reputación.
 
 ---
 
-## M06 — Reservas robustas (hardening)
+## M06 — Customer flow robustness
 
-*Depende de: M05. Endurece lo construido en M01–M05 antes de seguir; no agrega
-comportamiento nuevo visible. Milestone insertado al reordenar (antes vivía justo después
-del actual M04); ver nota en el resumen de la sesión que lo agregó.*
+*Depende de: M05 (estados `waiting`/`leaving`, cola FIFO y paciencia ya construidos) y M04
+(ciclo básico `walking → idle/seated → leaving`). Endurece y consolida lo construido en
+M04–M05 antes de seguir; no agrega comportamiento nuevo visible en la mayoría de sus pasos.
+Redefinido por completo el 2026-08-21 — la versión anterior de este milestone ("Reservas
+robustas") predataba la arquitectura actual y se apoyaba en archivos que ya no existen
+(`game/reservations.ts`, nunca creado; `game/npc/controller.ts`, eliminado en M04.4). No es
+un sistema de reservas tradicional: el objetivo real es gestionar correctamente el flujo de
+clientes y la capacidad del restaurante sobre la arquitectura ya vigente —
+`core/customers/` (dominio puro) + `state/GameState.customers[]` + `systems/CustomerSystem`
+— sin introducir una estructura de ocupación separada (`occupiedTables` o similar): la
+ocupación de mesas sigue derivándose de `state.customers` en cada lectura, como ya decidió
+M04.4/M04.6 (ver `.juntia/ARCHITECTURE.md`).*
 
-- [ ] Extraer reservas a `game/reservations.ts`: `reserveTable`, `releaseTable`,
-      `isTableReserved`.
-- [ ] Test: reservar una mesa ya reservada no tiene efecto (evita doble reserva).
-- [ ] Reemplazar el tracking ad hoc de mesas ocupadas en `game/npc/controller.ts` por el
-      nuevo módulo.
-- [ ] `findFreeTable` usa el módulo de reservas en vez de recibir la lista por parámetro.
-- [ ] `releaseTable` invoca la función FIFO de M05 para que, al liberar una mesa, el
-      primer NPC en cola la ocupe automáticamente.
-- [ ] Test: liberar una mesa con NPCs en `waiting` (motivo `table`) asigna la mesa al
-      primero (FIFO) y lo saca de `waiting`.
+**Player-visible outcome (milestone completo):** en su mayoría, ninguno nuevo — el
+comportamiento visible ya construido en M04–M05 (clientes que entran, encuentran mesa,
+esperan en fila, abandonan por paciencia o completan su ciclo) se mantiene idéntico. M06 lo
+consolida y lo cubre con invariantes explícitas para que M07 (demanda) y milestones
+posteriores puedan construir sobre una base sin ambigüedades ni estados imposibles.
 
-**Player-visible outcome:** ninguno nuevo — el comportamiento de M04–M05 se mantiene
-igual, pero corre sobre reservas centralizadas sin lógica duplicada, como base sólida para
-los milestones siguientes.
+M06 es un plan incremental de tareas pequeñas, mismo patrón que M04/M05 — trabajar siempre
+en la primera `M06.x` con estado pendiente, sin saltar pasos. Cada paso es ejecutable de
+forma autónoma: objetivo, tareas concretas contra archivos/funciones que ya existen, límites
+explícitos de qué no tocar, y un resultado verificable (test, `tsc --noEmit`, o chequeo
+visual) antes de marcarlo `[x]`.
 
-**Completion criteria:** `pnpm test` cubre reservas y la integración liberación↔cola FIFO
-de M05; no queda lógica de mesas ad hoc en `game/npc/controller.ts`.
+---
+
+### M06.1 — Customer lifecycle state hardening
+
+**Objetivo:** consolidar `CustomerState` (`core/customers/customer-state.ts`:
+`"walking" | "idle" | "seated" | "leaving" | "waiting"`) y sus transiciones — hoy repartidas
+implícitamente entre `moveCustomer`, `assignTables`, `advanceStay`, `advanceWait` y
+`sendToExit` (`core/customers/customer.ts`) — en una fuente única, documentada y testeada.
+
+- [ ] Documentar explícitamente, junto a `CustomerState`, la tabla de transiciones válidas
+      hoy vigentes (`walking → idle`, `walking → seated`, `idle → waiting`, `waiting →
+      walking`, cualquier estado no-`leaving` → `leaving` vía `sendToExit`, `leaving →`
+      eliminado por `removeDepartedCustomers`) — sin cambiar ninguna transición existente,
+      solo hacerla citable en un solo lugar.
+- [ ] Documentar los invariantes que cada estado sostiene hoy por construcción pero nunca de
+      forma explícita: `idle` ⇒ `tableId === null`; `seated` ⇒ `tableId !== null` &&
+      `stayRemainingMs !== null`; `waiting` ⇒ `waitReason !== null`; `leaving` ⇒
+      `tableId === null` && `stayRemainingMs === null` && `waitReason === null`.
+- [ ] Test: cada función pura de transición (`moveCustomer`, `assignTables`, `advanceStay`,
+      `advanceWait`, `sendToExit`) devuelve siempre un `Customer` que cumple estos
+      invariantes, no solo el campo puntual que ya cubre su test actual.
+- [ ] Test: una transición imposible no ocurre — p.ej. `waiting` nunca pasa directo a
+      `seated` sin pasar por `walking`; ningún `idle` queda con `tableId` no nulo.
+
+**No implementar:** pedidos; camareros; cocina; ningún estado nuevo. Este paso es hardening
+y tests — no cambia ninguna transición ni ningún archivo fuera de tests/documentación
+inline.
+
+**Player-visible outcome:** sin cambios visuales. Mejora la estabilidad interna del sistema
+de clientes.
+
+---
+
+### M06.2 — Table assignment as domain state
+
+**Objetivo:** convertir en función de dominio explícita, nombrada y testeada la derivación
+de ocupación de mesas que hoy vive inline al principio de `assignTables`
+(`core/customers/customer.ts`) — sin crear una estructura de ocupación separada ni un
+módulo de reservas.
+
+- [ ] Extraer esa derivación a una función pura nombrada — p.ej. `getOccupiedTableIds(
+      customers)` — reutilizada por `assignTables` en vez de recalculada inline, para que
+      M06.3+ y milestones futuros (M07 demanda, M15 exit/release) tengan un punto único al
+      que apuntar en vez de reimplementarla.
+- [ ] Test: `getOccupiedTableIds` devuelve exactamente los `tableId` no nulos presentes en
+      `Customer[]`, sin duplicados.
+- [ ] Formalizar como test explícito (hoy solo cubierto indirectamente) el invariante de
+      asignación única: en cualquier `Customer[]` producido por `assignTables`, ningún
+      `tableId` no nulo se repite.
+- [ ] Test/confirmación: `sendToExit` sigue siendo el único punto que libera una mesa
+      (`tableId → null`) — deliberadamente no se introduce una función `releaseTable`
+      independiente ni una lista de ocupación aparte, para no reintroducir el problema de
+      `occupiedTables` desincronizado que M04.4 ya eliminó (ver `.juntia/ARCHITECTURE.md`).
+
+**No solucionar todavía:** sistema completo de reservas con estado propio; refactor de
+`occupiedTables` como lista aparte — decisión ya tomada de no tenerla (la ocupación siempre
+se deriva de `state.customers`).
+
+**Player-visible outcome:** sin cambios visuales. Los clientes tienen una relación clara y
+citable con su mesa (`Customer.tableId` + `getOccupiedTableIds`), en vez de lógica de
+ocupación implícita dentro de `assignTables`.
+
+---
+
+### M06.3 — Restaurant capacity management
+
+**Objetivo:** exponer como conceptos de dominio explícitos la detección de "restaurante
+lleno" y el tamaño de la cola de espera — hoy efectos secundarios implícitos dentro de
+`assignTables`. La cola en sí (`waiting`, `getQueueSlotPosition`, `findFreeQueueSlot`, orden
+FIFO vía `resolveTableQueue`) ya existe desde M05.2; este paso no la reimplementa, solo hace
+consultable su estado.
+
+- [ ] Función pura `isRestaurantFull(customers, furnitureList)` que exprese la condición
+      "no hay mesa libre" ya usada implícitamente dentro de `assignTables`, reutilizando
+      `getOccupiedTableIds` (M06.2) y `findFreeTable` (`core/restaurant.ts`).
+- [ ] Test: `isRestaurantFull` responde correctamente con 0 mesas, todas ocupadas, y al
+      menos una libre.
+- [ ] Función o selector puro para el tamaño actual de la cola (`customers.filter(c =>
+      c.state === "waiting" && c.waitReason === "table").length`), consultable sin recorrer
+      `assignTables`.
+- [ ] Test: el tamaño de cola crece con más llegadas que mesas libres y baja cuando
+      `resolveTableQueue`/`assignTables` asigna una mesa o un cliente abandona.
+
+**No implementar todavía:** UI avanzada de cola (contador visible en HUD, etc.); animaciones
+complejas de la fila.
+
+**Player-visible outcome:** sin cambios de comportamiento — la cola visual ya existe desde
+M05.2. El estado "lleno"/tamaño de cola queda disponible como dato de dominio reutilizable
+(p.ej. por M07, que deriva el intervalo de spawn a partir de reputación y podría acotarlo
+también por capacidad).
+
+---
+
+### M06.4 — Customer patience system
+
+**Objetivo:** confirmar que el sistema de paciencia ya construido en M05.3/M05.4
+(`WAIT_DURATION_MS`, `advanceWait`, penalización de reputación) queda correctamente
+integrado con los conceptos formalizados en M06.1–M06.3, sin duplicar ni modificar su
+comportamiento.
+
+- [ ] Test de integración: un customer que abandona por paciencia (`advanceWait` →
+      `sendToExit`) deja los invariantes de M06.1 consistentes (sin `tableId`/`waitReason`/
+      `waitRemainingMs` colgantes).
+- [ ] Test de integración: un abandono por paciencia reduce correctamente el resultado de
+      `isRestaurantFull`/el tamaño de cola de M06.3 — la mesa o el slot de cola liberado
+      queda disponible para el siguiente customer en el mismo tick.
+- [ ] Confirmar (test) que `REPUTATION_PENALTY_ABANDONED_WAIT` (M05.4,
+      `systems/customer-system.ts`) sigue aplicándose exactamente una vez por abandono tras
+      los cambios de M06.1–M06.3.
+
+**No implementar:** satisfacción avanzada; pedidos; ningún cambio a `WAIT_DURATION_MS` ni a
+`advanceWait`.
+
+**Player-visible outcome:** ninguno nuevo — el comportamiento visible de M05.3/M05.4 (un
+customer que espera demasiado se va y la reputación baja) se mantiene igual.
+
+---
+
+### M06.5 — Table release and reassignment
+
+**Objetivo:** cerrar el ciclo de uso de mesa como una secuencia explícita y testeada de
+principio a fin, usando las funciones de dominio formalizadas en M06.1–M06.4 en vez de
+lógica implícita repartida entre varios archivos.
+
+- [ ] Test end-to-end puro (sin Phaser, sin mocks): mesa ocupada → customer abandona
+      (paciencia) o termina su ciclo normal (`sendToExit`) → la mesa aparece libre en
+      `getOccupiedTableIds` (M06.2) → el siguiente customer en cola FIFO
+      (`resolveTableQueue`, ya existente desde M05.2) la ocupa en el mismo tick, sin
+      intervención manual — mismo comportamiento que ya fija el orden de pipeline de M05.3,
+      ahora verificado explícitamente contra las funciones de dominio nuevas.
+- [ ] Confirmar que `resolveTableQueue` — existente desde M05.2 pero sin uso real fuera de
+      sus propios tests hasta ahora — queda efectivamente ejercitada por este test,
+      cumpliendo el propósito para el que se creó.
+
+**No implementar todavía:** eventos de liberación por motivos nuevos (cocina, pagos, M14/
+M15) — solo los dos ya existentes (ciclo completo vía `advanceStay`, abandono vía
+`advanceWait`).
+
+**Player-visible outcome:** ninguno nuevo — el restaurante ya mantenía flujo continuo de
+clientes desde M05; este paso lo deja demostrado con un test explícito de punta a punta en
+vez de solo inferido de tests parciales.
+
+---
+
+### M06.6 — Validation and integration
+
+**Objetivo:** validar el M06 completo en navegador, mismo tipo de revisión que cerró M05
+(ver M05.5, PR #23).
+
+- [ ] Escenario en navegador: múltiples clientes llegan, las mesas se llenan, clientes
+      esperan en cola, algunos abandonan por paciencia, mesas se liberan, nuevos clientes
+      entran y ocupan las mesas liberadas.
+- [ ] Verificar: no existen dobles asignaciones de mesa (invariante de M06.2); ningún
+      customer queda bloqueado en un estado imposible (invariantes de M06.1); la reputación
+      sigue subiendo/bajando correctamente (M05.4 intacto); las responsabilidades siguen
+      separadas entre `CustomerSystem`/`ReputationSystem`/`CustomerRenderer` (mismo chequeo
+      que M05.5).
+- [ ] `pnpm test`, `tsc --noEmit` y `pnpm build` limpios.
+
+**No implementar:** nada nuevo — este paso es validación e integración, no funcionalidad
+nueva.
+
+**Player-visible outcome:** el mismo del milestone completo (ver arriba).
+
+---
+
+### M06 scope boundaries
+
+Fuera de alcance — pertenecen a milestones posteriores:
+
+- camareros;
+- pedidos;
+- recetas;
+- cocina;
+- pagos;
+- salarios;
+- eventos especiales;
+- VIP;
+- decoración avanzada.
+
+**Completion criteria (milestone completo):** `pnpm test` cubre los invariantes de estado
+(M06.1), la asignación única de mesas (M06.2), la detección de capacidad y tamaño de cola
+(M06.3), la integración de paciencia (M06.4) y el ciclo completo liberación↔reasignación
+(M06.5); en el navegador, con varios clientes y mesas limitadas, se ve la cola, el abandono
+por paciencia y la reasignación de mesas liberadas, sin dobles asignaciones ni clientes
+bloqueados.
 
 ---
 
 ## M07 — Demand
 
-*Depende de: M03 (reputación) y M06 (reservas estables).*
+*Depende de: M03 (reputación) y M06 (flujo de clientes y capacidad consolidados).*
 
 - [ ] Función pura que, dada la reputación actual, deriva el intervalo de spawn (o tasa
       de llegada) de NPCs.
@@ -966,13 +1156,16 @@ del HUD sube al terminar de comer un cliente.
 
 ## M15 — Exit / release table
 
-*Depende de: M14, M06 (reservas) y M04 (infraestructura de `leaving`).*
+*Depende de: M14, M06 (flujo de clientes y capacidad consolidados) y M04 (infraestructura
+de `leaving`).*
 
-- [ ] Tras pagar, el NPC dispara la misma transición a `leaving` de M04 y camina de vuelta
-      a la puerta.
-- [ ] Llamar a `releaseTable` (M06) al entrar en `leaving`.
+- [ ] Tras pagar, el NPC dispara la misma transición a `leaving` de M04 (vía `sendToExit`)
+      y camina de vuelta a la puerta.
+- [ ] Confirmar que la mesa queda libre automáticamente al entrar en `leaving`
+      (`sendToExit` ya limpia `tableId` — ver M06.2; no hace falta invocar una función
+      `releaseTable` aparte, esta arquitectura no mantiene una lista de ocupación separada).
 - [ ] Confirmar visualmente: la mesa liberada es ocupada por el primer NPC en cola
-      (M05/M06) o por un cliente nuevo si no hay cola.
+      (`resolveTableQueue`, M05.2/M06.5) o por un cliente nuevo si no hay cola.
 
 **Player-visible outcome:** el jugador ve al cliente salir por la puerta tras pagar, y la
 mesa liberada es ocupada por el siguiente cliente en cola.

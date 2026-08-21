@@ -110,3 +110,14 @@ funciones sueltas que ya vivían en `core/`.
 `occupiedTables` y el resto de `game/npc/` quedan igual por ahora — no es limpieza, es alcance
 de M04 (`occupiedTables` es tarea de M06). Ver `.juntia/DECISIONS.md` para las decisiones
 formales y `docs/MILESTONES.md` (M03.5) para el plan de pasos incrementales hacia M04.
+
+## Ocupación de mesas como estado de dominio (M06, sin código todavía)
+
+`game/npc/` ya no existe (eliminado en M04.4) y con él cualquier `occupiedTables` como lista
+aparte. Desde M04.6, la ocupación de mesas se deriva de `state.customers` en cada lectura
+(`tableId` no nulo por customer) en vez de mantenerse en una estructura propia que pudiera
+desincronizarse. M06 formaliza ese criterio como función de dominio nombrada y testeada
+(`getOccupiedTableIds`, `core/customers/customer.ts`) en vez de dejarlo inline dentro de
+`assignTables` — pero no introduce un módulo de reservas ni una estructura de ocupación
+separada: sigue siendo el mismo criterio derivado, solo citable en un solo lugar. Ver
+`docs/MILESTONES.md` (M06 — Customer flow robustness) para el plan de pasos.
