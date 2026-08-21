@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M06.4: Customer patience system. Añadir tests de integracion que confirmen que el sistema de paciencia (WAIT_DURATION_MS, advanceWait, penalizacion de reputacion) sigue funcionando correctamente junto con los invariantes de M06.1 y las queries de dominio de M06.2/M06.3 (isRestaurantFull, getTableQueueSize), sin cambiar ningun comportamiento existente.","generatedAt":"2026-08-21T17:40:34.842Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M06.5: Table release and reassignment. Agregar un test end-to-end puro que demuestre el ciclo mesa ocupada -> customer termina su ciclo (sendToExit via advanceStay) -> mesa libre en getOccupiedTableIds -> el siguiente customer en cola FIFO (resolveTableQueue) la ocupa en el mismo tick, ejercitando resolveTableQueue por primera vez fuera de sus propios tests unitarios.","generatedAt":"2026-08-21T18:14:07.169Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,14 +7,11 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M06.4: Customer patience system. Añadir tests de integracion que confirmen que el sistema de paciencia (WAIT_DURATION_MS, advanceWait, penalizacion de reputacion) sigue funcionando correctamente junto con los invariantes de M06.1 y las queries de dominio de M06.2/M06.3 (isRestaurantFull, getTableQueueSize), sin cambiar ningun comportamiento existente.
+> Implementar M06.5: Table release and reassignment. Agregar un test end-to-end puro que demuestre el ciclo mesa ocupada -> customer termina su ciclo (sendToExit via advanceStay) -> mesa libre en getOccupiedTableIds -> el siguiente customer en cola FIFO (resolveTableQueue) la ocupa en el mismo tick, ejercitando resolveTableQueue por primera vez fuera de sus propios tests unitarios.
 
 ## Task Status
 
-READY_TO_CONTINUE
-
-A decision that was blocking part of this task has just been confirmed — see "Confirmed decisions"
-below for the real answer, then continue the work that was waiting on it.
+ACTIVE
 
 Task type: Feature
 Confidence: 0.9
@@ -55,8 +52,7 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-- Q: "¿Qué modelo económico y de demanda usará el juego a futuro, más allá de M06 (Customer flow robustness)?" -> CONFIRMED: Restaurant simulation economy model: el juego se basará en un modelo económico de gestión donde el jugador controla precios, capacidad y costes operativos. La rentabilidad dependerá del equilibrio entre demanda, servicio y gastos. (product decision, 2026-08-21)
-  (options on the table when asked: Restaurant simulation economy model: el juego se basará en un modelo económico de gestión donde el jugador controla precios, capacidad y costes operativos. La rentabilidad dependerá del equilibrio entre demanda, servicio y gastos.)
+None yet.
 
 Already known when this task started:
 
@@ -88,6 +84,8 @@ Already known when this task started:
   (options on the table when asked: 15_000 (15s — algo más que la espera sentado, para dar margen a que se libere una mesa), 10_000 (10s — mismo valor que STAY_DURATION_MS, paciencia y estadía equivalentes), 20_000 (20s — más tolerante, reduce abandono mientras el layout inicial tiene pocas mesas))
 - Q: "¿Cuánta reputación resta un abandono por paciencia agotada, y cuánta suma un ciclo completado normalmente (M05.4)?" -> CONFIRMED: Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal) (product decision, 2026-08-20)
   (options on the table when asked: Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal), Abandono -1 / Ciclo completo +1 (simétrico — un abandono cancela exactamente un ciclo completo), Abandono -5 / Ciclo completo +2 (impacto fuerte — el abandono es un evento negativo grave comparado con el aporte de mobiliario))
+- Q: "¿Qué modelo económico y de demanda usará el juego a futuro, más allá de M06 (Customer flow robustness)?" -> CONFIRMED: Restaurant simulation economy model: el juego se basará en un modelo económico de gestión donde el jugador controla precios, capacidad y costes operativos. La rentabilidad dependerá del equilibrio entre demanda, servicio y gastos. (product decision, 2026-08-21)
+  (options on the table when asked: Restaurant simulation economy model: el juego se basará en un modelo económico de gestión donde el jugador controla precios, capacidad y costes operativos. La rentabilidad dependerá del equilibrio entre demanda, servicio y gastos.)
 
 ## Agent Context
 
@@ -143,7 +141,7 @@ The same information above, structured for programmatic use — navigation, neve
     ".juntia/context.md",
     ".juntia/governance/workflows/feature-development.md"
   ],
-  "taskStatus": "READY_TO_CONTINUE"
+  "taskStatus": "ACTIVE"
 }
 ```
 
