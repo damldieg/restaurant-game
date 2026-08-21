@@ -196,12 +196,37 @@ export function getOccupiedTableIds(customers: Customer[]): Set<string> {
   );
 }
 
-export function assignTables(customers: Customer[], furnitureList: Furniture[]): Customer[] {
-  const assignedTableIds = getOccupiedTableIds(customers);
+// Traduce `getOccupiedTableIds` a posiciones de grid, tal como `findFreeTable`
+// las necesita — antes vivía inline al principio de `assignTables`, ahora
+// compartida con `isRestaurantFull` (M06.3) sin duplicar el criterio.
+function getOccupiedTablePositions(customers: Customer[], furnitureList: Furniture[]): GridPosition[] {
+  const occupiedTableIds = getOccupiedTableIds(customers);
 
-  const occupiedTables: GridPosition[] = furnitureList
-    .filter((item): item is Table => item.type === "table" && assignedTableIds.has(item.id))
+  return furnitureList
+    .filter((item): item is Table => item.type === "table" && occupiedTableIds.has(item.id))
     .map((table) => table.position);
+}
+
+// M06.3 — expone como consulta de dominio explícita la condición "no hay
+// mesa libre" que `assignTables` ya evaluaba implícitamente en cada pasada
+// (vía `findFreeTable`). No cambia ningún comportamiento existente.
+//
+// Nota (hallazgo pre-existente, no introducido ni corregido acá):
+// `findFreeTable` (`core/restaurant.ts`) busca sobre su propio `furniture`
+// a nivel de módulo, no sobre el `furnitureList` recibido acá — hoy no
+// causa bugs porque `GameState.furniture` es literalmente esa misma
+// referencia (`createGameState`, `state/game-state.ts`), nunca una copia
+// independiente, así que ambos quedan siempre en sync por esa alias, no
+// por diseño explícito. Si algún día `furnitureList` pudiera ser
+// genuinamente distinto de ese array de módulo, esta función (y
+// `assignTables`) dejarían de reflejarlo correctamente — fuera de alcance
+// de M06.3 arreglarlo.
+export function isRestaurantFull(customers: Customer[], furnitureList: Furniture[]): boolean {
+  return findFreeTable(getOccupiedTablePositions(customers, furnitureList)) === undefined;
+}
+
+export function assignTables(customers: Customer[], furnitureList: Furniture[]): Customer[] {
+  const occupiedTables: GridPosition[] = getOccupiedTablePositions(customers, furnitureList);
 
   // `target` es la posición del slot mientras el customer todavía camina
   // hacia él; una vez que llega, `moveCustomer` limpia `target` a `null` y
@@ -251,19 +276,46 @@ export function assignTables(customers: Customer[], furnitureList: Furniture[]):
   });
 }
 
-// Cola FIFO (M05.2): dada la lista de customers, determina cuál debe
-// ocupar la próxima mesa que se libere. `assignTables` ya logra este mismo
-// orden de forma implícita procesando `customers` en su propio orden de
-// array; esta función existe como criterio standalone y testeado, aunque
+// Cola FIFO (M05.2, M06.3): la cola es estado lógico — un cliente
+// `"waiting"` con `waitReason: "table"` "está en la cola" sin importar
+// ninguna posición de grid; el orden es el orden de array de `customers`
+// (nunca reordenado, ver `spawnCustomer`/`removeDepartedCustomers`). Única
+// función que conoce este predicado — `resolveTableQueue`,
+// `getTableQueuePosition` y `getTableQueueSize` se derivan de acá en vez de
+// repetirlo cada una. `assignTables` no la usa: ya logra el mismo orden de
+// forma implícita procesando `customers` en su propio orden de array.
+function getTableQueue(customers: Customer[]): Customer[] {
+  return customers.filter(
+    (customer) => customer.state === "waiting" && customer.waitReason === "table"
+  );
+}
+
+// Determina cuál customer debe ocupar la próxima mesa que se libere.
 // M06.2 confirmó que no habrá una función `releaseTable` separada que la
 // invoque fuera del recorrido por frame — queda disponible para M06.5
 // (Table release and reassignment) o cualquier caso futuro que sí necesite
 // resolver la cola fuera de ese recorrido, sin duplicar el criterio de
 // orden.
 export function resolveTableQueue(customers: Customer[]): Customer | undefined {
-  return customers.find(
-    (customer) => customer.state === "waiting" && customer.waitReason === "table"
-  );
+  return getTableQueue(customers)[0];
+}
+
+// M06.3 — posición 0-based de un customer dentro de la cola de espera de
+// mesa, en orden de llegada (FIFO); `null` si no está esperando mesa. Un
+// hecho lógico de la simulación ("el cliente está tercero en la cola"), no
+// una posición visual — esa la deriva `CustomerRenderer` a partir de
+// `Customer.target`/`position` (`getQueueSlotPosition`, M05.2), nunca al
+// revés.
+export function getTableQueuePosition(customerId: string, customers: Customer[]): number | null {
+  const index = getTableQueue(customers).findIndex((customer) => customer.id === customerId);
+
+  return index === -1 ? null : index;
+}
+
+// M06.3 — tamaño actual de la cola de espera de mesa, consultable sin
+// recorrer `assignTables`.
+export function getTableQueueSize(customers: Customer[]): number {
+  return getTableQueue(customers).length;
 }
 
 // Infraestructura genérica de salida (M04.8) — pone a un customer en camino

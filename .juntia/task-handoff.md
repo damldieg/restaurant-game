@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M06.2: Customer.tableId como fuente de verdad de ocupacion de mesas. Añadir getOccupiedTableIds y tests que verifiquen la asignacion unica de mesas y la liberacion via sendToExit.","generatedAt":"2026-08-21T11:38:09.238Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M06.3: Restaurant capacity management. Exponer isRestaurantFull, getTableQueuePosition y el tamaño de cola como funciones de dominio puras y testeadas, consolidando la deteccion de restaurante lleno y el orden FIFO de la cola que ya existen implicitamente desde M05.2. La cola sigue siendo estado logico, sin nueva UI ni animacion.","generatedAt":"2026-08-21T17:30:52.104Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,7 +7,7 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M06.2: Customer.tableId como fuente de verdad de ocupacion de mesas. Añadir getOccupiedTableIds y tests que verifiquen la asignacion unica de mesas y la liberacion via sendToExit.
+> Implementar M06.3: Restaurant capacity management. Exponer isRestaurantFull, getTableQueuePosition y el tamaño de cola como funciones de dominio puras y testeadas, consolidando la deteccion de restaurante lleno y el orden FIFO de la cola que ya existen implicitamente desde M05.2. La cola sigue siendo estado logico, sin nueva UI ni animacion.
 
 ## Task Status
 

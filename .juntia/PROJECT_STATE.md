@@ -155,7 +155,7 @@ second GitHub account/collaborator reviewing it, or relaxing the rule (e.g., tem
 the approval requirement, or adding a bypass actor in a repository ruleset). Not fixed here since
 it's a real judgment call, not an implementation detail.
 
-## Next known step
+## M06 (Customer flow robustness) — in progress
 
 M06 was renamed **"Customer flow robustness"** and fully rewritten in `docs/MILESTONES.md`
 (2026-08-21, planning-only — no `src/` changes) to drop its stale "Reservas robustas" framing,
@@ -212,10 +212,30 @@ table immediately (visible via `getOccupiedTableIds`, before `removeDepartedCust
 `pnpm test` (110/110 — 104 + 6 new) and `tsc --noEmit` clean; `pnpm build` clean. No browser
 check needed — zero behavior change, only a named extraction.
 
+**M06.3 (Restaurant capacity management) — done.** Design principle for this step, spelled
+out in `docs/MILESTONES.md`: "customer queue is logical state" — the domain answers "what
+position does this customer hold in the queue" (a fact), never "which visual slot does this
+customer walk to" (`CustomerRenderer`'s job). `core/customers/customer.ts` gained
+`isRestaurantFull(customers, furnitureList)`, `getTableQueuePosition(customerId, customers)`
+(0-based FIFO position, or `null`), and `getTableQueueSize(customers)`. Two private helpers
+consolidate previously-inline/duplicated logic without changing behavior:
+`getOccupiedTablePositions` (shared by `assignTables` and `isRestaurantFull`) and
+`getTableQueue` (the single place that knows the `waiting && waitReason === "table"`
+predicate — `resolveTableQueue`, `getTableQueuePosition`, and `getTableQueueSize` all derive
+from it; `resolveTableQueue` itself changed from `.find(...)` to `getTableQueue(...)[0]`,
+same result, confirmed by its own M05.2 tests staying green unchanged). Real finding during
+implementation, documented in both `customer.ts` and `.juntia/ARCHITECTURE.md`:
+`findFreeTable`/`getSeatForTable` (`core/restaurant.ts`) search their own module-level
+`furniture` export, not the `furnitureList` parameter callers pass in — harmless today only
+because `GameState.furniture` is literally that same array reference (`createGameState`),
+never a copy; not fixed, since it's out of M06.3's scope and not an active bug. `pnpm test`
+(117/117 — 110 + 7 new) and `tsc --noEmit` clean; `pnpm build` clean. No browser check
+needed — zero behavior change, confirmed by every pre-existing test (including
+`customer-system.test.ts`, which exercises the real queue) passing unchanged.
+
 ## Next known step
 
-M06 is in progress: M06.1 and M06.2 done, M06.3–M06.6 pending in `docs/MILESTONES.md` (M06 —
-Customer flow robustness). **Next real task: M06.3 (Restaurant capacity management)** —
-expose "restaurant full"/queue-size as explicit domain queries (`isRestaurantFull` or
-equivalent, reusing M06.2's `getOccupiedTableIds`), consolidating what M05.2's queue already
-does implicitly. Not started yet.
+M06 is in progress: M06.1–M06.3 done, M06.4–M06.6 pending in `docs/MILESTONES.md` (M06 —
+Customer flow robustness). **Next real task: M06.4 (Customer patience system)** — confirm
+M05.3/M05.4's patience system integrates cleanly with M06.1–M06.3's new invariants/domain
+queries, no behavior change expected. Not started yet.
