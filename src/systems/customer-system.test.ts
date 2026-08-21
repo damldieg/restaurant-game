@@ -1,8 +1,36 @@
 import { describe, expect, it } from "vitest";
 import { CustomerSystem } from "./customer-system";
 import { createGameState } from "../state/game-state";
+import type { Customer } from "../core/customers/customer";
 
 const SPAWN_INTERVAL_MS = 2500;
+
+// M06.1 — invariantes por estado documentados junto a CustomerState
+// (core/customers/customer-state.ts). A diferencia de los tests por función
+// en customer.test.ts, acá se verifican contra Customer reales producidos
+// por un tick completo de CustomerSystem.update — el único lugar donde el
+// invariante de "seated" (tableId y stayRemainingMs no nulos) está
+// garantizado, ya que moveCustomer y advanceStay se reparten esa
+// responsabilidad dentro del mismo pipeline.
+function expectValidCustomerState(customer: Customer): void {
+  switch (customer.state) {
+    case "idle":
+      expect(customer.tableId).toBeNull();
+      break;
+    case "seated":
+      expect(customer.tableId).not.toBeNull();
+      expect(customer.stayRemainingMs).not.toBeNull();
+      break;
+    case "waiting":
+      expect(customer.waitReason).not.toBeNull();
+      break;
+    case "leaving":
+      expect(customer.tableId).toBeNull();
+      expect(customer.stayRemainingMs).toBeNull();
+      expect(customer.waitReason).toBeNull();
+      break;
+  }
+}
 
 describe("CustomerSystem", () => {
   it("does not spawn a customer before the interval elapses", () => {
@@ -185,5 +213,15 @@ describe("CustomerSystem", () => {
 
     system.update(state, 1000);
     expect(state.reputationAdjustments).toBe(-2);
+  });
+
+  it("every customer satisfies its state invariant at every tick, across a run with queueing, seating, and patience abandonment (M06.1)", () => {
+    const state = createGameState(500, 0);
+    const system = new CustomerSystem();
+
+    for (let tick = 0; tick < 20; tick += 1) {
+      system.update(state, 1000);
+      state.customers.forEach(expectValidCustomerState);
+    }
   });
 });

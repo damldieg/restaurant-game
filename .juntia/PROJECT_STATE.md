@@ -177,8 +177,31 @@ of review as M05.5/PR #23). Fixed two stale forward-references to the old "M06 r
 in `docs/MILESTONES.md`'s M07 and M15 sections (dependency lines + M15's `releaseTable`
 mention, which this redesign deliberately does not introduce as a standalone function).
 
-**Prepared, not started.** First real task: **M06.1**, first unchecked item — document the
-`CustomerState` transition table and per-state invariants next to `core/customers/customer-
-state.ts`. No architecture decision was required for this rewrite (it only formalizes
-principles `.juntia/ARCHITECTURE.md` already states); see that file for a short new note on
-where table-occupancy-as-domain-state now lives.
+**M06.1 (Customer lifecycle state hardening) — done.** Documentation + tests only, no
+gameplay change. `core/customers/customer-state.ts` gained a comment above `CustomerState`
+documenting the transition table and per-state invariants (`idle` ⇒ `tableId === null`;
+`seated` ⇒ `tableId !== null && stayRemainingMs !== null`; `waiting` ⇒
+`waitReason !== null`; `leaving` ⇒ all three null) — no new type, no runtime validator,
+`CustomerState` is still the same 5-string union. Real finding during implementation: the
+`seated` invariant is **not** guaranteed by `moveCustomer` alone — its `walking → seated`
+arrival leaves `stayRemainingMs` null; `advanceStay`, running immediately after in the same
+`CustomerSystem.update` pipeline tick, is what actually sets it. Tests landed at two levels
+because of that: per-function in `customer.test.ts` (`describe("state invariants")`, each
+invariant checked against the function that actually produces it, including the explicit
+impossible-transition case — a `waiting` customer arriving at its queue slot never becomes
+`seated` via `moveCustomer`), and as a full invariant in `customer-system.test.ts` (20
+one-second ticks with queueing/seating/patience-abandonment, asserting every `Customer` in
+`state.customers` satisfies its state's invariant at every checkpoint — the only place the
+`seated` invariant is actually guaranteed end-to-end). `pnpm test` (104/104 — 95 + 9 new)
+and `tsc --noEmit` clean; `pnpm build` clean. No browser check needed (same precedent as
+M04.2/M05.1) — no new code path produces a different state or transition.
+
+## Next known step
+
+**M06.2 (Table assignment as domain state)** — extract the table-occupancy derivation that
+lives inline at the top of `assignTables` (`core/customers/customer.ts`) into a named, pure
+function (`getOccupiedTableIds` or equivalent), formalize the single-assignment invariant as
+an explicit test, and confirm `sendToExit` remains the sole table-release point — no
+`releaseTable` function, no separate occupancy structure (see `.juntia/ARCHITECTURE.md`'s
+"Ocupación de mesas como estado de dominio" note). Full spec in `docs/MILESTONES.md` (M06 —
+Customer flow robustness).

@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M05.5: Validacion e integracion, cerrando M05. Verificar en el navegador el ciclo completo de clientes: entrando, caminando, esperando, sentado, saliendo, eliminado, con 2 mesas y 3+ clientes. Confirmar que no hay responsabilidades duplicadas entre CustomerSystem, ReputationSystem y CustomerRenderer. No se espera nueva funcionalidad.","generatedAt":"2026-08-21T10:48:57.439Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M06.1: Customer lifecycle state hardening. Añadir documentación de la tabla de transiciones válidas y los invariantes de cada CustomerState, y crear tests nuevos que verifiquen esos invariantes en las funciones de transición existentes. Sin cambiar gameplay ni comportamiento visible.","generatedAt":"2026-08-21T11:09:53.405Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,7 +7,7 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M05.5: Validacion e integracion, cerrando M05. Verificar en el navegador el ciclo completo de clientes: entrando, caminando, esperando, sentado, saliendo, eliminado, con 2 mesas y 3+ clientes. Confirmar que no hay responsabilidades duplicadas entre CustomerSystem, ReputationSystem y CustomerRenderer. No se espera nueva funcionalidad.
+> Implementar M06.1: Customer lifecycle state hardening. Añadir documentación de la tabla de transiciones válidas y los invariantes de cada CustomerState, y crear tests nuevos que verifiquen esos invariantes en las funciones de transición existentes. Sin cambiar gameplay ni comportamiento visible.
 
 ## Task Status
 
