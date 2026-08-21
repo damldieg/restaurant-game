@@ -233,9 +233,39 @@ never a copy; not fixed, since it's out of M06.3's scope and not an active bug. 
 needed — zero behavior change, confirmed by every pre-existing test (including
 `customer-system.test.ts`, which exercises the real queue) passing unchanged.
 
+**M06.4 (Customer patience system) — done.** Test-only, no production file changed —
+`systems/customer-system.test.ts` gained 4 tests confirming M05.3/M05.4's patience system
+integrates cleanly with M06.1–M06.3. Real finding while writing them: the original checklist
+assumed a single clean "abandonment frees a resource, available next tick" test, but that
+didn't hold as one scenario for two reasons. (1) A patience abandonment frees a **queue
+slot**, not a table (`advanceWait`, not `advanceStay`) — the test checks the specific
+customer disappears from `getTableQueuePosition`, not an absolute queue size, since new
+customers keep spawning during the time patience takes to expire. (2) With someone queued, a
+table freed by `advanceStay` is reassigned within the same tick (M05.3) — `isRestaurantFull`
+never dips; and forcing a genuinely empty-queue scenario long enough for a stay to fully
+expire turned out to be unreachable through real `CustomerSystem` timing (`STAY_DURATION_MS`
+10s always outlasts enough `SPAWN_INTERVAL_MS` 2.5s ticks to seat someone in the queue
+first). Settled on testing what actually happens: `isRestaurantFull` correctly tracks
+occupancy empty→full, and stays `true` when the queue reclaims a freed table in the same
+tick (the false-transition-with-a-genuinely-free-table case is already covered at the unit
+level in `customer.test.ts`, M06.3). `pnpm test` (121/121 — 117 + 4 new) and `tsc --noEmit`
+clean; `pnpm build` clean. No browser check needed — zero production code changed.
+
+**Future design vision documented (2026-08-21, planning-only — no `src/` changes).**
+`docs/MILESTONES.md` gained a "Visión futura — demanda dinámica y economía de gestión"
+section plus short forward-looking notes on M07 (Demand), M10 (Recipes), M14 (Payment), and
+M16 (First employee): capacity-aware customer demand (not just reputation-driven), recipe
+costs/margins, configurable pricing with strategic trade-offs, and continuous employee costs
+(salary/speed/capacity), on top of M02's existing `money`/`canAfford` economy. Confirmed as
+a product decision via `juntia confirm` — see `.juntia/DECISIONS.md`, "Restaurant simulation
+economy model." Explicitly **not** part of M06, which stays scoped to
+clients/queues/tables/capacity/lifecycle (see M06 scope boundaries in `docs/MILESTONES.md`)
+— this is future-roadmap documentation only, nothing implemented, no architecture changed.
+
 ## Next known step
 
-M06 is in progress: M06.1–M06.3 done, M06.4–M06.6 pending in `docs/MILESTONES.md` (M06 —
-Customer flow robustness). **Next real task: M06.4 (Customer patience system)** — confirm
-M05.3/M05.4's patience system integrates cleanly with M06.1–M06.3's new invariants/domain
-queries, no behavior change expected. Not started yet.
+M06 is in progress: M06.1–M06.4 done, M06.5–M06.6 pending in `docs/MILESTONES.md` (M06 —
+Customer flow robustness). **Next real task: M06.5 (Table release and reassignment)** — an
+end-to-end test proving the release→reassignment cycle, finally exercising M05.2's
+`resolveTableQueue` outside its own tests. Not started yet. (Unchanged by the future-vision
+documentation above.)

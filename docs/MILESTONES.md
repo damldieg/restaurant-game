@@ -1018,26 +1018,59 @@ cambios en ningún test preexistente.
 
 ### M06.4 — Customer patience system
 
+**Estado: completado.**
+
 **Objetivo:** confirmar que el sistema de paciencia ya construido en M05.3/M05.4
 (`WAIT_DURATION_MS`, `advanceWait`, penalización de reputación) queda correctamente
 integrado con los conceptos formalizados en M06.1–M06.3, sin duplicar ni modificar su
 comportamiento.
 
-- [ ] Test de integración: un customer que abandona por paciencia (`advanceWait` →
+- [x] Test de integración: un customer que abandona por paciencia (`advanceWait` →
       `sendToExit`) deja los invariantes de M06.1 consistentes (sin `tableId`/`waitReason`/
-      `waitRemainingMs` colgantes).
-- [ ] Test de integración: un abandono por paciencia reduce correctamente el resultado de
-      `isRestaurantFull`/el tamaño de cola de M06.3 — la mesa o el slot de cola liberado
-      queda disponible para el siguiente customer en el mismo tick.
-- [ ] Confirmar (test) que `REPUTATION_PENALTY_ABANDONED_WAIT` (M05.4,
+      `waitRemainingMs` colgantes) y deja de aparecer en la cola lógica de M06.3
+      (`getTableQueuePosition` devuelve `null` para ese customer).
+- [x] Test de integración: `isRestaurantFull` (M06.3) refleja correctamente la ocupación a
+      lo largo de una corrida real, de vacío a lleno.
+- [x] Confirmar (test) que `REPUTATION_PENALTY_ABANDONED_WAIT` (M05.4,
       `systems/customer-system.ts`) sigue aplicándose exactamente una vez por abandono tras
-      los cambios de M06.1–M06.3.
+      los cambios de M06.1–M06.3 — mismo timing que el test original de M05.4, ahora
+      combinado con un barrido completo de invariantes de M06.1 sobre todos los customers.
+
+Ningún archivo de producción cambió — solo `systems/customer-system.test.ts` ganó 4 tests
+nuevos. Hallazgo real durante la implementación: el checklist original planteaba verificar
+que un abandono por paciencia "reduce correctamente... `isRestaurantFull`/el tamaño de
+cola... la mesa o el slot de cola liberado queda disponible... en el mismo tick" — en la
+práctica esto no se pudo testear como una única transición limpia, por dos razones
+descubiertas al escribir los tests:
+
+1. Un abandono por paciencia libera un **slot de cola**, no una mesa — nunca hizo bajar
+   `isRestaurantFull` (eso lo hace `advanceStay`, no `advanceWait`). El test correspondiente
+   verifica en cambio que el customer específico desaparece de `getTableQueuePosition`, sin
+   asumir un tamaño de cola absoluto (durante la ventana de tiempo necesaria para agotar la
+   paciencia, `CustomerSystem` sigue spawneando customers nuevos que también se suman a la
+   cola, así que el tamaño absoluto no es predecible — solo la ausencia de ese customer
+   puntual sí lo es).
+2. Con alguien en cola, una mesa liberada por `advanceStay` se reasigna dentro del mismo
+   tick (M05.3) — `isRestaurantFull` nunca "ve" el hueco, confirmado con un test dedicado.
+   Intentar un escenario "sin nadie en cola" para forzar la transición a `false` resultó
+   imposible de lograr de forma realista a través de `CustomerSystem`: para que el
+   `STAY_DURATION_MS` (10s) de los primeros 2 customers termine de agotarse, pasa tiempo
+   más que suficiente para que `SPAWN_INTERVAL_MS` (2.5s) genere varios customers nuevos que
+   ya están esperando mesa — la cola nunca está genuinamente vacía en una corrida real de
+   esa duración. `isRestaurantFull`'s transición limpia a `false` con una mesa realmente
+   libre ya está cubierta a nivel unitario en `customer.test.ts` (M06.3); a nivel de
+   sistema, se testeó en cambio lo que sí ocurre de verdad: `isRestaurantFull` sigue
+   correctamente la ocupación real vacío→lleno, y se mantiene `true` cuando la cola
+   reclama una mesa liberada en el mismo tick.
 
 **No implementar:** satisfacción avanzada; pedidos; ningún cambio a `WAIT_DURATION_MS` ni a
 `advanceWait`.
 
 **Player-visible outcome:** ninguno nuevo — el comportamiento visible de M05.3/M05.4 (un
 customer que espera demasiado se va y la reputación baja) se mantiene igual.
+
+Verificado: `pnpm test` (121/121 — 117 + 4 nuevos) y `tsc --noEmit` limpios; `pnpm build`
+limpio. Sin verificación en navegador — ningún archivo de producción cambió.
 
 ---
 
@@ -1101,7 +1134,14 @@ Fuera de alcance — pertenecen a milestones posteriores:
 - salarios;
 - eventos especiales;
 - VIP;
-- decoración avanzada.
+- decoración avanzada;
+- demanda dinámica de clientes (reaccionar a capacidad/saturación — ver nota de diseño en
+  M07 y la sección "Visión futura" al final de este documento);
+- economía avanzada (costes de recetas, costes fijos, costes de empleados, precios
+  configurables, contabilidad diaria — ver "Visión futura" al final de este documento).
+
+M06 se mantiene centrado en clientes, colas, mesas, capacidad y ciclo de vida — nada de lo
+anterior se implementa como parte de este milestone.
 
 **Completion criteria (milestone completo):** `pnpm test` cubre los invariantes de estado
 (M06.1), la asignación única de mesas (M06.2), la detección de capacidad y tamaño de cola
@@ -1115,6 +1155,18 @@ bloqueados.
 ## M07 — Demand
 
 *Depende de: M03 (reputación) y M06 (flujo de clientes y capacidad consolidados).*
+
+**Nota de diseño futura (no implementar en este paso — ver "Visión futura" al final de este
+documento):** la generación de nuevos clientes no debe ser, a largo plazo, un spawn fijo
+independiente del estado del restaurante. Este primer incremento de M07 solo deriva el
+intervalo de spawn a partir de la reputación (`M03`); una vez que el juego tenga presión
+real de capacidad (mesas limitadas, colas largas), la demanda deberá reaccionar también a
+esa saturación — reutilizando `isRestaurantFull`/`getTableQueueSize` (M06.3) — y no solo a
+la reputación. Regla conceptual a aplicar cuando corresponda: un restaurante completamente
+saturado no debería seguir generando clientes al mismo ritmo indefinidamente, para evitar
+colas infinitas, clientes entrando sin posibilidad real de servicio, y una simulación poco
+realista. Sin tareas nuevas en este documento todavía — se registra acá para que quien
+retome este milestone (o lo extienda más adelante) no lo pase por alto.
 
 - [ ] Función pura que, dada la reputación actual, deriva el intervalo de spawn (o tasa
       de llegada) de NPCs.
@@ -1191,6 +1243,13 @@ atendido por un camarero y muestra visualmente qué pidió; `pnpm test` cubre
 ## M10 — Recipes
 
 *Sin dependencias de gameplay — son datos de definición usados recién en M11.*
+
+**Nota de diseño futura (no implementar en este paso — ver "Visión futura" al final de este
+documento):** `RecipeDefinition` ya contempla `price`, pero el modelo económico avanzado
+necesitará además costes variables por receta — ingredientes, coste de producción, margen
+potencial derivado de `price - coste` — para que el jugador pueda tomar decisiones reales de
+rentabilidad por plato. Fuera de alcance de este incremento; se registra acá para que el
+campo `price` de hoy no se confunda con el modelo de costes completo que llega después.
 
 - [ ] Crear `RecipeDefinition { id, name, price, preparationTime, quality, station }`.
 - [ ] Crear una primera receta de prueba (ej. Hamburguesa) con esos campos.
@@ -1274,6 +1333,13 @@ comida.
 
 *Depende de: M13 y M02 (necesita `money` ya existente).*
 
+**Nota de diseño futura (no implementar en este paso — ver "Visión futura" al final de este
+documento):** este incremento fija `price` como un valor simple por `MenuItem`. El modelo
+económico avanzado espera que el jugador pueda configurar esos precios, y que el precio
+elegido sea una decisión estratégica con trade-offs (precio alto = mayor margen pero menor
+atractivo/mayores expectativas; precio bajo = menor margen pero mayor atractivo) — no solo
+una variable de ingreso fija. Fuera de alcance de este incremento.
+
 - [ ] Agregar `price` a cada `MenuItem`.
 - [ ] Función pura que calcula el monto a pagar al terminar `eating`.
 - [ ] Test: el monto calculado coincide con el precio del pedido.
@@ -1317,6 +1383,13 @@ clientes.
 Decisión abierta: qué hace exactamente el primer empleado — a resolver antes de empezar
 este milestone.*
 
+**Nota de diseño futura (no implementar en este paso — ver "Visión futura" al final de este
+documento):** este incremento solo pide un costo fijo de contratación. El modelo económico
+avanzado espera que los empleados tengan coste operativo continuo, no solo de contratación
+— p.ej. un Chef con salario diario/velocidad/capacidad, un Camarero con salario
+diario/capacidad de atención/eficiencia — como parte de los costes fijos diarios del
+restaurante. Fuera de alcance de este incremento.
+
 - [ ] Definir el efecto concreto del empleado (ej. acelera cocina o entrega).
 - [ ] Costo fijo de contratación vía el sistema de compra de M01/M02.
 - [ ] Aplicar el efecto de forma medible.
@@ -1346,6 +1419,65 @@ de forma reproducible, sin errores en consola.
 
 **Completion criteria:** loop jugable de principio a fin, reproducible, sin errores en
 consola.
+
+---
+
+## Visión futura — demanda dinámica y economía de gestión
+
+*Documentado el 2026-08-21 a partir de una decisión de producto confirmada (ver
+`.juntia/DECISIONS.md`, "Restaurant simulation economy model"). Esta sección describe
+dirección de diseño, no tareas — nada de lo siguiente se implementa todavía, ni pertenece a
+M06 (ver "M06 scope boundaries" más arriba). Se registra acá para que los milestones que
+dependan de estos sistemas (M07, M09, M10, M14, M16, y los que se desglosen más adelante)
+tengan esta dirección presente en vez de implementarse ignorándola. Cada sistema se
+mantiene separado — no se fusionan en un único sistema monolítico de "economía".*
+
+### 1. Sistema de demanda de clientes
+
+La generación de nuevos clientes no debe ser, a largo plazo, un spawn fijo independiente
+del estado del restaurante — la demanda futura debe reaccionar al estado real del
+restaurante. Factores a considerar (no una lista cerrada): capacidad del restaurante, mesas
+disponibles, longitud de cola, saturación, reputación, calidad del servicio.
+
+**Regla conceptual:** un restaurante completamente saturado no debería seguir generando
+clientes al mismo ritmo indefinidamente. La demanda debe reducirse cuando la capacidad está
+superada, para evitar colas infinitas, clientes entrando sin posibilidad real de servicio, y
+una simulación poco realista.
+
+Este sistema pertenece a un milestone futuro de demanda/equilibrio (extensión de M07 una vez
+que M06 esté cerrado y haya presión real de capacidad), no a M06.
+
+### 2. Sistema económico avanzado
+
+Evolucionar la economía actual (`money`, `canAfford`, M02) hacia un sistema de gestión de
+restaurante:
+
+- **Ingresos:** clientes pagando platos; precios configurables por el jugador (ver punto 3).
+- **Costes variables:** cada receta debe tener coste de producción, ingredientes, tiempo de
+  preparación y margen potencial (`price - coste`).
+- **Costes fijos:** el restaurante debe tener gastos diarios — p.ej. alquiler, electricidad,
+  mantenimiento, otros costes operativos.
+- **Costes de empleados:** los empleados deben tener coste operativo continuo, no solo de
+  contratación — p.ej. un Chef con salario diario, velocidad y capacidad; un Camarero con
+  salario diario, capacidad de atención y eficiencia.
+
+### 3. Sistema de precios
+
+El jugador debe poder configurar los precios de los platos. Los precios no son solamente una
+variable de ingreso — deben afectar al equilibrio del restaurante como una decisión
+estratégica de gestión:
+
+- **Precio alto:** mayor margen; menor atractivo potencial; mayores expectativas del
+  cliente.
+- **Precio bajo:** menor margen; mayor atractivo potencial.
+
+### 4. Qué debe contemplar el roadmap futuro
+
+Sin crear implementación todavía — el roadmap posterior a M06 debe contemplar, cada uno
+como sistema separado: demanda dinámica de clientes; recetas con costes; menú y precios;
+empleados con costes; contabilidad diaria; rentabilidad del restaurante. Notas puntuales ya
+añadidas en M07 (demanda), M10 (recetas), M14 (pagos) y M16 (primer empleado) para que no se
+pierdan de vista al llegar a cada uno.
 
 ---
 

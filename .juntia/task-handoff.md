@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M06.3: Restaurant capacity management. Exponer isRestaurantFull, getTableQueuePosition y el tamaño de cola como funciones de dominio puras y testeadas, consolidando la deteccion de restaurante lleno y el orden FIFO de la cola que ya existen implicitamente desde M05.2. La cola sigue siendo estado logico, sin nueva UI ni animacion.","generatedAt":"2026-08-21T17:30:52.104Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M06.4: Customer patience system. Añadir tests de integracion que confirmen que el sistema de paciencia (WAIT_DURATION_MS, advanceWait, penalizacion de reputacion) sigue funcionando correctamente junto con los invariantes de M06.1 y las queries de dominio de M06.2/M06.3 (isRestaurantFull, getTableQueueSize), sin cambiar ningun comportamiento existente.","generatedAt":"2026-08-21T17:40:34.842Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,11 +7,14 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M06.3: Restaurant capacity management. Exponer isRestaurantFull, getTableQueuePosition y el tamaño de cola como funciones de dominio puras y testeadas, consolidando la deteccion de restaurante lleno y el orden FIFO de la cola que ya existen implicitamente desde M05.2. La cola sigue siendo estado logico, sin nueva UI ni animacion.
+> Implementar M06.4: Customer patience system. Añadir tests de integracion que confirmen que el sistema de paciencia (WAIT_DURATION_MS, advanceWait, penalizacion de reputacion) sigue funcionando correctamente junto con los invariantes de M06.1 y las queries de dominio de M06.2/M06.3 (isRestaurantFull, getTableQueueSize), sin cambiar ningun comportamiento existente.
 
 ## Task Status
 
-ACTIVE
+READY_TO_CONTINUE
+
+A decision that was blocking part of this task has just been confirmed — see "Confirmed decisions"
+below for the real answer, then continue the work that was waiting on it.
 
 Task type: Feature
 Confidence: 0.9
@@ -52,7 +55,8 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-None yet.
+- Q: "¿Qué modelo económico y de demanda usará el juego a futuro, más allá de M06 (Customer flow robustness)?" -> CONFIRMED: Restaurant simulation economy model: el juego se basará en un modelo económico de gestión donde el jugador controla precios, capacidad y costes operativos. La rentabilidad dependerá del equilibrio entre demanda, servicio y gastos. (product decision, 2026-08-21)
+  (options on the table when asked: Restaurant simulation economy model: el juego se basará en un modelo económico de gestión donde el jugador controla precios, capacidad y costes operativos. La rentabilidad dependerá del equilibrio entre demanda, servicio y gastos.)
 
 Already known when this task started:
 
@@ -139,7 +143,7 @@ The same information above, structured for programmatic use — navigation, neve
     ".juntia/context.md",
     ".juntia/governance/workflows/feature-development.md"
   ],
-  "taskStatus": "ACTIVE"
+  "taskStatus": "READY_TO_CONTINUE"
 }
 ```
 
