@@ -247,6 +247,21 @@
       "source": "human",
       "confirmedAt": "2026-08-21T17:56:43.594Z",
       "status": "active"
+    },
+    {
+      "id": "8196719d98",
+      "type": "product",
+      "question": "¿La generación de nuevos clientes (demanda) debe depender del estado del restaurante, o puede seguir siendo un spawn fijo independiente del mundo?",
+      "context": "M07 (recién rediseñado en docs/MILESTONES.md como 'Demand system foundation', M07.1-M07.5) planea derivar el intervalo de spawn de la reputación (M07.2) y de la capacidad/saturación (M07.3), reemplazando el SPAWN_INTERVAL_MS fijo que hoy vive en CustomerSystem. Es una decisión de producto de largo alcance para todo el sistema de demanda, no un detalle de implementación de un solo paso.",
+      "options": [
+        "Customer demand depends on restaurant state: la generación de clientes debe depender progresivamente de variables del restaurante como reputación, capacidad y saturación, evitando un spawn fijo independiente del mundo."
+      ],
+      "evidence": [],
+      "reason": "Condiciona el diseño completo de M07 (M07.1-M07.5) y cualquier milestone futuro que module la demanda (M07.4 ya prevé precios/calidad de servicio/empleados como modificadores futuros) — no es un detalle de implementación que se pueda decidir solo al llegar a cada submilestone por separado.",
+      "text": "Customer demand depends on restaurant state: la generación de clientes debe depender progresivamente de variables del restaurante como reputación, capacidad y saturación, evitando un spawn fijo independiente del mundo.",
+      "source": "human",
+      "confirmedAt": "2026-08-21T23:44:37.921Z",
+      "status": "active"
     }
   ]
 }

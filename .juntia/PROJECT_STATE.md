@@ -155,133 +155,77 @@ second GitHub account/collaborator reviewing it, or relaxing the rule (e.g., tem
 the approval requirement, or adding a bypass actor in a repository ruleset). Not fixed here since
 it's a real judgment call, not an implementation detail.
 
-## M06 (Customer flow robustness) — in progress
+**M06 (Customer flow robustness) — done.** Redefined (2026-08-21) from a stale "Reservas
+robustas" plan that predated M04's architecture and referenced files that never existed
+(`game/reservations.ts`) or were already removed (`game/npc/controller.ts`, gone since
+M04.4). Not a traditional reservation system — table occupancy keeps being derived from
+`state.customers` on every read (the M04.4/M04.6 decision), never a separate tracked
+structure. Built incrementally as M06.1–M06.6 (full detail in `docs/MILESTONES.md` and PR
+history #24–#31), same pattern as M04/M05, consolidating/formalizing what M04–M05 already
+built rather than adding new player-visible behavior in most steps. Resulting shape:
 
-M06 was renamed **"Customer flow robustness"** and fully rewritten in `docs/MILESTONES.md`
-(2026-08-21, planning-only — no `src/` changes) to drop its stale "Reservas robustas" framing,
-which predated M04's architecture change and referenced files that never existed as planned
-(`game/reservations.ts`) or were already removed (`game/npc/controller.ts`, gone since M04.4).
-It is **not** a traditional reservation system — table occupancy keeps being derived from
-`state.customers` on every read (the M04.4/M04.6 decision), never a separate tracked structure.
-Split into six small, independently-verifiable sub-steps (M06.1–M06.6, same pattern as
-M04.1–M04.8/M05.1–M05.5), consolidating and formalizing what M04–M05 already built rather than
-adding new player-visible behavior in most steps: M06.1 (lifecycle state hardening — document
-and test the invariants each `CustomerState` already holds implicitly), M06.2 (table assignment
-as an explicit, named domain function — `getOccupiedTableIds`, extracted from inline logic in
-`assignTables`), M06.3 (capacity/queue-size as explicit domain queries — `isRestaurantFull`,
-consolidating what M05.2's queue already does implicitly), M06.4 (confirm M05.3/M05.4's patience
-system integrates cleanly with M06.1–M06.3's new invariants, no behavior change), M06.5
-(end-to-end test proving the release→reassignment cycle, finally exercising M05.2's
-`resolveTableQueue` outside its own tests), M06.6 (in-browser validation closing M06, same kind
-of review as M05.5/PR #23). Fixed two stale forward-references to the old "M06 reservas" framing
-in `docs/MILESTONES.md`'s M07 and M15 sections (dependency lines + M15's `releaseTable`
-mention, which this redesign deliberately does not introduce as a standalone function).
+- `core/customers/customer-state.ts` gained a documented `CustomerState` transition table
+  and per-state invariants as a comment (M06.1) — no new type, no runtime validator. Key
+  subtlety found: the `seated` invariant (`tableId`/`stayRemainingMs` both non-null) is only
+  guaranteed at the end of a full `CustomerSystem.update()` tick, not by `moveCustomer`
+  alone — `advanceStay` completes it in the same tick.
+- `core/customers/customer.ts` gained `getOccupiedTableIds`, `isRestaurantFull`,
+  `getTableQueuePosition`, `getTableQueueSize` (M06.2/M06.3) — named domain queries
+  extracted from previously-inline logic, zero behavior change (every M04/M05 test stayed
+  green throughout). `resolveTableQueue` now derives from a shared `getTableQueue` helper
+  (was `.find(...)`, same result). Ownership decision confirmed and recorded in
+  `.juntia/ARCHITECTURE.md`: `Customer.tableId` is the sole source of truth for table
+  occupancy — no `occupiedTables`, no `Table.isOccupied`, no standalone `releaseTable`.
+- M06.4/M06.5 added integration tests only (no production code changed) confirming M05.3/
+  M05.4's patience system and the table release→reassignment cycle work correctly against
+  the new domain functions — the latter exercising `resolveTableQueue` for the first time
+  outside its own M05.2 unit tests. Real findings along the way: a patience abandonment
+  frees a queue slot, not a table; a table freed by a completed stay is reassigned to the
+  queue within the same tick, so `isRestaurantFull` never observably dips while someone's
+  waiting.
+- Found and documented, not fixed (out of scope): `findFreeTable`/`getSeatForTable`
+  (`core/restaurant.ts`) search their own module-level `furniture` export rather than the
+  `furnitureList` parameter callers pass in — harmless today only because
+  `GameState.furniture` is literally that same array reference, never a copy.
 
-**M06.1 (Customer lifecycle state hardening) — done.** Documentation + tests only, no
-gameplay change. `core/customers/customer-state.ts` gained a comment above `CustomerState`
-documenting the transition table and per-state invariants (`idle` ⇒ `tableId === null`;
-`seated` ⇒ `tableId !== null && stayRemainingMs !== null`; `waiting` ⇒
-`waitReason !== null`; `leaving` ⇒ all three null) — no new type, no runtime validator,
-`CustomerState` is still the same 5-string union. Real finding during implementation: the
-`seated` invariant is **not** guaranteed by `moveCustomer` alone — its `walking → seated`
-arrival leaves `stayRemainingMs` null; `advanceStay`, running immediately after in the same
-`CustomerSystem.update` pipeline tick, is what actually sets it. Tests landed at two levels
-because of that: per-function in `customer.test.ts` (`describe("state invariants")`, each
-invariant checked against the function that actually produces it, including the explicit
-impossible-transition case — a `waiting` customer arriving at its queue slot never becomes
-`seated` via `moveCustomer`), and as a full invariant in `customer-system.test.ts` (20
-one-second ticks with queueing/seating/patience-abandonment, asserting every `Customer` in
-`state.customers` satisfies its state's invariant at every checkpoint — the only place the
-`seated` invariant is actually guaranteed end-to-end). `pnpm test` (104/104 — 95 + 9 new)
-and `tsc --noEmit` clean; `pnpm build` clean. No browser check needed (same precedent as
-M04.2/M05.1) — no new code path produces a different state or transition.
+M06.6 verified the whole milestone in-browser (Playwright, 60s run, default 2-table layout):
+full queued lifecycle (`entering → walking → waiting → seated → leaving → removed`)
+repeatedly observed; queue always a clean horizontal line of non-overlapping positions, even
+with 6+ waiting; reputation moving both up (+1 completed cycles) and down (-2 patience
+abandons, net negative over this long a run with only 2 tables — consistent with the
+arrivals-outpacing-turnover dynamic already documented since M05.3); `Dinero: $500`
+unaffected; zero console errors; no double table assignments or impossible states observed.
+`ReputationSystem`/`CustomerRenderer`/`CustomerSystem` responsibility boundaries
+re-confirmed unchanged by direct code read (same three files as M05.5). `pnpm test`:
+122/122 passing throughout M06; `tsc --noEmit`/`pnpm build` clean.
 
-**M06.2 (Table assignment as domain state) — done.** Confirmed ownership decision before
-implementing (now also recorded in `.juntia/ARCHITECTURE.md`): `Customer.tableId` is the
-sole source of truth for table occupancy — no `occupiedTables`, no `Table.isOccupied`, no
-`releaseTable` function; Phaser never maintains table state. `core/customers/customer.ts`
-gained `getOccupiedTableIds(customers): Set<string>`, extracting the exact `assignedTableIds`
-derivation that used to live inline at the top of `assignTables` — behavior-identical, same
-filter+map logic, now named and reused. Two stale comments in `customer.ts` (near
-`assignTables` and `resolveTableQueue`) that still promised a future `releaseTable` were
-updated to match the confirmed decision. New tests in `customer.test.ts`: `getOccupiedTableIds`
-itself (dedup, ignores tableless customers, empty case), the single-assignment invariant
-formalized explicitly (no duplicate `tableId` across `assignTables`' output, occupancy
-unchanged when every table is already taken), and confirmation that `sendToExit` frees a
-table immediately (visible via `getOccupiedTableIds`, before `removeDepartedCustomers` runs).
-`pnpm test` (110/110 — 104 + 6 new) and `tsc --noEmit` clean; `pnpm build` clean. No browser
-check needed — zero behavior change, only a named extraction.
+Also during M06 (planning-only, not part of the milestone itself): a future-roadmap vision
+for demand/economy was documented in `docs/MILESTONES.md` ("Visión futura — demanda
+dinámica y economía de gestión") and confirmed as a product decision via `juntia confirm` —
+see `.juntia/DECISIONS.md`, "Restaurant simulation economy model."
 
-**M06.3 (Restaurant capacity management) — done.** Design principle for this step, spelled
-out in `docs/MILESTONES.md`: "customer queue is logical state" — the domain answers "what
-position does this customer hold in the queue" (a fact), never "which visual slot does this
-customer walk to" (`CustomerRenderer`'s job). `core/customers/customer.ts` gained
-`isRestaurantFull(customers, furnitureList)`, `getTableQueuePosition(customerId, customers)`
-(0-based FIFO position, or `null`), and `getTableQueueSize(customers)`. Two private helpers
-consolidate previously-inline/duplicated logic without changing behavior:
-`getOccupiedTablePositions` (shared by `assignTables` and `isRestaurantFull`) and
-`getTableQueue` (the single place that knows the `waiting && waitReason === "table"`
-predicate — `resolveTableQueue`, `getTableQueuePosition`, and `getTableQueueSize` all derive
-from it; `resolveTableQueue` itself changed from `.find(...)` to `getTableQueue(...)[0]`,
-same result, confirmed by its own M05.2 tests staying green unchanged). Real finding during
-implementation, documented in both `customer.ts` and `.juntia/ARCHITECTURE.md`:
-`findFreeTable`/`getSeatForTable` (`core/restaurant.ts`) search their own module-level
-`furniture` export, not the `furnitureList` parameter callers pass in — harmless today only
-because `GameState.furniture` is literally that same array reference (`createGameState`),
-never a copy; not fixed, since it's out of M06.3's scope and not an active bug. `pnpm test`
-(117/117 — 110 + 7 new) and `tsc --noEmit` clean; `pnpm build` clean. No browser check
-needed — zero behavior change, confirmed by every pre-existing test (including
-`customer-system.test.ts`, which exercises the real queue) passing unchanged.
-
-**M06.4 (Customer patience system) — done.** Test-only, no production file changed —
-`systems/customer-system.test.ts` gained 4 tests confirming M05.3/M05.4's patience system
-integrates cleanly with M06.1–M06.3. Real finding while writing them: the original checklist
-assumed a single clean "abandonment frees a resource, available next tick" test, but that
-didn't hold as one scenario for two reasons. (1) A patience abandonment frees a **queue
-slot**, not a table (`advanceWait`, not `advanceStay`) — the test checks the specific
-customer disappears from `getTableQueuePosition`, not an absolute queue size, since new
-customers keep spawning during the time patience takes to expire. (2) With someone queued, a
-table freed by `advanceStay` is reassigned within the same tick (M05.3) — `isRestaurantFull`
-never dips; and forcing a genuinely empty-queue scenario long enough for a stay to fully
-expire turned out to be unreachable through real `CustomerSystem` timing (`STAY_DURATION_MS`
-10s always outlasts enough `SPAWN_INTERVAL_MS` 2.5s ticks to seat someone in the queue
-first). Settled on testing what actually happens: `isRestaurantFull` correctly tracks
-occupancy empty→full, and stays `true` when the queue reclaims a freed table in the same
-tick (the false-transition-with-a-genuinely-free-table case is already covered at the unit
-level in `customer.test.ts`, M06.3). `pnpm test` (121/121 — 117 + 4 new) and `tsc --noEmit`
-clean; `pnpm build` clean. No browser check needed — zero production code changed.
-
-**Future design vision documented (2026-08-21, planning-only — no `src/` changes).**
-`docs/MILESTONES.md` gained a "Visión futura — demanda dinámica y economía de gestión"
-section plus short forward-looking notes on M07 (Demand), M10 (Recipes), M14 (Payment), and
-M16 (First employee): capacity-aware customer demand (not just reputation-driven), recipe
-costs/margins, configurable pricing with strategic trade-offs, and continuous employee costs
-(salary/speed/capacity), on top of M02's existing `money`/`canAfford` economy. Confirmed as
-a product decision via `juntia confirm` — see `.juntia/DECISIONS.md`, "Restaurant simulation
-economy model." Explicitly **not** part of M06, which stays scoped to
-clients/queues/tables/capacity/lifecycle (see M06 scope boundaries in `docs/MILESTONES.md`)
-— this is future-roadmap documentation only, nothing implemented, no architecture changed.
-
-**M06.5 (Table release and reassignment) — done.** Test-only, no production file changed —
-`systems/customer-system.test.ts` gained 1 test closing the release→reassignment cycle
-end-to-end: calls `resolveTableQueue` directly against the real state just before a table
-frees up to *predict* who should get it next, then confirms that exact customer (and only
-that one) is reassigned the table in the same tick — the first real exercise of
-`resolveTableQueue` outside its own M05.2 unit tests, fulfilling the purpose it was built
-for. Real finding: the original checklist treated "patience abandonment" and "completed
-stay" as equivalent table-freeing triggers, but M06.4 had already established patience
-abandonment frees a queue slot, not a table (a waiting customer never had one) — so this
-test covers only the trigger that actually frees a table (`advanceStay` → `sendToExit`);
-the queue-slot-release case stays covered by M06.4, not duplicated here. `pnpm test`
-(122/122 — 121 + 1 new) and `tsc --noEmit` clean; `pnpm build` clean. No browser check
-needed — zero production code changed.
+**M07 (Demand system foundation) redefined (2026-08-22, planning-only — no `src/`
+changes).** Renamed from "M07 — Demand" to "M07 — Demand system foundation" and split into
+five small, independently-verifiable sub-steps in `docs/MILESTONES.md` (M07.1–M07.5, same
+incremental pattern as M04–M06), replacing what used to be a single flat checklist:
+M07.1 (foundation — decide `core/demand.ts` as the pure-logic home, separate from
+`core/customers/customer.ts` and `systems/customer-system.ts`, define the future function's
+signature, no computation yet), M07.2 (reputation-based spawn interval, with min/max
+bounds), M07.3 (capacity/saturation awareness, reusing M06.3's `isRestaurantFull`/
+`getTableQueueSize`), M07.4 (documents future demand modifiers — pricing, service quality,
+recipes, decoration, employees, events — without implementing any), M07.5 (in-browser
+validation closing M07, same kind of review as M05.5/M06.6). Added an "M07 scope
+boundaries" list (menu, recipes, pricing, production costs, salaries, employees, kitchen,
+waiters, payments, advanced marketing, special events — all out of scope). Confirmed as a
+product decision via `juntia confirm` — see `.juntia/DECISIONS.md`, "Customer demand
+depends on restaurant state." No architecture change recorded in `.juntia/ARCHITECTURE.md`
+— M07.1's `core/` (pure logic) + `systems/` (execution) split is a direct application of
+the pattern already documented there (same as `core/reputation.ts`/`ReputationSystem`), not
+a new principle.
 
 ## Next known step
 
-M06 is in progress: M06.1–M06.5 done, only M06.6 pending in `docs/MILESTONES.md` (M06 —
-Customer flow robustness). **Next real task: M06.6 (Validation and integration)** —
-in-browser validation closing M06, same kind of review as M05.5 (PR #23): multiple
-customers, tables filling up, queueing, patience abandonment, table release/reassignment,
-confirm no double-assignments, no impossible states, reputation still correct, and
-responsibilities still separated between `CustomerSystem`/`ReputationSystem`/
-`CustomerRenderer`. Not started yet.
+M06 is fully closed. **Next real task: M07.1 (Demand model foundation)** — decide and
+document where the demand logic lives (`core/demand.ts`), define its future function
+signature, and confirm the `core`/`systems` responsibility split, before M07.2 computes
+anything real. Not started yet.
