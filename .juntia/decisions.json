@@ -262,6 +262,22 @@
       "source": "human",
       "confirmedAt": "2026-08-21T23:44:37.921Z",
       "status": "active"
+    },
+    {
+      "id": "6def7bd4bc",
+      "type": "product",
+      "question": "A partir de M07, ¿qué criterio prioriza la planificación de milestones: features jugables con cambio observable, o preparación arquitectónica/documentación previa a la feature real?",
+      "context": "Hasta M06 el roadmap priorizó correctamente arquitectura, separación de responsabilidades, tests e invariantes explícitos, con pasos dedicados de 'foundation'/documentación antes de cada feature real (p.ej. M04.1, M05.1, M06.1, M07.1 tal como estaba planeado). El usuario observa que este patrón le está dando demasiado peso a preparación/documentación frente a implementación visible, y pide cambiar el criterio de planificación desde M07 en adelante.",
+      "options": [
+        "Priorizar features jugables: cada milestone debe producir un cambio observable para el jugador; documentar/refactorizar solo dentro del milestone de gameplay que lo necesita, nunca como milestone independiente salvo que evite una refactorización costosa o defina una responsabilidad nueva importante.",
+        "Mantener el criterio actual (M00-M06): pasos de foundation/documentación explícitos antes de cada feature real, incluso sin cambio visible."
+      ],
+      "evidence": [],
+      "reason": "Cambia cómo se van a planificar todos los milestones futuros (M07 en adelante) — no es un detalle de implementación de un solo paso, es un criterio de producto de largo alcance que además reabre M07.1 (ya completado como contrato de tipos sin cómputo real, PR #32) bajo el criterio anterior.",
+      "text": "Priorizar features jugables con cambio observable para el jugador. Documentación/refactor arquitectónico solo dentro del milestone de gameplay que lo necesita (no como milestone independiente), salvo que evite una refactorización costosa o defina una responsabilidad nueva importante. M07.1 (ya completado como contrato de tipos, PR #32) queda como historial válido bajo el criterio anterior; M07.2 en adelante sigue el nuevo criterio. [corrected: the original CLI submission recorded only \"1\", a stdin transcription error, not the human's real answer — corrected inline per DECISIONS.md's own correction rule]",
+      "source": "human",
+      "confirmedAt": "2026-08-22T16:41:07.036Z",
+      "status": "active"
     }
   ]
 }

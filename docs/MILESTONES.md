@@ -12,9 +12,35 @@
 
 ## Relación con PROJECT_STATE.md
 
-`.juntia/PROJECT_STATE.md` = estado actual. `docs/MILESTONES.md` = roadmap. Al completar
-una tarea que cambia el estado real del proyecto, actualizar ambos; no duplicar
-descripciones largas entre los dos.
+`.juntia/PROJECT_STATE.md` = estado actual (dónde estamos). `docs/MILESTONES.md` = roadmap
+(qué construir ahora). `.juntia/ARCHITECTURE.md` = por qué está construido así. Los PRs (y
+`git log`) = cómo se implementó cada paso. Al completar una tarea, actualizar
+`PROJECT_STATE.md` con una entrada breve y dejar el detalle narrativo (hallazgos, decisiones
+de test, capturas de verificación) en la descripción del PR — no duplicarlo en este
+documento.
+
+## Regla de planificación (desde M07)
+
+*Decisión de producto confirmada el 2026-08-22 (ver `.juntia/DECISIONS.md`). Hasta M06, el
+roadmap intercaló pasos de "foundation"/documentación explícitos antes de cada feature real
+(M04.1, M05.1, M06.1, etc.) — correcto para asentar la arquitectura base (`GameState`,
+`core`/`state`/`systems`, invariantes de `Customer`), pero a partir de M07 le da demasiado
+peso a la preparación frente a lo jugable.*
+
+Desde M07 en adelante:
+
+- **Cada milestone debe responder "¿qué puede ver o hacer el jugador al terminarlo?"** — un
+  milestone sin `Player-visible outcome` real es sospechoso.
+- Documentar/refactorizar solo cuando evite una refactorización costosa después, o defina
+  una responsabilidad nueva importante (ownership de un dato, límite entre `core`/
+  `systems`) — nunca como milestone independiente si puede resolverse dentro del milestone
+  de gameplay que lo necesita.
+- **Antes de crear un milestone de infraestructura pura, preguntar:** "¿Podemos implementar
+  la feature y refactorizar después sin riesgo importante?" Si la respuesta es sí, el
+  refactor/documentación va dentro del milestone de gameplay, no aparte.
+- Este documento se mantiene compacto: objetivo, tareas, límites, `Player-visible outcome`,
+  criterio de cierre. El detalle de implementación (bugs encontrados, diseño de tests,
+  capturas de verificación) pertenece al PR que implementa el paso, no a este documento.
 
 ## Fantasía central del jugador
 
@@ -284,15 +310,12 @@ Verificado: `pnpm test` (33/33) y `tsc --noEmit` limpios; `NpcController` intact
       spawnea antes del intervalo, spawnea al alcanzarlo entre llamadas, spawnea varios con ids
       únicos si pasa mucho `deltaMs` de una vez).
 
-**No:** sprites; Phaser; movimiento visual. (Ninguno de los dos se tocó.)
+**No:** sprites; Phaser; movimiento visual.
 
-**Player-visible outcome:** sin cambio visual — verificado en navegador (Playwright, 6s / 2+
-intervalos de spawn): mismo HUD, mismo NPC visible, sin errores de consola. `Customer` no se
-renderiza todavía (no existe `CustomerRenderer`), así que los clientes simulados son invisibles
-por diseño.
+**Player-visible outcome:** sin cambio visual — clientes simulados pero aún no renderizados
+(no existe `CustomerRenderer` todavía).
 
-Verificado: `pnpm test` (36/36) y `tsc --noEmit` limpios; `NpcController`/`RestaurantScene`/
-`GameState`/`main.ts` sin cambios.
+Verificado: `pnpm test` (36/36) y `tsc --noEmit` limpios.
 
 ---
 
@@ -309,31 +332,14 @@ Verificado: `pnpm test` (36/36) y `tsc --noEmit` limpios; `NpcController`/`Resta
 
 **Regla:** el renderer nunca modifica `CustomerState` — solo lee `GameState` y dibuja.
 
-`game/npc/` (`Npc`/`NpcState`/`NpcController`) se eliminó por completo — decisión de arquitectura
-ya confirmada en M03.5 (ver `.juntia/DECISIONS.md`: "`game/npc/controller.ts` reducido a lector
-puro de `state.customers`"). `CustomerRenderer` (`game/customers/customer-renderer.ts`) es su
-reemplazo directo: mismo estilo visual (rectángulo 22×28, color `0xc97a5b`), sin tweens ni
-`occupiedTables`/`findFreeTable` (esa lógica de asignación de mesa vuelve en M04.6, ya dentro de
-`CustomerSystem`). `main.ts` ya no instancia `NpcController` ni tiene su propio timer de spawn
-(`NPC_SPAWN_INTERVAL_MS`) — `RestaurantScene.update` llama `customerRenderer.update(state.
-customers)` cada frame, después de `runSystems`.
+`game/npc/` (`Npc`/`NpcState`/`NpcController`) se eliminó por completo (decisión ya confirmada
+en M03.5). `CustomerRenderer` (`game/customers/customer-renderer.ts`) es su reemplazo directo:
+crea/actualiza/destruye sprites desde `state.customers`, sin tweens ni mutar `Customer`.
 
-**Player-visible outcome:** el jugador puede ver clientes generados — verificado en navegador
-(Playwright, 6s / 2+ intervalos de spawn): aparece un sprite de cliente sobre la puerta (todos
-los clientes se apilan en la misma posición, ya que `CustomerSystem` todavía no simula movimiento
-— eso llega en M04.5), HUD y muebles sin cambios, sin errores de consola. El caminar/sentarse
-animado que antes daba `NpcController` desaparece intencionalmente hasta que M04.5–M04.7 lo
-repongan simulado.
+**Player-visible outcome:** aparece un sprite de cliente sobre la puerta — verificado en
+navegador, sin errores de consola. Sin movimiento todavía (llega en M04.5).
 
-`CustomerRenderer.update` también destruye y descarta el sprite de cualquier id que ya no esté
-en `state.customers` (evita memory leaks una vez que M04.8 empiece a despawnear clientes), y
-nunca muta los objetos `Customer` que lee. Tests en `customer-renderer.test.ts` (mock de
-`Phaser.Scene`, sin canvas/WebGL real): crea sprite nuevo, no duplica uno existente, actualiza
-posición, destruye el sprite de un cliente que desaparece, no lo recrea después, no muta
-`Customer`.
-
-Verificado: `pnpm test` (40/40 — 36 - 2 de `npc.test.ts` eliminado + 6 de
-`customer-renderer.test.ts`) y `tsc --noEmit` limpios; `pnpm build` limpio.
+Verificado: `pnpm test` (40/40) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 
@@ -359,18 +365,12 @@ Verificado: `pnpm test` (40/40 — 36 - 2 de `npc.test.ts` eliminado + 6 de
       un cliente recién spawneado se mueve en updates posteriores, llega a `idle` con `target`
       en `null`).
 
-`spawnCustomer` ahora fija `target: ENTRY_TARGET` (mismo punto que usaba
-`NpcController.spawnNpc()` como `entryTarget`, ahora como destino real de la simulación en vez
-de un tween de Phaser). `CustomerRenderer` (M04.4) no cambió — ya reposicionaba el sprite desde
-`Customer.position` cada frame.
+`spawnCustomer` fija `target: ENTRY_TARGET`; `CustomerRenderer` (M04.4) no cambió.
 
-**No usar:** tween de Phaser como fuente de verdad de la posición. (No se usó — `moveCustomer`
-es una función pura sin dependencia de Phaser.)
+**No usar:** tween de Phaser como fuente de verdad de la posición — `moveCustomer` es puro.
 
-**Player-visible outcome:** los clientes se desplazan correctamente — verificado en navegador
-(Playwright, screenshots a 1s/3s/6s/8s): un cliente aparece cerca de la puerta y se lo ve
-avanzar claramente hacia el mostrador entre capturas consecutivas antes de quedar quieto
-(llegada + transición a `idle`); HUD y muebles sin cambios; sin errores de consola.
+**Player-visible outcome:** los clientes avanzan visiblemente hacia el mostrador y se detienen
+al llegar — verificado en navegador, sin errores de consola.
 
 Verificado: `pnpm test` (49/49) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
@@ -401,10 +401,8 @@ Verificado: `pnpm test` (49/49) y `tsc --noEmit` limpios; `pnpm build` limpio.
 llegar al asiento (M04.7) — un customer que llega a su mesa hoy vuelve a `idle`, parado en el
 asiento, no `seated`.
 
-**Player-visible outcome:** el cliente tiene una mesa asignada — verificado en navegador
-(Playwright, screenshots espaciados en una corrida de ~13s): los clientes llegan a la entrada y
-luego se los ve dividirse visiblemente hacia una de las dos mesas del layout inicial, sin
-superponerse en la misma mesa; HUD y muebles sin cambios; sin errores de consola.
+**Player-visible outcome:** los clientes se dividen visiblemente hacia mesas distintas, sin
+superponerse — verificado en navegador, sin errores de consola.
 
 Verificado: `pnpm test` (59/59) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
@@ -429,14 +427,10 @@ Verificado: `pnpm test` (59/59) y `tsc --noEmit` limpios; `pnpm build` limpio.
 - [x] Preparar el terreno para estados futuros (`waiting`, `eating`, etc.) — `CustomerState`
       ya soporta `seated` desde M04.1; ningún cambio de forma de datos fue necesario.
 
-Ningún archivo fuera de `moveCustomer` cambió de comportamiento — `CustomerSystem`,
-`assignTables` y `CustomerRenderer` quedaron intactos; el pipeline `spawn → move →
-assignTables` de `CustomerSystem.update` no se tocó.
+Ningún archivo fuera de `moveCustomer` cambió de comportamiento.
 
-**Player-visible outcome:** el cliente llega y se sienta — verificado en navegador (Playwright,
-screenshots espaciados en una corrida de ~18s): los sprites de los clientes llegan a una de las
-dos sillas del layout inicial y se quedan quietos ahí (sin seguir desplazándose ni superponerse
-más allá de ese punto); HUD y muebles sin cambios; sin errores de consola.
+**Player-visible outcome:** el cliente llega a su silla y se queda quieto ahí — verificado en
+navegador, sin errores de consola.
 
 Verificado: `pnpm test` (61/61) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
@@ -471,11 +465,8 @@ Pipeline de `CustomerSystem.update` (`systems/customer-system.ts`), cada frame: 
 **No implementar todavía:** pedidos; comida; pagos; satisfacción.
 
 **Player-visible outcome:** el restaurante tiene clientes que entran, usan una mesa y salen —
-verificado en navegador (Playwright, ~32s de corrida real dado el timer de 10s): clientes
-entran, dos se sientan (posición fija en pantalla mientras están sentados), y entre los
-screenshots de 20s y 26s la cantidad de clientes en pantalla bajó de 5 a 4 — evidencia directa
-de un ciclo completo sentarse → levantarse → caminar a la puerta → despawnear; HUD y muebles
-sin cambios; sin errores de consola en toda la corrida.
+verificado en navegador (ciclo completo sentarse → levantarse → caminar a la puerta →
+despawnear observado), sin errores de consola.
 
 Verificado: `pnpm test` (72/72) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
@@ -608,19 +599,15 @@ no hay nada nuevo que observar (mismo criterio que M04.2).
       a dos customers en la misma pasada, limpia `waitReason`/`waitRemainingMs` al conseguir
       mesa, y deja intacto a un customer `waiting` sin mesa todavía disponible.
 
-Bug real encontrado y corregido durante la implementación: el cálculo de slots de cola ocupados
-inicialmente solo miraba `customer.target`, pero un customer que ya llegó a su slot tiene
-`target: null` (igual que cualquier arribo) aunque siga parado ahí — así que un slot ocupado
-podía "verse" libre para el siguiente customer que entra a la cola. Corregido usando
+Bug encontrado y corregido: el cálculo de slots de cola ocupados solo miraba `customer.target`,
+pero un customer que ya llegó a su slot tiene `target: null` — corregido con
 `customer.target ?? customer.position`.
 
 **No implementar todavía:** timeout de paciencia (M05.3); eventos de reputación (M05.4).
 
 **Player-visible outcome:** con las mesas ocupadas, los customers siguientes esperan en fila
 sin superponerse, y el primero en cola ocupa la próxima mesa que se libera — verificado en
-navegador (Playwright, ~18-20s de corrida): con más de 2 customers compitiendo por las 2 mesas
-del layout inicial, los excedentes caminan a posiciones de cola distintas entre sí y de
-`ENTRY_TARGET`, sin superponerse; HUD y muebles sin cambios; sin errores de consola.
+navegador, sin errores de consola.
 
 Verificado: `pnpm test` (82/82) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
@@ -650,34 +637,18 @@ Verificado: `pnpm test` (82/82) y `tsc --noEmit` limpios; `pnpm build` limpio.
       existentes de `advanceStay`), más un caso nuevo en `sendToExit` que verifica la limpieza de
       `waitReason`/`waitRemainingMs`.
 
-**Bug real encontrado y corregido durante la implementación:** con paciencia finita, el orden de
-pipeline heredado de M04 (`assignTables` antes que `advanceStay`) crea una condición de carrera:
-si el stay de un customer sentado se agota en el mismo tick en que un customer en cola agota su
-paciencia, `assignTables` ya corrió al principio del tick (con la mesa todavía ocupada) y no
-reasigna la mesa recién liberada hasta el tick siguiente — un tick de más que, con paciencia
-limitada, puede alcanzar para que `advanceWait` mande a ese mismo customer a la salida antes de
-que le toque la mesa. Corregido reordenando el pipeline a `moveCustomer → advanceStay →
-assignTables → advanceWait → removeDepartedCustomers`: las mesas liberadas por un stay agotado se
-reasignan en el mismo tick, y `advanceWait` solo cuenta paciencia contra quien siga efectivamente
-`waiting` después de esa reasignación. Detectado por un test ya existente de M05.2
-(`customer-system.test.ts`, "frees a table once its customer starts leaving...") que empezó a
-fallar al agregar la paciencia — no hizo falta cambiar el test, el reorden de pipeline lo corrige.
-
-**Player-visible outcome:** un customer que queda en cola sin que se libere una mesa a tiempo
-camina a la puerta y desaparece en vez de esperar para siempre — verificado en navegador
-(Playwright, ~28s de corrida, capturas cada 3-8s): cero errores de consola; la cola sigue
-formándose sin superposición (comportamiento de M05.2 intacto); HUD y dinero sin cambios; el
-tamaño de la cola se mantiene acotado (no crece de forma ininterrumpida pese a que la tasa de
-llegada de customers supera la de liberación de mesas en este layout de 2 mesas), consistente con
-que el abandono por paciencia efectivamente remueve customers de la cola. La corrida de 28s no
-permite aislar con certeza visual el trayecto completo puerta-a-puerta de un customer individual
-(varios customers comparten el mismo corredor vertical en direcciones opuestas); el timing exacto
-está cubierto de forma directa por los tests unitarios de `advanceWait`/`sendToExit`.
-
-Verificado: `pnpm test` (88/88) y `tsc --noEmit` limpios; `pnpm build` limpio.
+**Bug encontrado y corregido:** con paciencia finita, el orden de pipeline heredado de M04
+(`assignTables` antes que `advanceStay`) creaba una condición de carrera — una mesa liberada por
+un stay agotado no se reasignaba hasta el tick siguiente, dándole tiempo de más a
+`advanceWait` para mandar a ese mismo customer a la salida antes de que le tocara la mesa.
+Corregido reordenando el pipeline a `moveCustomer → advanceStay → assignTables → advanceWait →
+removeDepartedCustomers`.
 
 **Player-visible outcome:** un customer que espera demasiado abandona por la puerta, igual que
-un customer que termina su `stayRemainingMs` en M04.8.
+un customer que termina su `stayRemainingMs` en M04.8 — verificado en navegador, sin errores de
+consola.
+
+Verificado: `pnpm test` (88/88) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 
@@ -708,15 +679,12 @@ cada uno.
       `reputationAdjustments` al total derivado del mobiliario sin que `state.customers` influya
       en el resultado.
 
-**No se implementó nada nuevo del lado de clientes** — esta pieza es puramente la conexión entre
-las transiciones ya construidas en M05.2/M05.3 y la reputación; `sendToExit`, `advanceStay` y
-`advanceWait` quedan sin cambios respecto a M05.3.
+**No se implementó nada nuevo del lado de clientes** — conecta las transiciones ya construidas
+en M05.2/M05.3 con la reputación; `sendToExit`/`advanceStay`/`advanceWait` sin cambios.
 
 **Player-visible outcome:** la reputación del HUD baja cuando un customer abandona por espera y
-sube cuando un customer completa el ciclo normalmente — verificado en navegador (Playwright,
-~36s de corrida, capturas cada 3-5s): reputación 8 → 9 (ciclo completo) → 10 (otro ciclo
-completo) → 8 (abandono, baja exactamente 2), visible directamente en el texto del HUD; cero
-errores de consola en toda la corrida.
+sube cuando completa el ciclo normalmente — verificado en navegador (8 → 9 → 10 en ciclos
+completos, → 8 en un abandono), sin errores de consola.
 
 Verificado: `pnpm test` (95/95) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
@@ -739,17 +707,13 @@ duplicadas, mismo tipo de revisión que cerró M04 (ver PR #17).
       reputación.
 
 **No se implementó nada nuevo** — paso de validación e integración pura. Código fuente sin
-cambios; solo se leyeron `reputation-system.ts`, `customer-renderer.ts` y `customer-system.ts`
-para confirmar los límites de responsabilidad, y se corrió la app en navegador.
+cambios; se leyó `reputation-system.ts`/`customer-renderer.ts`/`customer-system.ts` para
+confirmar los límites de responsabilidad, y se corrió la app en navegador.
 
 **Player-visible outcome:** el mismo del milestone completo (ver arriba) — confirmado en
-navegador (Playwright, corrida de 45s, capturas cada 3s): reputación 8 → 9 → 10 (dos ciclos
-completos, +1 cada uno) → 8 → 3 (abandonos por paciencia, -2 cada uno, cola de espera visible
-como línea horizontal de customers en posiciones distintas sin superponerse); cero errores de
-consola en toda la corrida; `Dinero: $500` sin cambios. Lectura de código confirmó los límites:
-`ReputationSystem` solo lee `state.furniture`/`state.reputationAdjustments`, nunca
-`state.customers`; `CustomerRenderer` solo lee `id`/`position` de cada `Customer`; toda la
-lógica de eventos de reputación vive únicamente en `CustomerSystem`.
+navegador: cola visible sin superposición, reputación subiendo y bajando correctamente, cero
+errores de consola. Límites de responsabilidad confirmados por lectura de código:
+`ReputationSystem` nunca lee `state.customers`; `CustomerRenderer` solo lee `id`/`position`.
 
 ---
 
@@ -813,39 +777,16 @@ implícitamente entre `moveCustomer`, `assignTables`, `advanceStay`, `advanceWai
 - [x] Test: una transición imposible no ocurre — p.ej. `waiting` nunca pasa directo a
       `seated` sin pasar por `walking`; ningún `idle` queda con `tableId` no nulo.
 
-Toda la documentación vive como comentario junto a `CustomerState`
-(`core/customers/customer-state.ts`) — sin ningún nuevo tipo, validador en tiempo de
-ejecución ni cambio de forma de datos; `CustomerState` sigue siendo el mismo union de 5
-strings. Hallazgo real durante la implementación, ya documentado explícitamente: el
-invariante de `seated` (`tableId !== null && stayRemainingMs !== null`) **no** lo garantiza
-`moveCustomer` por sí solo — al hacer `walking → seated` en la llegada, deja
-`stayRemainingMs` en `null` (inicializarlo no es su responsabilidad); es `advanceStay`,
-corriendo inmediatamente después en el mismo pipeline de `CustomerSystem.update`, quien lo
-completa en el mismo tick. Por eso los tests quedaron en dos niveles: por función, en
-`customer.test.ts` (`describe("state invariants")`) — cada invariante contra la función que
-realmente lo produce, incluyendo el caso imposible explícito (`waiting` que llega a su slot
-de cola nunca pasa a `seated` vía `moveCustomer`); y como invariante completo tras un tick
-real, en `customer-system.test.ts` — 20 ticks de 1s con cola, asignación, estadía y
-abandono por paciencia, verificando que todo `Customer` en `state.customers` cumple el
-invariante de su estado en cada checkpoint (el único lugar donde el invariante de `seated`
-está garantizado). El caso "ningún `idle` queda con `tableId` no nulo" no se testeó como
-unit test aislado porque no es una transición que ningún camino real de `assignTables`
-pueda producir (`idle` solo lo produce `moveCustomer`, siempre con `tableId` en `null` por
-construcción de su propio ternario) — queda cubierto igual por el invariante completo del
-test de sistema, que solo observa `Customer` reales.
+Documentación vive como comentario junto a `CustomerState` — sin nuevo tipo ni validador en
+tiempo de ejecución. Hallazgo real: el invariante de `seated` no lo garantiza `moveCustomer`
+por sí solo (deja `stayRemainingMs` en `null`) — lo completa `advanceStay`, inmediatamente
+después en el mismo tick del pipeline.
 
-**No implementar:** pedidos; camareros; cocina; ningún estado nuevo. Este paso es hardening
-y tests — no cambia ninguna transición ni ningún archivo fuera de tests/documentación
-inline. Ningún archivo de `core/customers/customer.ts`, `systems/customer-system.ts` ni
-Phaser cambió.
+**No implementar:** pedidos; camareros; cocina; ningún estado nuevo. Solo hardening y tests.
 
-**Player-visible outcome:** sin cambios visuales. Mejora la estabilidad interna del sistema
-de clientes.
+**Player-visible outcome:** sin cambios visuales. Mejora la estabilidad interna.
 
-Verificado: `pnpm test` (104/104 — 95 + 9 nuevos) y `tsc --noEmit` limpios; `pnpm build`
-limpio. Sin verificación en navegador — mismo criterio que M04.2/M05.1: ningún camino de
-código nuevo produce un estado o transición distinta a la ya existente, así que no hay nada
-nuevo que observar visualmente.
+Verificado: `pnpm test` (104/104) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 
@@ -859,69 +800,29 @@ ocupación de mesas que hoy vive inline al principio de `assignTables`
 (`core/customers/customer.ts`) — sin crear una estructura de ocupación separada ni un
 módulo de reservas.
 
-**Decisión de ownership (confirmada antes de implementar, ver
-`.juntia/ARCHITECTURE.md`):** `Customer.tableId` es la única fuente de verdad de qué mesa
-ocupa cada cliente. No existe, ni se crea acá, un `occupiedTables` ni un `Table.isOccupied`
-independientes — cualquier código que necesite saber qué mesas están libres deriva la
-respuesta de `state.customers` a través de `getOccupiedTableIds`, nunca mantiene su propia
-copia. Esto ya era cierto desde M04.4/M04.6; M06.2 lo hace explícito como función nombrada
-en vez de dejarlo como lógica inline dentro de `assignTables`.
+**Decisión de ownership (ver `.juntia/ARCHITECTURE.md`):** `Customer.tableId` es la única
+fuente de verdad de qué mesa ocupa cada cliente — sin `occupiedTables`/`Table.isOccupied`
+independientes; se deriva siempre de `state.customers` vía `getOccupiedTableIds`.
 
-- [x] `Customer.tableId` — ya existía desde M04.6, sin cambios de forma; sigue siendo el
-      único campo que representa la relación cliente-mesa (cuándo se asigna: `assignTables`
-      encuentra mesa libre; cuándo se libera: `sendToExit`, ver abajo).
-- [x] Extraer la derivación de ocupación a una función pura nombrada —
-      `getOccupiedTableIds(customers)` (`core/customers/customer.ts`) — reutilizada por
-      `assignTables` en vez de recalculada inline, para que M06.3+ y milestones futuros
-      (M07 demanda, M15 exit/release) tengan un punto único al que apuntar en vez de
-      reimplementarla.
-- [x] Test: `getOccupiedTableIds` devuelve exactamente los `tableId` no nulos presentes en
-      `Customer[]`, sin duplicados (usa `Set`, dedupe estructural); ignora customers sin
-      mesa; devuelve conjunto vacío sin customers.
-- [x] Formalizar como test explícito (antes solo cubierto indirectamente, comparando de a
-      dos) el invariante de asignación única: en cualquier `Customer[]` producido por
-      `assignTables`, ningún `tableId` no nulo se repite — y, con todas las mesas ya
-      ocupadas, la ocupación no cambia al intentar asignar un customer de más (sin "mesa
-      fantasma").
-- [x] Test/confirmación: `sendToExit` sigue siendo el único punto que libera una mesa
-      (`tableId → null`) — verificado con `getOccupiedTableIds`, que deja de listar la mesa
-      apenas corre `sendToExit`, sin esperar a `removeDepartedCustomers`. Deliberadamente no
-      se introduce una función `releaseTable` independiente ni una lista de ocupación
-      aparte, para no reintroducir el problema de `occupiedTables` desincronizado que M04.4
-      ya eliminó (ver `.juntia/ARCHITECTURE.md`). Los dos comentarios de `customer.ts` que
-      todavía prometían un `releaseTable` futuro (junto a `assignTables` y
-      `resolveTableQueue`) quedaron actualizados para reflejar esta confirmación.
-
-Transiciones relacionadas revisadas (sin cambios de comportamiento, ya garantizadas desde
-M04.6/M04.7 y formalizadas como invariante en M06.1): un customer nunca llega a `seated` sin
-`tableId` — `moveCustomer` solo produce `seated` cuando `tableId` ya es no nulo, y
-`assignTables` solo asigna `tableId` desde una mesa realmente libre
-(`findFreeTable(occupiedTables)`, derivado ahora de `getOccupiedTableIds`). "Mesa
-disponible" en el sentido de "existe en el catálogo real" no cambió en este paso — sigue
-siendo la lista de `Table` de `core/restaurant.ts`, fuera de alcance de M06.2.
+- [x] `Customer.tableId` — sin cambios de forma, único campo que representa la relación
+      cliente-mesa.
+- [x] Extraer la derivación de ocupación a `getOccupiedTableIds(customers)`
+      (`core/customers/customer.ts`), reutilizada por `assignTables`.
+- [x] Test: `getOccupiedTableIds` devuelve los `tableId` no nulos sin duplicados.
+- [x] Test: invariante de asignación única — ningún `tableId` se repite; con todas las
+      mesas ocupadas, la ocupación no cambia al intentar asignar de más.
+- [x] Confirmado: `sendToExit` sigue siendo el único punto que libera una mesa
+      (`tableId → null`). No se introduce `releaseTable` ni lista de ocupación aparte.
 
 **No solucionar todavía:** cola de espera; posiciones de fila; movimiento de cola;
 paciencia; pedidos; camareros; cocina; pagos; sistema completo de reservas con estado
 propio; refactor de `occupiedTables` como lista aparte — decisión ya tomada de no tenerla
 (la ocupación siempre se deriva de `state.customers`).
 
-**Nota para M06.3+:** la cola ya construida en M05.2 (`getQueueSlotPosition`,
-`findFreeQueueSlot`) guarda posiciones de grid en `Customer.target`/`position` — son datos
-de dominio (`GridPosition`), no objetos de Phaser, y el renderer (`CustomerRenderer`) sigue
-siendo un lector puro que nunca decide esas posiciones. Al consolidar capacidad/cola en
-M06.3, mantener ese mismo principio: la cola es lógica (derivada de `state.customers`,
-igual que la ocupación de mesas de este paso), la representación visual sigue siendo
-responsabilidad exclusiva del renderer — no agregar aquí un nuevo tipo de estado "físico"
-que Phaser deba interpretar.
-
 **Player-visible outcome:** sin cambios visuales. Los clientes tienen una relación clara y
-citable con su mesa (`Customer.tableId` + `getOccupiedTableIds`), en vez de lógica de
-ocupación implícita dentro de `assignTables`.
+citable con su mesa (`Customer.tableId` + `getOccupiedTableIds`).
 
-Verificado: `pnpm test` (110/110 — 104 + 6 nuevos) y `tsc --noEmit` limpios; `pnpm build`
-limpio. Sin verificación en navegador — `getOccupiedTableIds` es la misma lógica de
-`assignedTableIds` que ya existía, solo extraída y nombrada; ningún comportamiento
-observable cambió.
+Verificado: `pnpm test` (110/110) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 
@@ -929,90 +830,35 @@ observable cambió.
 
 **Estado: completado.**
 
-**Objetivo:** dejar explícito, como principio de diseño de este paso, que **la cola de
-espera es estado lógico de la simulación — "customer queue is logical state"** — no una
-fila física que Phaser calcula o anima. Exponer como conceptos de dominio explícitos la
-detección de "restaurante lleno" y el orden/tamaño de la cola de espera, hoy efectos
-secundarios implícitos dentro de `assignTables`. La cola en sí (`waiting`,
-`getQueueSlotPosition`, `findFreeQueueSlot`, orden FIFO vía `resolveTableQueue`) ya existe
-desde M05.2; este paso no la reimplementa, solo hace consultable su estado.
+**Objetivo:** exponer como conceptos de dominio explícitos la detección de "restaurante
+lleno" y el orden/tamaño de la cola de espera, hoy efectos secundarios implícitos dentro de
+`assignTables`. La cola en sí ya existe desde M05.2; este paso solo hace consultable su
+estado.
 
-**Principio central — separación simulación/render (misma línea desde M03.5):** el dominio
-responde "¿qué lugar ocupa este cliente en la cola?" (un hecho lógico — *"el cliente está
-tercero en la cola"*); nunca responde "¿a qué casillero visual camina?" (*"el cliente
-camina hasta el tercer hueco"*) — eso es responsabilidad exclusiva de `CustomerRenderer`.
-En concreto:
+**Principio central (misma línea desde M03.5):** la cola de espera es estado lógico de la
+simulación — no una fila física que Phaser calcule o anime; el renderer solo proyecta esa
+posición lógica a una celda de grid, nunca decide el orden.
 
-- **FIFO / orden de llegada:** ya garantizado desde M05.2 por el orden de array de
-  `state.customers` (nunca reordenado, ver `spawnCustomer`/`removeDepartedCustomers`) — este
-  paso lo expone como consulta explícita en vez de dejarlo como comportamiento emergente de
-  `assignTables`.
-- **Cliente esperando sin mesa:** en el dominio es, exactamente, `state === "waiting" &&
-  waitReason === "table"` — no depende de ninguna posición de grid para "ser" parte de la
-  cola.
-- **Posición visual derivada:** `Customer.target`/`position` (vía `getQueueSlotPosition`,
-  M05.2) es una proyección de esa posición lógica hacia una celda del grid — dato de
-  dominio que el renderer puede consumir, pero el dominio nunca depende de cómo se ve.
-- **Movimiento de fila = responsabilidad del renderer:** que un cliente "avance un lugar"
-  visualmente cuando el de adelante consigue mesa es trabajo exclusivo de
-  `CustomerRenderer`/Phaser — la simulación no anima nada, solo actualiza la posición lógica
-  cuando corresponde (mismo principio ya confirmado en M03.5: la simulación es la fuente de
-  verdad, Phaser solo representa).
+- [x] Función pura `isRestaurantFull(customers, furnitureList)`, reutilizando
+      `getOccupiedTableIds` (M06.2) y `findFreeTable`.
+- [x] Función pura `getTableQueuePosition(customerId, customers): number | null` — orden
+      lógico de cola, generaliza `resolveTableQueue` sin cambiar su comportamiento.
+- [x] Función pura `getTableQueueSize(customers)` — tamaño de cola actual.
+- [x] Tests: ocupación total/parcial; orden FIFO consistente con `resolveTableQueue`;
+      tamaño de cola sube/baja con llegadas y asignaciones/abandonos.
 
-- [x] Función pura `isRestaurantFull(customers, furnitureList)` que exprese la condición
-      "no hay mesa libre" ya usada implícitamente dentro de `assignTables`, reutilizando
-      `getOccupiedTableIds` (M06.2) y `findFreeTable` (`core/restaurant.ts`).
-- [x] Test: `isRestaurantFull` responde correctamente con todas las mesas ocupadas y con al
-      menos una libre (el caso "0 mesas" no se testeó de forma aislada — ver nota abajo).
-- [x] Función pura para el orden lógico de la cola — `getTableQueuePosition(customerId,
-      customers): number | null` (posición 0-based de un cliente `waiting`/`"table"` dentro
-      de la cola, o `null` si no está esperando mesa) — generaliza `resolveTableQueue` (que
-      hoy solo devuelve el primero) sin cambiar su comportamiento ni el de `assignTables`.
-- [x] Test: el orden lógico de cola coincide con el orden de llegada (FIFO) y con el
-      resultado de `resolveTableQueue` — consultable de forma explícita e independiente de
-      cualquier posición de grid.
-- [x] Función pura `getTableQueueSize(customers)` para el tamaño actual de la cola,
-      consultable sin recorrer `assignTables`.
-- [x] Test: el tamaño de cola crece con más llegadas que mesas libres y baja cuando
-      `assignTables` asigna una mesa o un cliente abandona (`sendToExit`).
+**Hallazgo (documentado, no corregido — fuera de alcance):** `findFreeTable`/
+`getSeatForTable` (`core/restaurant.ts`) buscan sobre su propio `furniture` a nivel de
+módulo, no sobre el `furnitureList` que reciben como parámetro — inofensivo hoy solo porque
+`GameState.furniture` es la misma referencia de array, nunca una copia. Detalle en
+`.juntia/ARCHITECTURE.md`.
 
-Implementación: `getOccupiedTableIds` (M06.2) más la traducción a posiciones de grid que
-antes vivía inline en `assignTables` quedaron consolidadas en un helper privado
-`getOccupiedTablePositions(customers, furnitureList)`, compartido ahora por `assignTables` e
-`isRestaurantFull` sin duplicar el criterio. Del mismo modo, `resolveTableQueue`,
-`getTableQueuePosition` y `getTableQueueSize` se derivan todos de un helper privado
-`getTableQueue(customers)` (el mismo predicado `waiting` + `waitReason: "table"`, en un solo
-lugar) — `resolveTableQueue` pasó de `.find(...)` a `getTableQueue(customers)[0]`, mismo
-resultado, verificado porque sus tests existentes (M05.2) siguen en verde sin cambios.
-Ninguna de las dos consolidaciones cambia comportamiento observable.
+**Fuera de alcance:** UI de cola; prioridad VIP; reservas.
 
-**Hallazgo real durante la implementación (documentado, no corregido — fuera de alcance):**
-`findFreeTable`/`getSeatForTable` (`core/restaurant.ts`) buscan sobre su propio `furniture`
-a nivel de módulo, no sobre el `furnitureList` que reciben `assignTables`/`isRestaurantFull`
-como parámetro — por eso el caso "0 mesas" no se pudo testear pasando un `furnitureList`
-vacío (`findFreeTable` seguía encontrando las mesas reales del módulo). Hoy esto no causa
-bugs porque `GameState.furniture` es literalmente esa misma referencia de array
-(`createGameState`), nunca una copia — quedan en sync por esa alias, no por diseño. Detalle
-completo en `.juntia/ARCHITECTURE.md`.
+**Player-visible outcome:** sin cambios de comportamiento — el estado "lleno"/orden/tamaño
+de cola queda disponible como dato de dominio reutilizable (p.ej. por M07).
 
-**Fuera de alcance (pertenece a otros milestones o a la capa de renderer, no a este paso de
-dominio):**
-
-- animación de caminar en cola (ya existe como interpolación de `CustomerRenderer`/
-  `moveCustomer`; este paso no la tocó);
-- UI de cola (contador visible en HUD, indicadores, etc.);
-- prioridad VIP;
-- reservas.
-
-**Player-visible outcome:** sin cambios de comportamiento — la cola visual ya existe desde
-M05.2. El estado "lleno"/orden/tamaño de cola queda disponible como dato de dominio
-reutilizable (p.ej. por M07, que deriva el intervalo de spawn a partir de reputación y
-podría acotarlo también por capacidad).
-
-Verificado: `pnpm test` (117/117 — 110 + 7 nuevos) y `tsc --noEmit` limpios; `pnpm build`
-limpio. Sin verificación en navegador — comportamiento idéntico al anterior, confirmado por
-la suite completa (incluida `customer-system.test.ts`, que ejercita la cola real) sin
-cambios en ningún test preexistente.
+Verificado: `pnpm test` (117/117) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 
@@ -1036,41 +882,18 @@ comportamiento.
       los cambios de M06.1–M06.3 — mismo timing que el test original de M05.4, ahora
       combinado con un barrido completo de invariantes de M06.1 sobre todos los customers.
 
-Ningún archivo de producción cambió — solo `systems/customer-system.test.ts` ganó 4 tests
-nuevos. Hallazgo real durante la implementación: el checklist original planteaba verificar
-que un abandono por paciencia "reduce correctamente... `isRestaurantFull`/el tamaño de
-cola... la mesa o el slot de cola liberado queda disponible... en el mismo tick" — en la
-práctica esto no se pudo testear como una única transición limpia, por dos razones
-descubiertas al escribir los tests:
-
-1. Un abandono por paciencia libera un **slot de cola**, no una mesa — nunca hizo bajar
-   `isRestaurantFull` (eso lo hace `advanceStay`, no `advanceWait`). El test correspondiente
-   verifica en cambio que el customer específico desaparece de `getTableQueuePosition`, sin
-   asumir un tamaño de cola absoluto (durante la ventana de tiempo necesaria para agotar la
-   paciencia, `CustomerSystem` sigue spawneando customers nuevos que también se suman a la
-   cola, así que el tamaño absoluto no es predecible — solo la ausencia de ese customer
-   puntual sí lo es).
-2. Con alguien en cola, una mesa liberada por `advanceStay` se reasigna dentro del mismo
-   tick (M05.3) — `isRestaurantFull` nunca "ve" el hueco, confirmado con un test dedicado.
-   Intentar un escenario "sin nadie en cola" para forzar la transición a `false` resultó
-   imposible de lograr de forma realista a través de `CustomerSystem`: para que el
-   `STAY_DURATION_MS` (10s) de los primeros 2 customers termine de agotarse, pasa tiempo
-   más que suficiente para que `SPAWN_INTERVAL_MS` (2.5s) genere varios customers nuevos que
-   ya están esperando mesa — la cola nunca está genuinamente vacía en una corrida real de
-   esa duración. `isRestaurantFull`'s transición limpia a `false` con una mesa realmente
-   libre ya está cubierta a nivel unitario en `customer.test.ts` (M06.3); a nivel de
-   sistema, se testeó en cambio lo que sí ocurre de verdad: `isRestaurantFull` sigue
-   correctamente la ocupación real vacío→lleno, y se mantiene `true` cuando la cola
-   reclama una mesa liberada en el mismo tick.
+Ningún archivo de producción cambió — solo tests nuevos. Hallazgo real: un abandono por
+paciencia libera un **slot de cola**, no una mesa (eso lo hace `advanceStay`, no
+`advanceWait`) — el test de `isRestaurantFull` verifica en cambio la ocupación real
+vacío→lleno, sin asumir que un abandono la afecta.
 
 **No implementar:** satisfacción avanzada; pedidos; ningún cambio a `WAIT_DURATION_MS` ni a
 `advanceWait`.
 
-**Player-visible outcome:** ninguno nuevo — el comportamiento visible de M05.3/M05.4 (un
-customer que espera demasiado se va y la reputación baja) se mantiene igual.
+**Player-visible outcome:** ninguno nuevo — el comportamiento visible de M05.3/M05.4 se
+mantiene igual.
 
-Verificado: `pnpm test` (121/121 — 117 + 4 nuevos) y `tsc --noEmit` limpios; `pnpm build`
-limpio. Sin verificación en navegador — ningún archivo de producción cambió.
+Verificado: `pnpm test` (121/121) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 
@@ -1095,24 +918,14 @@ lógica implícita repartida entre varios archivos.
       customer debería ocupar la próxima mesa libre, y después confirma que ese mismo
       customer (y no otro) es quien efectivamente la ocupa en el tick siguiente.
 
-Hallazgo real durante la implementación: el checklist original mencionaba "customer abandona
-(paciencia) o termina su ciclo normal" como disparadores equivalentes de "la mesa aparece
-libre" — pero M06.4 ya había establecido que un abandono por paciencia libera un **slot de
-cola**, no una mesa (el customer en espera nunca llegó a tener una). El test de este paso
-cubre en cambio el disparador que sí libera una mesa real: el fin de una estadía
-(`advanceStay` → `sendToExit`). El caso de abandono por paciencia y su efecto sobre la cola
-ya quedó cubierto en M06.4, no se duplica acá.
-
 **No implementar todavía:** eventos de liberación por motivos nuevos (cocina, pagos, M14/
 M15) — solo los dos ya existentes (ciclo completo vía `advanceStay`, abandono vía
 `advanceWait`).
 
 **Player-visible outcome:** ninguno nuevo — el restaurante ya mantenía flujo continuo de
-clientes desde M05; este paso lo deja demostrado con un test explícito de punta a punta en
-vez de solo inferido de tests parciales.
+clientes desde M05; este paso lo deja demostrado con un test explícito de punta a punta.
 
-Verificado: `pnpm test` (122/122 — 121 + 1 nuevo) y `tsc --noEmit` limpios; `pnpm build`
-limpio. Sin verificación en navegador — ningún archivo de producción cambió.
+Verificado: `pnpm test` (122/122) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 ---
 
@@ -1133,22 +946,14 @@ limpio. Sin verificación en navegador — ningún archivo de producción cambi�
       que M05.5).
 - [x] `pnpm test`, `tsc --noEmit` y `pnpm build` limpios.
 
-Confirmado por lectura directa de código, mismo chequeo que M05.5: `ReputationSystem.update`
-sigue tocando solo `state.furniture`/`state.reputationAdjustments`, nunca
-`state.customers`; `CustomerRenderer` sigue leyendo solo `id`/`position` de cada `Customer`;
-toda la lógica de eventos de reputación sigue viviendo únicamente en `CustomerSystem` — los
-tres archivos, sin cambios desde M05.5.
+Confirmado por lectura directa de código: `ReputationSystem` nunca lee `state.customers`;
+`CustomerRenderer` solo lee `id`/`position`; toda la lógica de eventos de reputación vive
+en `CustomerSystem` — sin cambios desde M05.5.
 
-Verificado en navegador (Playwright, corrida de 60s, capturas cada 3s, layout inicial de 2
-mesas sin construcción adicional): ciclo completo `entering → walking → waiting → seated →
-leaving → removed` observado repetidas veces; la cola de espera se ve siempre como una línea
-horizontal de posiciones distintas sin superponerse, incluso con 6+ customers esperando a la
-vez; reputación fluctuando en ambas direcciones según lo esperado (8 → 9 → 10 en ciclos
-completos, bajando hasta -3 con varios abandonos por paciencia — arribos más frecuentes que
-la rotación de solo 2 mesas, mismo patrón ya documentado desde M05.3); `Dinero: $500` sin
-cambios en toda la corrida; cero errores de consola. Ninguna mesa asignada a dos customers
-a la vez en ningún frame observado; ningún customer visto en una posición/estado
-inconsistente.
+Verificado en navegador (60s de corrida, layout inicial de 2 mesas): ciclo completo
+`entering → walking → waiting → seated → leaving → removed` observado repetidas veces; cola
+sin superposición incluso con 6+ customers esperando; reputación fluctuando en ambas
+direcciones correctamente; cero errores de consola; ninguna mesa asignada dos veces.
 
 **No implementar:** nada nuevo — este paso es validación e integración, no funcionalidad
 nueva.
@@ -1193,86 +998,52 @@ bloqueados.
 ## M07 — Demand system foundation
 
 *Depende de: M03 (reputación) y M06 (flujo de clientes y capacidad consolidados). Renombrado
-el 2026-08-22 de "M07 — Demand" a "M07 — Demand system foundation" para reflejar mejor el
-objetivo real: cómo llegan nuevos clientes al restaurante, no una lista suelta de tareas de
-spawn. Redefinido por completo (planning-only, sin código todavío) en el mismo estilo
-incremental de M04/M05/M06 — dividido en pasos pequeños, cada uno testeable y verificable
-por separado.*
+el 2026-08-22 de "M07 — Demand" a "M07 — Demand system foundation": cómo llegan nuevos
+clientes al restaurante, no una lista suelta de tareas de spawn.*
 
-**Objetivo general:** crear un sistema de generación de clientes donde la llegada de nuevos
-clientes dependa de la situación del restaurante — reputación primero, capacidad/saturación
-después. La demanda no debe ser un spawn fijo independiente del estado del mundo (hoy
-`SPAWN_INTERVAL_MS`, una constante fija dentro de `CustomerSystem`,
-`systems/customer-system.ts`).
+**Objetivo general:** que la llegada de nuevos clientes dependa de la situación del
+restaurante — reputación primero, capacidad/saturación después — en vez de un
+`SPAWN_INTERVAL_MS` fijo e independiente del mundo (`systems/customer-system.ts`).
 
-M07 es un plan incremental de tareas pequeñas, mismo patrón que M04/M05/M06 — trabajar
-siempre en la primera `M07.x` con estado pendiente, sin saltar pasos.
+*Reestructurado el 2026-08-22 bajo la nueva "Regla de planificación" (ver arriba): M07.1 ya
+se había completado como un paso de foundation puro (contrato de tipos, sin cómputo real,
+PR #32) bajo el criterio anterior — se mantiene como historial válido, sin reabrir. Desde
+M07.2 en adelante, cada paso produce un cambio jugable real; se eliminó el paso separado de
+"documentar modificadores futuros" (antes M07.4), plegado como nota breve en "M07 scope
+boundaries" más abajo.*
 
 ---
 
 ### M07.1 — Demand model foundation
 
-**Estado: completado.**
+**Estado: completado** (bajo el criterio de planificación anterior a esta reestructuración
+— ver nota arriba).
 
-**Objetivo:** crear la base conceptual del sistema de demanda — dónde vive la lógica, cómo
-se separa del ciclo de vida del cliente, y qué forma tendrá antes de calcular nada real.
+`core/demand.ts` exporta `type DeriveSpawnIntervalMs = (reputation: number) => number` — un
+contrato de tipos, no una función con cuerpo (evita una fórmula inventada que M07.2 tendría
+que deshacer). `CustomerSystem` sigue siendo responsable solo de *ejecutar* el spawn;
+*calcular* cuándo corresponde vivirá en `core/demand.ts`, mismo split que
+`ReputationSystem`/`core/reputation.ts`. Sin cambios de comportamiento.
 
-- [x] Decidir y documentar dónde vive la lógica de demanda: un módulo puro nuevo en
-      `core/` (p.ej. `core/demand.ts`), sin `phaser`, mismo patrón que `core/reputation.ts`
-      — separado de `core/customers/customer.ts` (ciclo de vida del cliente) y de
-      `systems/customer-system.ts` (ejecución mecánica del spawn).
-- [x] Definir la firma de la futura función de demanda (p.ej. `deriveSpawnIntervalMs(...):
-      number`), sin implementar todavía la fórmula real — solo el contrato de entrada/salida
-      que M07.2/M07.3 completarán.
-- [x] Documentar que `SPAWN_INTERVAL_MS` (hoy una constante fija dentro de `CustomerSystem`)
-      será reemplazada por el resultado de esta función una vez exista — sin tocarla
-      todavía en este paso.
-- [x] Confirmar el límite de responsabilidad: `CustomerSystem` sigue siendo responsable
-      solo de *ejecutar* el spawn (llamar `spawnCustomer` cuando corresponda); *calcular*
-      cuándo corresponde vive en `core/demand.ts` — mismo split ya establecido entre
-      `ReputationSystem` y `core/reputation.ts`.
-
-**No implementar todavía:** reputación (M07.2); capacidad (M07.3); precios; empleados.
-
-**Player-visible outcome:** sin cambios visibles. Preparación interna del sistema.
-
-`core/demand.ts` (nuevo) exporta únicamente `type DeriveSpawnIntervalMs = (reputation:
-number) => number` — un contrato de tipos, no una función con cuerpo. Se eligió un `type`
-en vez de un stub ejecutable (p.ej. una función que devuelva un valor fijo o lance) porque
-cualquier cuerpo real hoy sería una fórmula inventada que M07.2 tendría que deshacer, no
-completar; el contrato de tipos deja el compilador validando la firma sin necesitar ningún
-valor de retorno todavía. `systems/customer-system.ts` solo ganó un comentario junto a
-`SPAWN_INTERVAL_MS` señalando el reemplazo futuro — la constante y el bucle de spawn no
-cambiaron. De paso, se corrigió una referencia obsoleta en ese mismo comentario
-(`NPC_SPAWN_INTERVAL_MS` / `NpcController` en `main.ts`) que databa de antes del refactor de
-Customer en M03.5 y ya no correspondía a ningún archivo real. Sin cambios de comportamiento;
-`pnpm test` (122/122) y `tsc --noEmit` limpios.
+**Player-visible outcome:** ninguno. Verificado: `pnpm test` (122/122), `tsc --noEmit`
+limpios.
 
 ---
 
 ### M07.2 — Reputation-based demand
 
-**Objetivo:** la reputación afecta a la frecuencia potencial de llegada de clientes — más
-reputación, mayor interés y más clientes potenciales; menos reputación, menor llegada.
+**Objetivo:** la reputación afecta la frecuencia de llegada de clientes — más reputación,
+más clientes; menos reputación, menos clientes.
 
-- [ ] Función pura `deriveSpawnIntervalMs(reputation: number): number` en `core/demand.ts`
-      (M07.1): a mayor `state.reputation`, menor intervalo (llegan más clientes); a menor
-      reputación, mayor intervalo.
-- [ ] Límite de demanda mínima: intervalo máximo acotado, con llegada mínima garantizada
-      incluso con reputación muy baja, para poder recuperarse tras una mala racha.
-- [ ] Límite de demanda máxima: el intervalo no baja de un mínimo, para no desbordar el
-      juego con clientes ilimitados.
-- [ ] Valores de balance iniciales (mínimo/máximo de intervalo, y cómo escala entremedio)
-      — valores de balance sin una respuesta objetivamente correcta, a confirmar como
-      decisión de producto antes de fijarlos en código (mismo patrón que otros valores de
-      balance ya confirmados: precios M01, dinero inicial M02, `STAY_DURATION_MS` M04.8,
-      etc. — ver `.juntia/DECISIONS.md`).
-- [ ] Test: valores límite de reputación (mínimo y máximo) devuelven el intervalo
-      mínimo/máximo esperado.
-- [ ] Test: valores representativos de reputación intermedia devuelven un intervalo
-      coherente (monótono: a mayor reputación, intervalo igual o menor).
+- [ ] Implementar `deriveSpawnIntervalMs(reputation: number): number` en `core/demand.ts`
+      (M07.1) con la fórmula real: a mayor `state.reputation`, menor intervalo, acotado
+      entre un mínimo y un máximo (valores de balance a confirmar como decisión de producto
+      antes de fijarlos en código — mismo patrón que precios M01, `STAY_DURATION_MS` M04.8,
+      etc.).
 - [ ] Reemplazar el `SPAWN_INTERVAL_MS` fijo de `CustomerSystem` por esta función, evaluada
       contra `state.reputation` en cada spawn.
+- [ ] Test: límites de reputación (mínimo/máximo) y monotonicidad (a mayor reputación,
+      intervalo igual o menor).
 - [ ] Confirmar visualmente: con reputación alta llegan más clientes que con reputación
       baja, sin generar clientes sin límite.
 
@@ -1285,28 +1056,18 @@ reputación, mayor interés y más clientes potenciales; menos reputación, meno
 
 ### M07.3 — Capacity pressure and saturation
 
-**Objetivo:** la demanda debe reaccionar también a la capacidad del restaurante, no solo a
-la reputación (M07.2) — la nota de diseño futura que traía la versión anterior de M07 se
-formaliza acá como tareas reales.
+**Objetivo:** la demanda también reacciona a la capacidad del restaurante, no solo a la
+reputación (M07.2) — restaurante saturado, menos clientes nuevos.
 
-- [ ] Extender (o componer) `deriveSpawnIntervalMs` (M07.2) para considerar la capacidad
-      del restaurante, reutilizando `isRestaurantFull`/`getTableQueueSize`
-      (`core/customers/customer.ts`, M06.3) — sin recorrer `state.customers` de nuevo por
-      fuera de esas funciones ya existentes.
-- [ ] Detectar saturación: mesas ocupadas (`isRestaurantFull`) combinado con una cola de
-      espera larga (`getTableQueueSize`).
-- [ ] Reducir la frecuencia de llegada (intervalo mayor) cuando el restaurante está
-      saturado, en vez de mantener el ritmo derivado solo de la reputación.
-- [ ] Test: con el restaurante lleno y cola larga, el intervalo resultante es mayor que con
-      el mismo nivel de reputación y el restaurante con capacidad libre.
-- [ ] Test: un restaurante con capacidad libre no se ve afectado por este factor (mismo
-      resultado que M07.2 sola).
-- [ ] Confirmar visualmente: un restaurante saturado (mesas llenas + cola larga) recibe
-      clientes con menor frecuencia que uno con capacidad libre, a igual reputación.
-
-**Regla conceptual:** un restaurante completamente saturado no debería seguir generando
-clientes al mismo ritmo indefinidamente — evita colas infinitas, clientes entrando sin
-posibilidad real de servicio, y una simulación poco realista.
+- [ ] Extender `deriveSpawnIntervalMs` (M07.2) para considerar la capacidad, reutilizando
+      `isRestaurantFull`/`getTableQueueSize` (`core/customers/customer.ts`, M06.3) — sin
+      recorrer `state.customers` de nuevo por fuera de esas funciones.
+- [ ] Reducir la frecuencia de llegada cuando mesas ocupadas + cola larga indican
+      saturación, en vez de mantener el ritmo derivado solo de la reputación.
+- [ ] Test: restaurante lleno + cola larga da un intervalo mayor que con capacidad libre a
+      igual reputación; restaurante con capacidad libre no se ve afectado.
+- [ ] Confirmar visualmente: un restaurante saturado recibe clientes con menor frecuencia
+      que uno con capacidad libre, a igual reputación.
 
 **No implementar todavía:** marketing; eventos; clientes VIP.
 
@@ -1315,44 +1076,16 @@ ritmo.
 
 ---
 
-### M07.4 — Demand balancing foundation
-
-**Objetivo:** preparar el sistema para futuros modificadores de demanda, sin implementar
-ninguno todavía.
-
-- [ ] Documentar (comentario junto a `core/demand.ts`, o en este mismo documento) los
-      factores futuros identificados que podrían modificar la demanda más adelante:
-      precios, calidad del servicio, recetas, decoración, empleados, eventos, zonas
-      especiales.
-- [ ] Confirmar que la forma actual de `deriveSpawnIntervalMs` (M07.1–M07.3) admite agregar
-      factores nuevos sin romper los ya existentes (p.ej. como argumentos adicionales
-      opcionales o una función compuesta) — sin implementar ninguno de esos factores
-      todavía.
-
-**No implementar estos factores todavía** — pertenecen a milestones posteriores (ver "M07
-scope boundaries" abajo y "Visión futura" al final de este documento).
-
-**Player-visible outcome:** sin cambio obligatorio — este paso es documentación/preparación,
-no funcionalidad nueva.
-
----
-
-### M07.5 — Validation and integration
+### M07.4 — Validation and integration
 
 **Objetivo:** validar el sistema completo de demanda en navegador, mismo tipo de revisión
-que cerró M05/M06 (M05.5 PR #23, M06.6 PR #31).
+que cerró M05/M06.
 
-- [ ] Escenario en navegador: restaurante con baja reputación → pocos clientes.
-- [ ] Escenario en navegador: restaurante con buena reputación → más clientes.
-- [ ] Escenario en navegador: restaurante saturado (mesas llenas + cola larga) → reducción
-      de la frecuencia de llegada.
-- [ ] Verificar: no hay spawn infinito sin límite (respeta el límite máximo de M07.2); no
-      hay conflicto con `CustomerSystem` (sigue siendo el único responsable de *ejecutar*
-      el spawn); no hay responsabilidades duplicadas entre `core/demand.ts` (cálculo) y
-      `CustomerSystem` (ejecución) — mismo tipo de chequeo de separación que M05.5/M06.6.
+- [ ] Escenarios en navegador: baja reputación → pocos clientes; buena reputación → más
+      clientes; restaurante saturado → menor frecuencia de llegada.
+- [ ] Verificar: no hay spawn infinito sin límite; no hay responsabilidades duplicadas
+      entre `core/demand.ts` (cálculo) y `CustomerSystem` (ejecución).
 - [ ] `pnpm test`, `tsc --noEmit` y `pnpm build` limpios.
-
-**No implementar:** nada nuevo — este paso es validación e integración.
 
 **Player-visible outcome:** el mismo del milestone completo (ver arriba).
 
@@ -1360,49 +1093,42 @@ que cerró M05/M06 (M05.5 PR #23, M06.6 PR #31).
 
 ### M07 scope boundaries
 
-Fuera de alcance — pertenecen a milestones posteriores:
-
-- menú;
-- recetas;
-- precios;
-- costes de producción;
-- salarios;
-- empleados;
-- cocina;
-- camareros;
-- pagos;
-- marketing avanzado;
-- eventos especiales.
+Fuera de alcance — pertenecen a milestones posteriores: menú; recetas; precios; costes de
+producción; salarios; empleados; cocina; camareros; pagos; marketing avanzado; eventos
+especiales. Modificadores futuros de demanda (precios, calidad de servicio, decoración,
+eventos) no se documentan como paso propio — cuando alguno de esos milestones llegue,
+extender `deriveSpawnIntervalMs` con ese factor como parte de su propio milestone de
+gameplay (ver "Regla de planificación" arriba), no antes.
 
 **Completion criteria (milestone completo):** `pnpm test` cubre los límites y valores
 representativos de la demanda basada en reputación (M07.2) y su reacción a la capacidad
 (M07.3); en el navegador, el intervalo de spawn responde a la reputación y se reduce cuando
-el restaurante está saturado, sin spawn infinito ni responsabilidades duplicadas entre
-`core/demand.ts` y `CustomerSystem`.
+el restaurante está saturado.
 
 ---
+
+*Reestructurado el 2026-08-22 bajo la nueva "Regla de planificación": M10 (Recipes) se
+fusionó dentro de M10 (Kitchen) — datos de receta sin cocina real no producían ningún
+`Player-visible outcome` propio, así que ahora llegan juntos. M11–M16 se renumeraron en
+consecuencia (antes M12–M17).*
 
 ## M08 — Waiters
 
 *Depende de: M04 (necesita clientes sentados a los que caminar).*
 
 - [ ] Crear entidad `Waiter` con `id`, posición y estado `idle`.
-- [ ] Marcar un cliente sentado como "solicita atención" (placeholder simple, sin pedido
-      real todavía — M09 lo conecta a pedidos reales).
-- [ ] El camarero detecta el primer cliente que solicita atención.
-- [ ] Reservar ese cliente (evita que dos camareros lo atiendan a la vez).
-- [ ] Test: un cliente ya reservado por un camarero no puede ser reservado por otro.
-- [ ] Camarero camina hacia el cliente reservado.
-- [ ] Al llegar, "atenderlo" (placeholder: quitar la marca de "solicita atención") y
-      volver a `idle`.
-- [ ] Confirmar visualmente: un camarero (sprite provisional) camina hacia un cliente
-      sentado y vuelve a esperar.
+- [ ] Marcar un cliente sentado como "solicita atención" (placeholder, sin pedido real
+      todavía — M09 lo conecta).
+- [ ] El camarero detecta y reserva al primer cliente que solicita atención (evita que dos
+      camareros atiendan al mismo cliente).
+- [ ] Camarero camina hacia el cliente reservado, lo "atiende" al llegar y vuelve a `idle`.
+- [ ] Test: un cliente ya reservado no puede ser reservado por otro camarero.
 
 **Player-visible outcome:** el jugador ve un camarero moverse desde su posición inicial
 hacia un cliente sentado y volver a esperar.
 
-**Completion criteria:** `pnpm test` cubre la reserva exclusiva de clientes; en el
-navegador el camarero recorre hasta un cliente y vuelve a `idle`.
+**Completion criteria:** `pnpm test` cubre la reserva exclusiva; en el navegador el
+camarero recorre hasta un cliente y vuelve a `idle`.
 
 ---
 
@@ -1410,90 +1136,58 @@ navegador el camarero recorre hasta un cliente y vuelve a `idle`.
 
 *Depende de: M08 (camarero real) y M05 (mecanismo de espera).*
 
-- [ ] Crear `game/menu.ts`: `MenuItem { id, name }`, lista mínima (2–3 platos, sin precio
-      todavía).
+- [ ] Crear `game/menu.ts`: `MenuItem { id, name }`, lista mínima (2–3 platos).
 - [ ] `pickRandomOrder(menu): MenuItem`, función pura.
-- [ ] Test: `pickRandomOrder` siempre devuelve un ítem del menú dado.
-- [ ] Al llegar a `seated`, el NPC pasa a `waiting` con motivo `order` (mismo mecanismo de
-      espera de M05).
-- [ ] Cuando el camarero (M08) atiende a un cliente en `waiting`/`order`, le asigna un
-      pedido (`pickRandomOrder`) y el cliente pasa a `waiting` con motivo `food`.
+- [ ] Al llegar a `seated`, el NPC pasa a `waiting` con motivo `order`; cuando el camarero
+      lo atiende, le asigna un pedido y pasa a `waiting` con motivo `food`.
 - [ ] Indicador visual (texto) sobre el NPC con su pedido.
-- [ ] *(Tarea posterior, no imprescindible en este incremento)* Timeout de espera de
-      pedido (motivo `order`), reutilizando el timeout de M05.
+- [ ] Test: `pickRandomOrder` siempre devuelve un ítem del menú dado.
 
 **Player-visible outcome:** el jugador ve al camarero tomar el pedido de un cliente
 sentado, y el pedido aparece como texto sobre el cliente.
 
-**Completion criteria:** cada cliente sentado pasa por `waiting` (motivo `order`), es
-atendido por un camarero y muestra visualmente qué pidió; `pnpm test` cubre
-`pickRandomOrder`.
+**Completion criteria:** cada cliente sentado es atendido y muestra visualmente qué pidió;
+`pnpm test` cubre `pickRandomOrder`.
 
 ---
 
-## M10 — Recipes
+## M10 — Recipes and kitchen
 
-*Sin dependencias de gameplay — son datos de definición usados recién en M11.*
+*Depende de: M09 (pedidos reales). Fusiona lo que antes eran dos milestones separados
+(Recipes + Kitchen) — datos de receta sin cocina real no tenían resultado jugable propio.
+La preparación debe durar segundos, no minutos.*
 
-**Nota de diseño futura (no implementar en este paso — ver "Visión futura" al final de este
-documento):** `RecipeDefinition` ya contempla `price`, pero el modelo económico avanzado
-necesitará además costes variables por receta — ingredientes, coste de producción, margen
-potencial derivado de `price - coste` — para que el jugador pueda tomar decisiones reales de
-rentabilidad por plato. Fuera de alcance de este incremento; se registra acá para que el
-campo `price` de hoy no se confunda con el modelo de costes completo que llega después.
+- [ ] Crear `RecipeDefinition { id, name, price, cost, preparationTime, quality, station }`
+      (`cost` desde el inicio, no solo `price` — deja explícita la diferencia
+      precio/coste que la economía necesitará en M13, sin implementar todavía nada con
+      ella) y una primera receta real (ej. Hamburguesa).
+- [ ] Crear entidad `CookingStation` con `id`, tipo, estado `idle`.
+- [ ] Modelar el pedido como estado `ordered → cooking → ready`: al recibir un pedido
+      (`waiting`/`food`, M09), reservar una estación libre e iniciar `cooking` con
+      temporizador `preparationTime`; al vencer, pasa a `ready` y la estación vuelve a
+      `idle`.
+- [ ] Indicador visual de "cocinando"/"listo".
+- [ ] Test: `canCookRecipe(station, recipe)` (compatible/incompatible); transición
+      `cooking → ready`.
+- [ ] Confirmar visualmente: un pedido pasa de cocinando a listo en pocos segundos.
 
-- [ ] Crear `RecipeDefinition { id, name, price, preparationTime, quality, station }`.
-- [ ] Crear una primera receta de prueba (ej. Hamburguesa) con esos campos.
-- [ ] Test: la receta de prueba tiene todos los campos requeridos con valores válidos.
+**Player-visible outcome:** el jugador ve un pedido pasar de "cocinando" a "listo" en la
+cocina, en segundos.
 
-**Player-visible outcome:** ninguno todavía — son datos de definición; preparan el terreno
-para que M11 (Cocina) tenga algo real que cocinar.
-
-**Completion criteria:** `pnpm test` cubre la validez de la receta de prueba.
-
----
-
-## M11 — Kitchen
-
-*Depende de: M09 (pedidos reales) y M10 (recetas). La preparación debe durar segundos, no
-minutos — el juego es relajado y con simulación acelerada.*
-
-- [ ] Crear entidad `CookingStation` con `id`, tipo y estado `idle`.
-- [ ] Función pura `canCookRecipe(station, recipe)`: valida que la estación soporte la
-      receta.
-- [ ] Test: `canCookRecipe` con estación compatible e incompatible.
-- [ ] Modelar el pedido como estado: `ordered → cooking → ready`.
-- [ ] Al recibir un pedido (`waiting`/`food`, de M09), reservar una estación libre e
-      iniciar `cooking`.
-- [ ] Temporizador de preparación usando `preparationTime` de la receta (M10).
-- [ ] Al vencer el temporizador, el pedido pasa a `ready` y la estación vuelve a `idle`.
-- [ ] Test: transición `cooking → ready` dado el tiempo transcurrido.
-- [ ] Indicador visual de "cocinando" / "listo" sobre la estación o el pedido.
-- [ ] Confirmar visualmente: un pedido pasa de cocinando a listo tras un tiempo corto
-      (segundos).
-
-**Player-visible outcome:** el jugador ve una estación de cocina pasar de inactiva a
-cocinando y luego a lista, en unos pocos segundos.
-
-**Completion criteria:** `pnpm test` cubre `canCookRecipe` y la transición
-`cooking → ready`; en el navegador el pedido de cada cliente cambia visualmente de estado.
+**Completion criteria:** `pnpm test` cubre `canCookRecipe` y la transición; en el
+navegador el pedido de cada cliente cambia visualmente de estado.
 
 ---
 
-## M12 — Food delivery
+## M11 — Food delivery
 
-*Depende de: M11 (comida lista) y M08 (camarero real).*
+*Depende de: M10 (comida lista) y M08 (camarero real).*
 
-- [ ] Camarero detecta un pedido en estado `ready`.
-- [ ] Camarero recoge la comida (placeholder: sin animación de "cargar bandeja" todavía).
-- [ ] Camarero camina hacia el cliente y entrega la comida; el pedido pasa a `delivered`.
-- [ ] Al recibir `delivered`, el NPC sale de `waiting` (motivo `food`).
+- [ ] Camarero detecta un pedido `ready`, camina hacia el cliente y lo entrega; el pedido
+      pasa a `delivered` y el NPC sale de `waiting` (motivo `food`).
 - [ ] Indicador visual del cambio (ej. ícono de plato en la mesa).
-- [ ] *(Tarea posterior, no imprescindible en este incremento)* Timeout de espera de
-      comida (motivo `food`), reutilizando el timeout de M05: si se agota antes de
-      `delivered`, dispara el mismo abandono enfadado.
-- [ ] Confirmar visualmente: el camarero recoge la comida lista y la lleva hasta el
-      cliente correspondiente.
+- [ ] Confirmar visualmente: el camarero recoge la comida lista y la lleva al cliente
+      correspondiente.
 
 **Player-visible outcome:** el jugador ve al camarero llevar la comida lista desde la
 cocina hasta el cliente que la pidió.
@@ -1503,14 +1197,12 @@ lista, transportada por el camarero.
 
 ---
 
-## M13 — Eating
+## M12 — Eating
 
-*Depende de: M12.*
+*Depende de: M11.*
 
-- [ ] Agregar estado `eating` a `NpcState`.
-- [ ] Al recibir `delivered`, el NPC pasa a `eating`.
-- [ ] Temporizador fijo de consumo.
-- [ ] Indicador visual de "comiendo".
+- [ ] Agregar estado `eating`; al recibir `delivered`, el NPC pasa a `eating` con un
+      temporizador fijo de consumo, con indicador visual de "comiendo".
 
 **Player-visible outcome:** el jugador ve al cliente pasar de sentado a "comiendo" tras
 recibir su comida.
@@ -1520,43 +1212,36 @@ comida.
 
 ---
 
-## M14 — Payment
+## M13 — Payment
 
-*Depende de: M13 y M02 (necesita `money` ya existente).*
+*Depende de: M12 y M02 (`money` ya existente). Primer paso donde el modelo económico
+avanzado ("Visión futura", al final de este documento) empieza a implementarse, no solo a
+documentarse — ver la regla de planificación arriba.*
 
-**Nota de diseño futura (no implementar en este paso — ver "Visión futura" al final de este
-documento):** este incremento fija `price` como un valor simple por `MenuItem`. El modelo
-económico avanzado espera que el jugador pueda configurar esos precios, y que el precio
-elegido sea una decisión estratégica con trade-offs (precio alto = mayor margen pero menor
-atractivo/mayores expectativas; precio bajo = menor margen pero mayor atractivo) — no solo
-una variable de ingreso fija. Fuera de alcance de este incremento.
+- [ ] Función pura que calcula el monto a pagar al terminar `eating`, usando `price` de la
+      receta (M10); sumarlo a `money` y mostrarlo en pantalla.
+- [ ] Si el alcance lo permite sin bloquear el milestone: UI mínima para que el jugador
+      configure el `price` de cada plato (el efecto de ese precio en la demanda/atractivo
+      queda fuera de este paso — ver M07 y "Visión futura").
+- [ ] Test: el monto pagado coincide con el precio del pedido.
+- [ ] Confirmar visualmente: al terminar de comer, se muestra el monto y el dinero del HUD
+      sube.
 
-- [ ] Agregar `price` a cada `MenuItem`.
-- [ ] Función pura que calcula el monto a pagar al terminar `eating`.
-- [ ] Test: el monto calculado coincide con el precio del pedido.
-- [ ] Mostrar el pago en pantalla (temporal, ej. texto flotante).
-- [ ] Sumar el pago al `money` del jugador (reutiliza el estado de M02).
-- [ ] Confirmar visualmente: al terminar de comer, se muestra el monto y el dinero del
-      HUD sube.
-
-**Player-visible outcome:** el jugador ve el monto pagado por el cliente y cómo sube el
-dinero en el HUD.
+**Player-visible outcome:** el jugador ve el monto pagado y el dinero del HUD sube; si se
+implementa la UI de precios, puede configurar cuánto cobra por cada plato.
 
 **Completion criteria:** `pnpm test` cubre el cálculo del monto; en el navegador el dinero
 del HUD sube al terminar de comer un cliente.
 
 ---
 
-## M15 — Exit / release table
+## M14 — Exit / release table
 
-*Depende de: M14, M06 (flujo de clientes y capacidad consolidados) y M04 (infraestructura
-de `leaving`).*
+*Depende de: M13, M06 (flujo de clientes y capacidad consolidados) y M04 (`leaving`).*
 
-- [ ] Tras pagar, el NPC dispara la misma transición a `leaving` de M04 (vía `sendToExit`)
-      y camina de vuelta a la puerta.
-- [ ] Confirmar que la mesa queda libre automáticamente al entrar en `leaving`
-      (`sendToExit` ya limpia `tableId` — ver M06.2; no hace falta invocar una función
-      `releaseTable` aparte, esta arquitectura no mantiene una lista de ocupación separada).
+- [ ] Tras pagar, el NPC dispara la transición a `leaving` (vía `sendToExit`) y camina a la
+      puerta; la mesa queda libre automáticamente (`sendToExit` ya limpia `tableId`, M06.2
+      — sin `releaseTable` aparte).
 - [ ] Confirmar visualmente: la mesa liberada es ocupada por el primer NPC en cola
       (`resolveTableQueue`, M05.2/M06.5) o por un cliente nuevo si no hay cola.
 
@@ -1568,34 +1253,30 @@ clientes.
 
 ---
 
-## M16 — First employee
+## M15 — First employee
 
-*Depende de: M01/M02 (sistema de compra) y M11/M12 (algo que un empleado pueda acelerar).
-Decisión abierta: qué hace exactamente el primer empleado — a resolver antes de empezar
-este milestone.*
+*Depende de: M01/M02 (compra) y M10/M11 (cocina/entrega, algo que un empleado pueda
+acelerar). Replanteado para que el efecto sea real, no solo un costo de contratación —
+velocidad, capacidad y coste operativo continuo, no solo puntual.*
 
-**Nota de diseño futura (no implementar en este paso — ver "Visión futura" al final de este
-documento):** este incremento solo pide un costo fijo de contratación. El modelo económico
-avanzado espera que los empleados tengan coste operativo continuo, no solo de contratación
-— p.ej. un Chef con salario diario/velocidad/capacidad, un Camarero con salario
-diario/capacidad de atención/eficiencia — como parte de los costes fijos diarios del
-restaurante. Fuera de alcance de este incremento.
+- [ ] Definir el efecto concreto: velocidad (menor `preparationTime`) o capacidad (más de
+      un pedido en paralelo por `CookingStation`) en cocina o entrega.
+- [ ] Costo fijo de contratación (M01/M02) **más** costo operativo continuo — ej. salario
+      diario descontado periódicamente de `money`, no solo al contratar.
+- [ ] Confirmar visualmente/por tiempo que el efecto se aplica y que el salario descuenta
+      dinero con el tiempo.
 
-- [ ] Definir el efecto concreto del empleado (ej. acelera cocina o entrega).
-- [ ] Costo fijo de contratación vía el sistema de compra de M01/M02.
-- [ ] Aplicar el efecto de forma medible.
-- [ ] Confirmar visualmente o por tiempo que el efecto se aplica.
+**Player-visible outcome:** el jugador contrata a un empleado, nota un cambio observable
+en el ritmo del loop, y ve su salario descontado del dinero con el tiempo.
 
-**Player-visible outcome:** el jugador puede contratar a un empleado y notar un cambio
-observable en el ritmo del loop (cocina o entrega más rápida).
-
-**Completion criteria:** contratar al empleado cambia observablemente el ritmo del loop.
+**Completion criteria:** contratar cambia observablemente el ritmo del loop; el costo
+operativo se refleja en el dinero del HUD con el tiempo.
 
 ---
 
-## M17 — First complete loop
+## M16 — First complete loop
 
-*Depende de: M01–M16 (integración, no sistemas nuevos).*
+*Depende de: M01–M15 (integración, no sistemas nuevos).*
 
 - [ ] Playtest manual del ciclo completo: construir/comprar mesa → cliente entra → mesa →
       camarero → pedido → cocina → recibe → come → paga → se va → dinero+reputación
@@ -1619,9 +1300,12 @@ consola.
 `.juntia/DECISIONS.md`, "Restaurant simulation economy model"). Esta sección describe
 dirección de diseño, no tareas — nada de lo siguiente se implementa todavía, ni pertenece a
 M06 (ver "M06 scope boundaries" más arriba). Se registra acá para que los milestones que
-dependan de estos sistemas (M07, M09, M10, M14, M16, y los que se desglosen más adelante)
+dependan de estos sistemas (M07, M09, M10, M13, M15, y los que se desglosen más adelante)
 tengan esta dirección presente en vez de implementarse ignorándola. Cada sistema se
-mantiene separado — no se fusionan en un único sistema monolítico de "economía".*
+mantiene separado — no se fusionan en un único sistema monolítico de "economía". Desde la
+"Regla de planificación" (2026-08-22, ver arriba), estos sistemas se implementan
+progresivamente dentro de cada milestone de gameplay que los necesita (p.ej. M13 ya agrega
+`cost`/UI de precios), no como preparación aparte antes de que la feature exista.*
 
 ### 1. Sistema de demanda de clientes
 
@@ -1635,10 +1319,10 @@ clientes al mismo ritmo indefinidamente. La demanda debe reducirse cuando la cap
 superada, para evitar colas infinitas, clientes entrando sin posibilidad real de servicio, y
 una simulación poco realista.
 
-Este sistema es precisamente M07 (Demand system foundation) — ya dividido en M07.1–M07.5
+Este sistema es precisamente M07 (Demand system foundation) — ya dividido en M07.1–M07.4
 (reputación en M07.2, capacidad/saturación en M07.3) tras el cierre de M06 — no algo a
 inventar más adelante. Los modificadores de demanda basados en precio o calidad de servicio
-siguen siendo futuros (ver M07.4).
+siguen siendo futuros (ver "M07 scope boundaries").
 
 ### 2. Sistema económico avanzado
 
@@ -1666,11 +1350,11 @@ estratégica de gestión:
 
 ### 4. Qué debe contemplar el roadmap futuro
 
-Sin crear implementación todavía — el roadmap posterior a M06 debe contemplar, cada uno
-como sistema separado: demanda dinámica de clientes; recetas con costes; menú y precios;
-empleados con costes; contabilidad diaria; rentabilidad del restaurante. Notas puntuales ya
-añadidas en M07 (demanda), M10 (recetas), M14 (pagos) y M16 (primer empleado) para que no se
-pierdan de vista al llegar a cada uno.
+El roadmap posterior a M06 contempla, cada uno como sistema separado pero implementado
+dentro de su propio milestone de gameplay (no como preparación aparte): demanda dinámica de
+clientes (M07); recetas con costes (M10); menú y precios (M13); empleados con costes (M15);
+contabilidad diaria y rentabilidad — todavía sin milestone propio, a definir cuando el loop
+completo (M16) esté jugable y se sienta la necesidad real.
 
 ---
 
