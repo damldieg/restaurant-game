@@ -9,14 +9,7 @@ import {
   removeDepartedCustomers,
   spawnCustomer,
 } from "../core/customers/customer";
-
-// Decisión confirmada en M04.3, ver .juntia/DECISIONS.md. Sigue el principio
-// confirmado en M03.5 (la simulación es la fuente de verdad; Phaser solo
-// representa lo que este sistema escriba en GameState). Será reemplazada por
-// el resultado de core/demand.ts:DeriveSpawnIntervalMs una vez M07.2 la
-// implemente (ver M07.1, docs/MILESTONES.md) — CustomerSystem seguirá
-// responsable solo de *ejecutar* el spawn, nunca de calcular el intervalo.
-const SPAWN_INTERVAL_MS = 2500;
+import { deriveSpawnIntervalMs } from "../core/demand";
 
 // Eventos de reputación por ciclo de vida de customer (M05.4, decisión de
 // producto confirmada, ver .juntia/DECISIONS.md). Se aplican exactamente
@@ -31,9 +24,11 @@ export class CustomerSystem implements GameSystem {
   update(state: GameState, deltaMs: number): void {
     this.elapsedSinceLastSpawnMs += deltaMs;
 
-    while (this.elapsedSinceLastSpawnMs >= SPAWN_INTERVAL_MS) {
-      this.elapsedSinceLastSpawnMs -= SPAWN_INTERVAL_MS;
+    let spawnIntervalMs = deriveSpawnIntervalMs(state.reputation);
+    while (this.elapsedSinceLastSpawnMs >= spawnIntervalMs) {
+      this.elapsedSinceLastSpawnMs -= spawnIntervalMs;
       state.customers.push(spawnCustomer(`customer-${this.nextId++}`));
+      spawnIntervalMs = deriveSpawnIntervalMs(state.reputation);
     }
 
     state.customers = state.customers.map((customer) => moveCustomer(customer, deltaMs));

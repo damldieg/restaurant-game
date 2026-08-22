@@ -1054,25 +1054,40 @@ limpios.
 
 ### M07.2 — Reputation-based demand
 
+**Estado: completado.**
+
 **Objetivo:** la reputación afecta la frecuencia de llegada de clientes — más reputación,
 más clientes; menos reputación, menos clientes.
 
-- [ ] Implementar `deriveSpawnIntervalMs(reputation: number): number` en `core/demand.ts`
-      (M07.1) con la fórmula real: a mayor `state.reputation`, menor intervalo, acotado
-      entre un mínimo y un máximo (valores de balance a confirmar como decisión de producto
-      antes de fijarlos en código — mismo patrón que precios M01, `STAY_DURATION_MS` M04.8,
-      etc.).
-- [ ] Reemplazar el `SPAWN_INTERVAL_MS` fijo de `CustomerSystem` por esta función, evaluada
-      contra `state.reputation` en cada spawn.
-- [ ] Test: límites de reputación (mínimo/máximo) y monotonicidad (a mayor reputación,
+- [x] Implementar `deriveSpawnIntervalMs(reputation: number): number` en `core/demand.ts`
+      (M07.1) con la fórmula real: interpolación lineal acotada entre 1200ms (reputación
+      >= 15) y 5000ms (reputación <= -5) — valores de balance confirmados como decisión de
+      producto, ver `.juntia/DECISIONS.md`.
+- [x] Reemplazar el `SPAWN_INTERVAL_MS` fijo de `CustomerSystem` por esta función, evaluada
+      contra `state.reputation` en cada spawn (recalculada dentro del bucle de spawn, no
+      una sola vez por tick — deja el terreno listo para M07.3, donde el spawn de un
+      customer puede cambiar la saturación que el propio bucle necesita reconsultar).
+- [x] Test: límites de reputación (mínimo/máximo) y monotonicidad (a mayor reputación,
       intervalo igual o menor).
-- [ ] Confirmar visualmente: con reputación alta llegan más clientes que con reputación
+- [x] Confirmar visualmente: con reputación alta llegan más clientes que con reputación
       baja, sin generar clientes sin límite.
 
 **No implementar todavía:** economía; precios; calidad de platos; capacidad/saturación
 (M07.3).
 
 **Player-visible outcome:** el restaurante recibe más o menos clientes según su reputación.
+
+Verificado en navegador: con la reputación inicial (8, del mobiliario default) el intervalo
+real es ~2530ms, cercano al viejo baseline fijo de 2500ms; subiendo la reputación a 13 (una
+mesa extra) la cola visible se vuelve notablemente más larga en la misma ventana de 20s que
+con reputación 8-10, sin errores de consola. Dos tests de `customer-system.test.ts`
+necesitaron ajustar su timing (spawnear 3 customers vía tres calls `update()` separados en
+vez de uno solo con `SPAWN_INTERVAL_MS * 3`) porque ese patrón de batch-spawn consumía de
+golpe la mayor parte del presupuesto de paciencia (15000ms) contra el nuevo intervalo más
+alto a reputación 0 — comportamiento de test, no un bug del sistema real (en el juego nunca
+llega un `deltaMs` tan grande de una sola vez).
+
+Verificado: `pnpm test` (126/126) y `tsc --noEmit` limpios.
 
 ---
 
