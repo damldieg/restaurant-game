@@ -1212,20 +1212,22 @@ siempre en la primera `M07.x` con estado pendiente, sin saltar pasos.
 
 ### M07.1 — Demand model foundation
 
+**Estado: completado.**
+
 **Objetivo:** crear la base conceptual del sistema de demanda — dónde vive la lógica, cómo
 se separa del ciclo de vida del cliente, y qué forma tendrá antes de calcular nada real.
 
-- [ ] Decidir y documentar dónde vive la lógica de demanda: un módulo puro nuevo en
+- [x] Decidir y documentar dónde vive la lógica de demanda: un módulo puro nuevo en
       `core/` (p.ej. `core/demand.ts`), sin `phaser`, mismo patrón que `core/reputation.ts`
       — separado de `core/customers/customer.ts` (ciclo de vida del cliente) y de
       `systems/customer-system.ts` (ejecución mecánica del spawn).
-- [ ] Definir la firma de la futura función de demanda (p.ej. `deriveSpawnIntervalMs(...):
+- [x] Definir la firma de la futura función de demanda (p.ej. `deriveSpawnIntervalMs(...):
       number`), sin implementar todavía la fórmula real — solo el contrato de entrada/salida
       que M07.2/M07.3 completarán.
-- [ ] Documentar que `SPAWN_INTERVAL_MS` (hoy una constante fija dentro de `CustomerSystem`)
+- [x] Documentar que `SPAWN_INTERVAL_MS` (hoy una constante fija dentro de `CustomerSystem`)
       será reemplazada por el resultado de esta función una vez exista — sin tocarla
       todavía en este paso.
-- [ ] Confirmar el límite de responsabilidad: `CustomerSystem` sigue siendo responsable
+- [x] Confirmar el límite de responsabilidad: `CustomerSystem` sigue siendo responsable
       solo de *ejecutar* el spawn (llamar `spawnCustomer` cuando corresponda); *calcular*
       cuándo corresponde vive en `core/demand.ts` — mismo split ya establecido entre
       `ReputationSystem` y `core/reputation.ts`.
@@ -1233,6 +1235,18 @@ se separa del ciclo de vida del cliente, y qué forma tendrá antes de calcular 
 **No implementar todavía:** reputación (M07.2); capacidad (M07.3); precios; empleados.
 
 **Player-visible outcome:** sin cambios visibles. Preparación interna del sistema.
+
+`core/demand.ts` (nuevo) exporta únicamente `type DeriveSpawnIntervalMs = (reputation:
+number) => number` — un contrato de tipos, no una función con cuerpo. Se eligió un `type`
+en vez de un stub ejecutable (p.ej. una función que devuelva un valor fijo o lance) porque
+cualquier cuerpo real hoy sería una fórmula inventada que M07.2 tendría que deshacer, no
+completar; el contrato de tipos deja el compilador validando la firma sin necesitar ningún
+valor de retorno todavía. `systems/customer-system.ts` solo ganó un comentario junto a
+`SPAWN_INTERVAL_MS` señalando el reemplazo futuro — la constante y el bucle de spawn no
+cambiaron. De paso, se corrigió una referencia obsoleta en ese mismo comentario
+(`NPC_SPAWN_INTERVAL_MS` / `NpcController` en `main.ts`) que databa de antes del refactor de
+Customer en M03.5 y ya no correspondía a ningún archivo real. Sin cambios de comportamiento;
+`pnpm test` (122/122) y `tsc --noEmit` limpios.
 
 ---
 
