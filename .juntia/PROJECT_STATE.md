@@ -223,9 +223,21 @@ depends on restaurant state." No architecture change recorded in `.juntia/ARCHIT
 the pattern already documented there (same as `core/reputation.ts`/`ReputationSystem`), not
 a new principle.
 
+**M07.1 (Demand model foundation) — done (2026-08-22).** Added `core/demand.ts`, exporting
+only `type DeriveSpawnIntervalMs = (reputation: number) => number` — a type contract, not a
+callable stub, so no invented formula exists for M07.2 to undo. `systems/customer-system.ts`
+gained a comment on `SPAWN_INTERVAL_MS` documenting that it will be replaced by this
+function's result once M07.2 implements it; the constant and spawn loop themselves are
+unchanged. Also fixed a stale `NPC_SPAWN_INTERVAL_MS`/`NpcController`/`main.ts` reference in
+that same comment, left over from before the M03.5 Customer refactor. No behavior change;
+`pnpm test` 122/122, `tsc --noEmit` clean. No new architecture decision — direct application
+of the existing `core`/`systems` split (same as `core/reputation.ts`/`ReputationSystem`).
+
 ## Next known step
 
-M06 is fully closed. **Next real task: M07.1 (Demand model foundation)** — decide and
-document where the demand logic lives (`core/demand.ts`), define its future function
-signature, and confirm the `core`/`systems` responsibility split, before M07.2 computes
-anything real. Not started yet.
+**Next real task: M07.2 (Reputation-based demand)** — implement `deriveSpawnIntervalMs`
+against `state.reputation` with min/max interval bounds, replace `CustomerSystem`'s fixed
+`SPAWN_INTERVAL_MS` with it, and add monotonicity/boundary tests. Balance values (min/max
+interval, scaling curve) are not objectively correct — confirm as a product decision before
+fixing them in code, same pattern as other balance values (`.juntia/DECISIONS.md`). Not
+started yet.

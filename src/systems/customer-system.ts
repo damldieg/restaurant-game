@@ -10,10 +10,12 @@ import {
   spawnCustomer,
 } from "../core/customers/customer";
 
-// Mismo ritmo que NPC_SPAWN_INTERVAL_MS en main.ts (NpcController) — decisión
-// confirmada en M04.3, ver .juntia/DECISIONS.md. Sigue el principio
+// Decisión confirmada en M04.3, ver .juntia/DECISIONS.md. Sigue el principio
 // confirmado en M03.5 (la simulación es la fuente de verdad; Phaser solo
-// representa lo que este sistema escriba en GameState).
+// representa lo que este sistema escriba en GameState). Será reemplazada por
+// el resultado de core/demand.ts:DeriveSpawnIntervalMs una vez M07.2 la
+// implemente (ver M07.1, docs/MILESTONES.md) — CustomerSystem seguirá
+// responsable solo de *ejecutar* el spawn, nunca de calcular el intervalo.
 const SPAWN_INTERVAL_MS = 2500;
 
 // Eventos de reputación por ciclo de vida de customer (M05.4, decisión de

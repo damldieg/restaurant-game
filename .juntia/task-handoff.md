@@ -1,5 +1,5 @@
 <!-- juntia:generated -->
-<!-- juntia:task-meta {"text":"Implementar M06.6: Validation and integration, cerrando M06. Validar en el navegador el escenario completo: multiples clientes llegan, las mesas se llenan, clientes esperan en cola, algunos abandonan por paciencia, mesas se liberan, nuevos clientes entran y ocupan las mesas liberadas. Verificar que no existen dobles asignaciones de mesa, que ningun customer queda en un estado imposible, que la reputacion sigue funcionando correctamente, y que las responsabilidades siguen separadas entre CustomerSystem, ReputationSystem y CustomerRenderer. No implementar funcionalidad nueva.","generatedAt":"2026-08-21T23:26:25.680Z"} -->
+<!-- juntia:task-meta {"text":"Implementar M07.1: Demand model foundation. Decidir y documentar dónde vive la lógica de demanda (core/demand.ts), definir la firma futura de su función, y confirmar el split de responsabilidades core/systems, sin implementar cómputo real todavía.","generatedAt":"2026-08-22T10:32:44.003Z"} -->
 # Task Handoff
 
 Juntia classified this request and resolved the process to follow. Juntia does not decide HOW to build
@@ -7,14 +7,11 @@ this — that reasoning, planning, and implementation stay entirely yours.
 
 ## Request
 
-> Implementar M06.6: Validation and integration, cerrando M06. Validar en el navegador el escenario completo: multiples clientes llegan, las mesas se llenan, clientes esperan en cola, algunos abandonan por paciencia, mesas se liberan, nuevos clientes entran y ocupan las mesas liberadas. Verificar que no existen dobles asignaciones de mesa, que ningun customer queda en un estado imposible, que la reputacion sigue funcionando correctamente, y que las responsabilidades siguen separadas entre CustomerSystem, ReputationSystem y CustomerRenderer. No implementar funcionalidad nueva.
+> Implementar M07.1: Demand model foundation. Decidir y documentar dónde vive la lógica de demanda (core/demand.ts), definir la firma futura de su función, y confirmar el split de responsabilidades core/systems, sin implementar cómputo real todavía.
 
 ## Task Status
 
-READY_TO_CONTINUE
-
-A decision that was blocking part of this task has just been confirmed — see "Confirmed decisions"
-below for the real answer, then continue the work that was waiting on it.
+ACTIVE
 
 Task type: Feature
 Confidence: 0.9
@@ -55,8 +52,7 @@ areas become concrete at different points.
 Confirmed since this task started — re-check before finishing, even if it contradicts what you already
 proposed or implemented:
 
-- Q: "¿La generación de nuevos clientes (demanda) debe depender del estado del restaurante, o puede seguir siendo un spawn fijo independiente del mundo?" -> CONFIRMED: Customer demand depends on restaurant state: la generación de clientes debe depender progresivamente de variables del restaurante como reputación, capacidad y saturación, evitando un spawn fijo independiente del mundo. (product decision, 2026-08-21)
-  (options on the table when asked: Customer demand depends on restaurant state: la generación de clientes debe depender progresivamente de variables del restaurante como reputación, capacidad y saturación, evitando un spawn fijo independiente del mundo.)
+None yet.
 
 Already known when this task started:
 
@@ -90,6 +86,8 @@ Already known when this task started:
   (options on the table when asked: Abandono -2 / Ciclo completo +1 (penaliza el doble de lo que premia — el abandono debe doler más que lo que aporta un servicio normal), Abandono -1 / Ciclo completo +1 (simétrico — un abandono cancela exactamente un ciclo completo), Abandono -5 / Ciclo completo +2 (impacto fuerte — el abandono es un evento negativo grave comparado con el aporte de mobiliario))
 - Q: "¿Qué modelo económico y de demanda usará el juego a futuro, más allá de M06 (Customer flow robustness)?" -> CONFIRMED: Restaurant simulation economy model: el juego se basará en un modelo económico de gestión donde el jugador controla precios, capacidad y costes operativos. La rentabilidad dependerá del equilibrio entre demanda, servicio y gastos. (product decision, 2026-08-21)
   (options on the table when asked: Restaurant simulation economy model: el juego se basará en un modelo económico de gestión donde el jugador controla precios, capacidad y costes operativos. La rentabilidad dependerá del equilibrio entre demanda, servicio y gastos.)
+- Q: "¿La generación de nuevos clientes (demanda) debe depender del estado del restaurante, o puede seguir siendo un spawn fijo independiente del mundo?" -> CONFIRMED: Customer demand depends on restaurant state: la generación de clientes debe depender progresivamente de variables del restaurante como reputación, capacidad y saturación, evitando un spawn fijo independiente del mundo. (product decision, 2026-08-21)
+  (options on the table when asked: Customer demand depends on restaurant state: la generación de clientes debe depender progresivamente de variables del restaurante como reputación, capacidad y saturación, evitando un spawn fijo independiente del mundo.)
 
 ## Agent Context
 
@@ -145,7 +143,7 @@ The same information above, structured for programmatic use — navigation, neve
     ".juntia/context.md",
     ".juntia/governance/workflows/feature-development.md"
   ],
-  "taskStatus": "READY_TO_CONTINUE"
+  "taskStatus": "ACTIVE"
 }
 ```
 
