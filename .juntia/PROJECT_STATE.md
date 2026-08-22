@@ -233,6 +233,31 @@ that same comment, left over from before the M03.5 Customer refactor. No behavio
 `pnpm test` 122/122, `tsc --noEmit` clean. No new architecture decision — direct application
 of the existing `core`/`systems` split (same as `core/reputation.ts`/`ReputationSystem`).
 
+**Roadmap restructured (2026-08-22, planning-only — no `src/` changes) under a new
+planning-criteria product decision** (see `.juntia/DECISIONS.md`, "A partir de M07, ¿qué
+criterio prioriza la planificación de milestones..."): from M07 onward, milestones must
+produce a player-visible outcome; documentation/refactor steps live inside the gameplay
+milestone that needs them, not as standalone milestones, unless they avoid a costly
+refactor or define an important new responsibility. `docs/MILESTONES.md` gained a "Regla de
+planificación (desde M07)" section codifying this, and its M04–M06 sections were compressed
+in place (long narrative/bug-finding prose trimmed to short verification lines — detail
+recoverable via git/PR history, not this document; no checklist items or `[x]` marks
+changed).
+
+Concretely: **M07** dropped from 5 sub-steps to 4 — M07.1 stays completed as historical
+record (it was a type-contract-only foundation step under the old criteria, not reopened);
+the old M07.4 ("document future demand modifiers") was folded into "M07 scope boundaries"
+instead of being its own step; M07.2/M07.3 (reputation, then capacity/saturation) are
+unchanged in substance; old M07.5 (validation) is now M07.4. **M10 (Recipes)** — previously
+pure data with no player-visible outcome of its own — was merged into **M10 (Recipes and
+kitchen)**, so recipes always ship bundled with a visible cooking flow; M11–M16 renumbered
+down from the old M12–M17 accordingly (Food delivery → M11, Eating → M12, Payment → M13,
+Exit/release table → M14, First employee → M15, First complete loop → M16). M13 (Payment)
+now introduces `cost` alongside `price` on `RecipeDefinition` and an optional price-config
+UI, pulling a slice of the "Visión futura" economy model into a real milestone instead of
+deferring it entirely. M15 (First employee) now requires a measurable velocity/capacity
+effect plus continuous operating cost (not just a one-time hiring cost).
+
 ## Next known step
 
 **Next real task: M07.2 (Reputation-based demand)** — implement `deriveSpawnIntervalMs`
