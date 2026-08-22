@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CustomerSystem } from "./customer-system";
 import { createGameState } from "../state/game-state";
+import { deriveSpawnIntervalMs } from "../core/demand";
 import {
   getOccupiedTableIds,
   getTableQueuePosition,
@@ -9,7 +10,9 @@ import {
   type Customer,
 } from "../core/customers/customer";
 
-const SPAWN_INTERVAL_MS = 2500;
+// Todos los tests de este archivo usan createGameState(_, 0) — el intervalo
+// real a reputación 0 (M07.2), no un valor fijo arbitrario.
+const SPAWN_INTERVAL_MS = deriveSpawnIntervalMs(0);
 
 // M06.1 — invariantes por estado documentados junto a CustomerState
 // (core/customers/customer-state.ts). A diferencia de los tests por función
@@ -135,7 +138,14 @@ describe("CustomerSystem", () => {
     const state = createGameState(500, 0);
     const system = new CustomerSystem();
 
-    system.update(state, SPAWN_INTERVAL_MS * 3);
+    // Tres calls separados (no SPAWN_INTERVAL_MS * 3 de una sola vez): así
+    // cada customer entra a la cola con su propio deltaMs de esa llamada
+    // (no el acumulado de las tres), dejando margen real de paciencia —
+    // igual que en el juego real, donde los spawns nunca llegan en un solo
+    // frame gigante.
+    system.update(state, SPAWN_INTERVAL_MS);
+    system.update(state, SPAWN_INTERVAL_MS);
+    system.update(state, SPAWN_INTERVAL_MS);
     system.update(state, 5000);
 
     const waiting = state.customers.find((customer) => customer.tableId === null);
@@ -277,7 +287,11 @@ describe("CustomerSystem", () => {
     const state = createGameState(500, 0);
     const system = new CustomerSystem();
 
-    system.update(state, SPAWN_INTERVAL_MS * 3);
+    // Ver comentario en el test anterior sobre por qué son tres calls
+    // separados en vez de SPAWN_INTERVAL_MS * 3.
+    system.update(state, SPAWN_INTERVAL_MS);
+    system.update(state, SPAWN_INTERVAL_MS);
+    system.update(state, SPAWN_INTERVAL_MS);
     system.update(state, 5000);
 
     const waiting = state.customers.find((customer) => customer.tableId === null);
