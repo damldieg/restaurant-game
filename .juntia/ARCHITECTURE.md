@@ -128,7 +128,7 @@ de como función de dominio:
 - **La ocupación no se duplica entre capas.** `getOccupiedTableIds(customers)`
   (`core/customers/customer.ts`) es el único punto que deriva "qué mesas están ocupadas
   ahora mismo" a partir de `state.customers`; `assignTables` lo usa en vez de recalcularlo
-  inline, y cualquier código futuro (M06.3 capacidad, M07 demanda, M15 exit/release) debe
+  inline, y cualquier código futuro (M06.3 capacidad, M07 demanda, M14 exit/release) debe
   reutilizarlo en vez de mantener su propia copia.
 - **No hay una función `releaseTable` independiente.** La liberación de una mesa sigue
   siendo un efecto de `sendToExit` (`tableId → null`), recogido por `getOccupiedTableIds`/

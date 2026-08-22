@@ -5,6 +5,7 @@
 - Las tareas se ejecutan en orden dentro de cada milestone, y los milestones en orden.
 - Trabajar siempre en la primera tarea `[ ]` que esté desbloqueada (sin dependencias `[ ]`/`[-]` sin resolver antes).
 - Cada tarea se verifica (test, `tsc --noEmit`, o chequeo visual en el navegador) antes de marcarla `[x]`.
+- Un milestone completo (no una tarea suelta) además cumple la "Definition of Done de gameplay milestones" (ver abajo) antes de darse por cerrado.
 - No saltar milestones ni implementar varias tareas grandes de una sola vez sin necesidad.
 - Implementar una sola tarea por sesión, salvo pedido explícito de continuar.
 - Estados: `[ ]` pendiente · `[x]` completada y verificada · `[-]` bloqueada (con motivo breve al lado).
@@ -41,6 +42,27 @@ Desde M07 en adelante:
 - Este documento se mantiene compacto: objetivo, tareas, límites, `Player-visible outcome`,
   criterio de cierre. El detalle de implementación (bugs encontrados, diseño de tests,
   capturas de verificación) pertenece al PR que implementa el paso, no a este documento.
+
+## Definition of Done de gameplay milestones
+
+*Añadido el 2026-08-22 junto con la "Regla de planificación" de arriba — el criterio
+concreto para juzgar si un milestone de gameplay (M07 en adelante) está realmente
+terminado, no solo técnicamente correcto.*
+
+Un milestone de gameplay no se considera completo solo porque:
+
+- los tests pasan;
+- la arquitectura está correcta.
+
+Debe tener:
+
+- una interacción visible para el jugador, o
+- una decisión estratégica nueva disponible para el jugador.
+
+Si ninguna de las dos se cumple, el milestone no está listo para marcarse `[x]` como
+completo, sin importar cuánto código o cuántos tests respalden el paso — hay que seguir
+trabajando el paso hasta que produzca una de las dos, o replantearlo como parte de otro
+milestone que sí lo haga (ver "Regla de planificación" arriba).
 
 ## Fantasía central del jugador
 
