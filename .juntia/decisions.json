@@ -278,6 +278,23 @@
       "source": "human",
       "confirmedAt": "2026-08-22T16:41:07.036Z",
       "status": "active"
+    },
+    {
+      "id": "6767f65939",
+      "type": "product",
+      "question": "¿Qué valores de balance (mínimo/máximo de intervalo de spawn, y puntos de referencia de reputación) debe usar deriveSpawnIntervalMs(reputation) en M07.2?",
+      "context": "Hoy CustomerSystem usa SPAWN_INTERVAL_MS fijo (2500ms) sin importar la reputación. M07.2 pide reemplazarlo por una función que derive el intervalo de la reputación, acotada entre un mínimo (reputación alta) y un máximo (reputación baja), monótona. La reputación arranca en 0 y puede ser negativa (se vio hasta -3 en los playtests de M06.6) o crecer con mobiliario (mesa +3, silla +1).",
+      "options": [
+        "Moderado: intervalo 1200ms (rep >= +15) a 5000ms (rep <= -5), interpolación lineal entre esos puntos. En rep=0 (inicio de partida) el intervalo es ~3600ms, cercano al baseline actual de 2500ms.",
+        "Ajustado (tight): intervalo 1500ms a 4000ms sobre el mismo rango de reputación (-5..+15) — la demanda varía menos dramáticamente con la reputación.",
+        "Amplio (wide): intervalo 1000ms a 6000ms sobre el mismo rango de reputación (-5..+15) — un restaurante con mala reputación se siente notablemente vacío, uno con buena reputación notablemente ocupado."
+      ],
+      "evidence": [],
+      "reason": "Es un valor de balance sin una respuesta objetivamente correcta (trigger balancing_value, requiere confirmación), mismo patrón que otros valores ya confirmados (precios M01, dinero inicial M02, STAY_DURATION_MS M04.8, WAIT_DURATION_MS M05.3).",
+      "text": "Moderado: intervalo 1200ms (reputacion >= 15) a 5000ms (reputacion <= -5), interpolacion lineal entre esos puntos. En reputacion=0 (inicio de partida) el intervalo es ~3600ms, cercano al baseline actual de 2500ms.",
+      "source": "human",
+      "confirmedAt": "2026-08-22T16:59:58.544Z",
+      "status": "active"
     }
   ]
 }

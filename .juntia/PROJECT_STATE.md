@@ -258,11 +258,31 @@ UI, pulling a slice of the "Visión futura" economy model into a real milestone 
 deferring it entirely. M15 (First employee) now requires a measurable velocity/capacity
 effect plus continuous operating cost (not just a one-time hiring cost).
 
+**M07.2 (Reputation-based demand) — done (2026-08-22).** `core/demand.ts`'s
+`deriveSpawnIntervalMs` now implements the real formula: linear interpolation clamped
+between 1200ms (reputation >= 15) and 5000ms (reputation <= -5) — balance values confirmed
+as a product decision, see `.juntia/DECISIONS.md`. `CustomerSystem` recomputes it inside the
+spawn loop (once per spawn, not once per tick) rather than caching it once per `update()`
+call — inert for M07.2 alone, but sets up correctly for M07.3, where spawning a customer
+changes the saturation the loop itself needs to re-check.
+
+Verified in-browser (Playwright via `npx playwright`, no project devDependency added):
+at the game's real starting reputation (8, from default furniture, not the 0 passed as
+`GameState`'s base value before `ReputationSystem` runs) the interval is ~2530ms, close to
+the old fixed 2500ms baseline; raising reputation to 13 (one extra table) produced a
+visibly longer/more backed-up queue over the same 20s window than at reputation 8-10, with
+zero console errors throughout. Two `customer-system.test.ts` tests needed their spawn
+setup changed from one `update(SPAWN_INTERVAL_MS * 3)` call to three separate
+`update(SPAWN_INTERVAL_MS)` calls — the batched version dumped ~81% of the 15000ms patience
+budget into a single tick against the new (higher-at-rep-0) interval, which no real game
+frame ever does. `pnpm test` 126/126 (122 + 4 new `demand.test.ts` cases), `tsc --noEmit`
+clean.
+
 ## Next known step
 
-**Next real task: M07.2 (Reputation-based demand)** — implement `deriveSpawnIntervalMs`
-against `state.reputation` with min/max interval bounds, replace `CustomerSystem`'s fixed
-`SPAWN_INTERVAL_MS` with it, and add monotonicity/boundary tests. Balance values (min/max
-interval, scaling curve) are not objectively correct — confirm as a product decision before
-fixing them in code, same pattern as other balance values (`.juntia/DECISIONS.md`). Not
+**Next real task: M07.3 (Capacity pressure and saturation)** — extend
+`deriveSpawnIntervalMs` to also react to capacity, reusing `isRestaurantFull`/
+`getTableQueueSize` (`core/customers/customer.ts`, M06.3) without re-walking
+`state.customers` outside those functions. Reduce arrival frequency when the restaurant is
+saturated (full tables + long queue), on top of the reputation-driven rate from M07.2. Not
 started yet.
