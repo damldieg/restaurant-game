@@ -151,36 +151,6 @@ export function moveCustomer(customer: Customer, deltaMs: number): Customer {
   };
 }
 
-// Asigna mesa a los customers `idle` o `waiting` (por mesa) sin `tableId`
-// todavía, usando `findFreeTable`/`getSeatForTable`. Evita doble asignación
-// de la misma mesa dentro de la misma pasada llevando una lista de
-// posiciones ya ocupadas (las ya asignadas + las que se van asignando en
-// este mismo llamado). No muta los Customer originales.
-//
-// FIFO entre `waiting` e `idle` (M05.2): procesa `customers` en su orden de
-// array — nunca reordenado, ver `spawnCustomer`/`removeDepartedCustomers` —
-// así que un customer que ya estaba `waiting` (llegó antes) siempre aparece
-// antes que uno recién `idle` en esta misma pasada, y por lo tanto siempre
-// se evalúa primero para cualquier mesa que se libere. `resolveTableQueue`
-// expresa este mismo criterio como función standalone y testeada por
-// separado, aunque hoy sin uso real fuera de sus propios tests — M06.2
-// confirmó que no habrá una función `releaseTable` independiente que la
-// invoque (ver `.dorch/history/ARCHITECTURE.md`); la liberación sigue siendo un
-// efecto de `sendToExit` (`tableId → null`), recogido por esta misma
-// función en el siguiente pase de `assignTables`.
-//
-// Sin mesa libre: un customer `idle` pasa a `waiting` con `waitReason:
-// "table"` y `target` al primer slot de cola libre (mismo patrón de
-// `occupied`-tracking, ahora también para slots de cola, evitando que dos
-// customers que entran a la cola en la misma pasada se superpongan). Un
-// customer que ya estaba `waiting` se deja intacto — ya tiene su slot.
-//
-// Con mesa libre: fija `tableId`, apunta `target` al asiento, limpia
-// `waitReason`/`waitRemainingMs` (si venía de la cola) y vuelve a `walking`
-// para que `moveCustomer` lo lleve hasta ahí y lo siente al llegar
-// (transición `walking → seated`, ver `moveCustomer`) — esta función nunca
-// sienta al customer directamente.
-
 // Deriva qué mesas están ocupadas ahora mismo, a partir de `Customer.tableId`
 // (M06.2 — antes vivía inline al principio de `assignTables`). `Customer` es
 // la única fuente de verdad de ocupación (decisión confirmada en M04.4/M04.6,
@@ -225,6 +195,35 @@ export function isRestaurantFull(customers: Customer[], furnitureList: Furniture
   return findFreeTable(getOccupiedTablePositions(customers, furnitureList)) === undefined;
 }
 
+// Asigna mesa a los customers `idle` o `waiting` (por mesa) sin `tableId`
+// todavía, usando `findFreeTable`/`getSeatForTable`. Evita doble asignación
+// de la misma mesa dentro de la misma pasada llevando una lista de
+// posiciones ya ocupadas (las ya asignadas + las que se van asignando en
+// este mismo llamado). No muta los Customer originales.
+//
+// FIFO entre `waiting` e `idle` (M05.2): el invariante de orden FIFO se
+// enuncia junto a su aplicación, ver `spawnCustomer`/`removeDepartedCustomers`;
+// así que un customer que ya estaba `waiting` (llegó antes) siempre aparece
+// antes que uno recién `idle` en esta misma pasada, y por lo tanto siempre
+// se evalúa primero para cualquier mesa que se libere. `resolveTableQueue`
+// expresa este mismo criterio como función standalone y testeada por
+// separado, aunque hoy sin uso real fuera de sus propios tests — M06.2
+// confirmó que no habrá una función `releaseTable` independiente que la
+// invoque (ver `.dorch/history/ARCHITECTURE.md`); la liberación sigue siendo un
+// efecto de `sendToExit` (`tableId → null`), recogido por esta misma
+// función en el siguiente pase de `assignTables`.
+//
+// Sin mesa libre: un customer `idle` pasa a `waiting` con `waitReason:
+// "table"` y `target` al primer slot de cola libre (mismo patrón de
+// `occupied`-tracking, ahora también para slots de cola, evitando que dos
+// customers que entran a la cola en la misma pasada se superpongan). Un
+// customer que ya estaba `waiting` se deja intacto — ya tiene su slot.
+//
+// Con mesa libre: fija `tableId`, apunta `target` al asiento, limpia
+// `waitReason`/`waitRemainingMs` (si venía de la cola) y vuelve a `walking`
+// para que `moveCustomer` lo lleve hasta ahí y lo siente al llegar
+// (transición `walking → seated`, ver `moveCustomer`) — esta función nunca
+// sienta al customer directamente.
 export function assignTables(customers: Customer[], furnitureList: Furniture[]): Customer[] {
   const occupiedTables: GridPosition[] = getOccupiedTablePositions(customers, furnitureList);
 
