@@ -10,16 +10,16 @@ import {
 } from "../restaurant";
 
 // Velocidad de caminata — tiles/segundo (decisión confirmada en M04.5, ver
-// .juntia/DECISIONS.md).
+// .dorch/history/DECISIONS.md).
 export const CUSTOMER_SPEED_TILES_PER_SEC = 1.5;
 
 // Tiempo que un customer permanece "seated" antes de irse — placeholder fijo
 // sin comida/pedido real todavía (decisión confirmada en M04.8, ver
-// .juntia/DECISIONS.md).
+// .dorch/history/DECISIONS.md).
 export const STAY_DURATION_MS = 10_000;
 
 // Paciencia de un customer "waiting" por mesa antes de abandonar (decisión
-// confirmada en M05.3, ver .juntia/DECISIONS.md).
+// confirmada en M05.3, ver .dorch/history/DECISIONS.md).
 export const WAIT_DURATION_MS = 15_000;
 
 // Único motivo de espera implementado por ahora (M05.1) — el pedido
@@ -165,7 +165,7 @@ export function moveCustomer(customer: Customer, deltaMs: number): Customer {
 // expresa este mismo criterio como función standalone y testeada por
 // separado, aunque hoy sin uso real fuera de sus propios tests — M06.2
 // confirmó que no habrá una función `releaseTable` independiente que la
-// invoque (ver `.juntia/ARCHITECTURE.md`); la liberación sigue siendo un
+// invoque (ver `.dorch/history/ARCHITECTURE.md`); la liberación sigue siendo un
 // efecto de `sendToExit` (`tableId → null`), recogido por esta misma
 // función en el siguiente pase de `assignTables`.
 //
@@ -184,7 +184,7 @@ export function moveCustomer(customer: Customer, deltaMs: number): Customer {
 // Deriva qué mesas están ocupadas ahora mismo, a partir de `Customer.tableId`
 // (M06.2 — antes vivía inline al principio de `assignTables`). `Customer` es
 // la única fuente de verdad de ocupación (decisión confirmada en M04.4/M04.6,
-// ver `.juntia/ARCHITECTURE.md`): no existe un `occupiedTables` ni un
+// ver `.dorch/history/ARCHITECTURE.md`): no existe un `occupiedTables` ni un
 // `Table.isOccupied` aparte que pueda desincronizarse — cualquier código que
 // necesite saber qué mesas están libres pasa por acá en vez de recorrer
 // `state.customers` a mano.

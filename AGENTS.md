@@ -1,0 +1,1 @@
+Project context lives in .dorch/ (see project.md, memory.md, decisions.md).

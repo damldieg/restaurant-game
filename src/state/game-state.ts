@@ -7,7 +7,7 @@ export interface GameState {
   // Acumulador de eventos dinámicos de reputación (M05.4) — abandono/ciclo
   // completo de customers. ReputationSystem lo suma a la reputación
   // derivada del mobiliario; nunca inspecciona state.customers (decisión
-  // confirmada: "Customer lifecycle events ownership", ver .juntia/DECISIONS.md).
+  // confirmada: "Customer lifecycle events ownership", ver .dorch/history/DECISIONS.md).
   reputationAdjustments: number;
   furniture: Furniture[];
   customers: Customer[];

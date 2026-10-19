@@ -13,16 +13,17 @@
 
 ## Relación con PROJECT_STATE.md
 
-`.juntia/PROJECT_STATE.md` = estado actual (dónde estamos). `docs/MILESTONES.md` = roadmap
-(qué construir ahora). `.juntia/ARCHITECTURE.md` = por qué está construido así. Los PRs (y
+`.dorch/project.md` = estado actual canónico (dónde estamos) y fuente de contexto del proyecto.
+La historia migrada vive en `.dorch/history/{PROJECT_STATE,ARCHITECTURE,DECISIONS}.md` como
+referencia de solo lectura. `docs/MILESTONES.md` = roadmap (qué construir ahora). Los PRs (y
 `git log`) = cómo se implementó cada paso. Al completar una tarea, actualizar
-`PROJECT_STATE.md` con una entrada breve y dejar el detalle narrativo (hallazgos, decisiones
-de test, capturas de verificación) en la descripción del PR — no duplicarlo en este
-documento.
+`.dorch/project.md` (o `.dorch/changes/*/status.md`) con una entrada breve y dejar el detalle
+narrativo (hallazgos, decisiones de test, capturas de verificación) en la descripción del PR —
+no duplicarlo en este documento.
 
 ## Regla de planificación (desde M07)
 
-*Decisión de producto confirmada el 2026-08-22 (ver `.juntia/DECISIONS.md`). Hasta M06, el
+*Decisión de producto confirmada el 2026-08-22 (ver `.dorch/history/DECISIONS.md`). Hasta M06, el
 roadmap intercaló pasos de "foundation"/documentación explícitos antes de cada feature real
 (M04.1, M05.1, M06.1, etc.) — correcto para asentar la arquitectura base (`GameState`,
 `core`/`state`/`systems`, invariantes de `Customer`), pero a partir de M07 le da demasiado
@@ -102,7 +103,7 @@ Ya implementado:
 - [x] Crear catálogo de muebles comprables: `FurnitureDefinition { type, name, price }`
       (ej. mesa, silla), separado de las instancias ya colocadas en el restaurante.
 - [x] Definir el precio de cada tipo de mueble del catálogo. (Mesa 100 / Silla 25 —
-      decisión confirmada, ver `.juntia/DECISIONS.md`.)
+      decisión confirmada, ver `.dorch/history/DECISIONS.md`.)
 - [x] Función pura `isValidPlacement(position, grid, existingFurniture)`: valida límites
       del grid y colisión con muebles existentes.
 - [x] Test: colocación dentro de límites y sin colisión es válida.
@@ -134,7 +135,7 @@ grid.
 *Depende de: M01 (necesita algo que comprar).*
 
 - [x] `money` como estado real del juego (no solo texto), con un valor inicial. ($500 —
-      decisión confirmada, ver `.juntia/DECISIONS.md`.)
+      decisión confirmada, ver `.dorch/history/DECISIONS.md`.)
 - [x] Mostrar `money` en el HUD.
 - [x] Función pura `canAfford(money, price)`.
 - [x] Test: `canAfford` con fondos suficientes e insuficientes.
@@ -154,8 +155,8 @@ comprar y la compra se bloquea sin fondos suficientes.
 ## M02.5 — Core simulation foundation
 
 *Depende de: M01 y M02 (reorganiza su código existente). No agrega comportamiento nuevo — es
-preparación arquitectónica antes de M03. Ver `.juntia/ARCHITECTURE.md` para el resultado
-completo y `.juntia/DECISIONS.md` para la decisión arquitectónica que la origina.*
+preparación arquitectónica antes de M03. Ver `.dorch/history/ARCHITECTURE.md` para el resultado
+completo y `.dorch/history/DECISIONS.md` para la decisión arquitectónica que la origina.*
 
 - [x] Crear la estructura inicial `src/core/`, `src/state/`, `src/systems/` (con un README
       breve cada una describiendo su rol; sin mover código todavía).
@@ -177,8 +178,8 @@ completo y `.juntia/DECISIONS.md` para la decisión arquitectónica que la origi
 - [x] Agregar `update(time, delta)` a `RestaurantScene`, que llama a `runSystems` con la lista
       de sistemas vacía en cada frame — el flujo `Phaser update(delta) → Game systems update →
       GameState` queda armado y operativo, aunque no haga nada todavía.
-- [x] Documentar la arquitectura resultante en `.juntia/ARCHITECTURE.md` y registrar la
-      decisión arquitectónica en `.juntia/DECISIONS.md`.
+- [x] Documentar la arquitectura resultante en `.dorch/history/ARCHITECTURE.md` y registrar la
+      decisión arquitectónica en `.dorch/history/DECISIONS.md`.
 
 **Player-visible outcome:** el jugador no verá grandes cambios visuales, pero la arquitectura
 queda preparada para añadir reputación, clientes, cocina y empleados sin mezclar lógica de
@@ -196,9 +197,9 @@ cierre de M02 (compra de mesas, HUD de dinero, NPCs).
 *Depende de: M01 (necesita muebles con valor de reputación).*
 
 - [x] `reputation` como estado real del juego (no solo texto), con un valor inicial. (0 —
-      decisión confirmada, ver `.juntia/DECISIONS.md`.)
+      decisión confirmada, ver `.dorch/history/DECISIONS.md`.)
 - [x] Agregar un valor de reputación a cada `FurnitureDefinition` del catálogo (M01). (Mesa
-      +3 / Silla +1 — decisión confirmada, ver `.juntia/DECISIONS.md`.)
+      +3 / Silla +1 — decisión confirmada, ver `.dorch/history/DECISIONS.md`.)
 - [x] Función pura que calcula la reputación total a partir de los muebles colocados.
 - [x] Test: reputación total con 0, 1 y varios muebles colocados.
 - [x] Recalcular la reputación total cada vez que se coloca un mueble nuevo. (Vía
@@ -220,14 +221,14 @@ el número del HUD sube al colocar un mueble.
 
 *Depende de: M03. No agrega funcionalidad de juego — es análisis y planificación antes de M04,
 para reducir el riesgo de introducir la primera entidad simulada compleja (clientes) sin mezclar
-lógica de negocio con Phaser. Ver `.juntia/ARCHITECTURE.md` (sección "Próxima extensión:
-Customer") para el análisis completo y `.juntia/DECISIONS.md` para la decisión arquitectónica
+lógica de negocio con Phaser. Ver `.dorch/history/ARCHITECTURE.md` (sección "Próxima extensión:
+Customer") para el análisis completo y `.dorch/history/DECISIONS.md` para la decisión arquitectónica
 que produce.*
 
 - [x] Analizar `game/npc/npc.ts` y `game/npc/controller.ts`: qué es lógica de simulación pura,
       qué es renderizado Phaser, qué está mezclado, y qué riesgos concretos tiene separarlos.
 - [x] Documentar la separación entre Customer simulation y Customer rendering (ver
-      `.juntia/ARCHITECTURE.md`, sección "Principio de propiedad del estado").
+      `.dorch/history/ARCHITECTURE.md`, sección "Principio de propiedad del estado").
 - [x] Definir la forma conceptual futura de `CustomerState` — sin implementarla todavía:
       ```
       Customer:
@@ -247,18 +248,18 @@ que produce.*
 - [x] Identificar qué partes del NPC actual quedan intactas por ahora (`occupiedTables`,
       constantes de presentación, `findFreeTable` leyendo el export de módulo) y por qué.
 - [x] Confirmar la decisión de arquitectura para `Customer` (`data_model_change`, ver
-      `.juntia/DECISIONS.md`): `core/customers/` (`customer.ts` + `customer-state.ts`) +
+      `.dorch/history/DECISIONS.md`): `core/customers/` (`customer.ts` + `customer-state.ts`) +
       `GameState.customers[]` + `systems/customer-system.ts` + `game/npc/controller.ts` reducido
       a lector puro de `state.customers`.
-- [x] Confirmar el principio de propiedad del estado (ver `.juntia/DECISIONS.md`): la simulación
+- [x] Confirmar el principio de propiedad del estado (ver `.dorch/history/DECISIONS.md`): la simulación
       es la fuente de verdad; Phaser no controla transiciones de estado mediante tweens,
       callbacks ni eventos visuales.
 
 **Player-visible outcome:** el jugador no verá cambios visuales. Esta fase prepara la base para
 que los clientes puedan existir como entidades simuladas independientes de Phaser.
 
-**Completion criteria:** `.juntia/ARCHITECTURE.md` documenta la extensión propuesta para
-`Customer`; `.juntia/DECISIONS.md` registra la decisión arquitectónica confirmada; ningún archivo
+**Completion criteria:** `.dorch/history/ARCHITECTURE.md` documenta la extensión propuesta para
+`Customer`; `.dorch/history/DECISIONS.md` registra la decisión arquitectónica confirmada; ningún archivo
 de `src/` cambia de comportamiento; `pnpm test` sigue en verde sin modificaciones.
 
 ---
@@ -325,7 +326,7 @@ Verificado: `pnpm test` (33/33) y `tsc --noEmit` limpios; `NpcController` intact
       `Customer` en la puerta, estado `walking`.
 - [x] Añadir cliente a `GameState.customers` — `CustomerSystem.update` acumula `deltaMs` y
       llama `spawnCustomer` cada `SPAWN_INTERVAL_MS` (2500ms, mismo ritmo que
-      `NpcController`/`NPC_SPAWN_INTERVAL_MS` — decisión confirmada, ver `.juntia/DECISIONS.md`).
+      `NpcController`/`NPC_SPAWN_INTERVAL_MS` — decisión confirmada, ver `.dorch/history/DECISIONS.md`).
 - [x] Definir posición inicial lógica (`DOOR_POSITION`, derivada de `RESTAURANT_COLS`/
       `RESTAURANT_ROWS`, mismo cálculo que usaba `NpcController.spawnNpc()`, ahora puro).
 - [x] Crear tests de spawn (`customer.test.ts`: `spawnCustomer`; `customer-system.test.ts`: no
@@ -373,7 +374,7 @@ Verificado: `pnpm test` (40/40) y `tsc --noEmit` limpios; `pnpm build` limpio.
 
 - [x] Añadir `target: GridPosition | null` al `Customer` (`core/customers/customer.ts`).
 - [x] Añadir velocidad — `CUSTOMER_SPEED_TILES_PER_SEC = 1.5` tiles/seg (decisión confirmada,
-      ver `.juntia/DECISIONS.md`).
+      ver `.dorch/history/DECISIONS.md`).
 - [x] Actualizar posición mediante `deltaMs` en `CustomerSystem` — `moveCustomer(customer,
       deltaMs)`, función pura que interpola la posición hacia `target` según velocidad y
       `deltaMs`, sin mutar el `Customer` original.
@@ -465,7 +466,7 @@ Verificado: `pnpm test` (61/61) y `tsc --noEmit` limpios; `pnpm build` limpio.
 **Objetivo:** cliente permanece un tiempo y abandona.
 
 - [x] Añadir timer de "stay" — `STAY_DURATION_MS = 10_000` (10s, placeholder fijo sin
-      comida/pedido todavía; decisión confirmada, ver `.juntia/DECISIONS.md`). Vive en
+      comida/pedido todavía; decisión confirmada, ver `.dorch/history/DECISIONS.md`). Vive en
       `Customer.stayRemainingMs: number | null`, arrancando en `STAY_DURATION_MS` la primera
       vez que `advanceStay` ve a un customer `seated` (no cuenta el tiempo caminando).
 - [x] Agregar estado `leaving` (`CustomerState`) y la infraestructura genérica de salida —
@@ -544,7 +545,7 @@ arriba — no forma parte de esa secuencia, se mantiene como registro histórico
 ## M05 — Waiting and satisfaction
 
 *Depende de: M04 (necesita mesas, asientos y la infraestructura de `leaving`/`sendToExit`) y
-M03 (reutiliza `reputation`). Arquitectura confirmada en `.juntia/DECISIONS.md` antes de
+M03 (reutiliza `reputation`). Arquitectura confirmada en `.dorch/history/DECISIONS.md` antes de
 empezar: `GameState.reputationAdjustments` como acumulador, y el principio de propiedad
 "Customer lifecycle events ownership" (`CustomerSystem` emite los eventos del ciclo de vida;
 `ReputationSystem` nunca inspecciona `state.customers`).*
@@ -644,7 +645,7 @@ Verificado: `pnpm test` (82/82) y `tsc --noEmit` limpios; `pnpm build` limpio.
 - [x] Implementar `advanceWait(customer, deltaMs)` — espejo exacto de `advanceStay` (M04.8):
       cuenta regresiva de `waitRemainingMs` por `deltaMs`, sin mutar el original. Paciencia
       inicial `WAIT_DURATION_MS = 15_000` (decisión de producto confirmada, ver
-      `.juntia/DECISIONS.md`).
+      `.dorch/history/DECISIONS.md`).
 - [x] Transición `waiting → leaving` al agotar la paciencia — vía `sendToExit`, reutilizada como
       infraestructura genérica de salida. Con una excepción respecto al plan original: `sendToExit`
       ahora también limpia `waitReason`/`waitRemainingMs` (antes solo limpiaba `stayRemainingMs`) —
@@ -682,7 +683,7 @@ Verificado: `pnpm test` (88/88) y `tsc --noEmit` limpios; `pnpm build` limpio.
 cada uno.
 
 - [x] Añadir `GameState.reputationAdjustments: number` (decisión de arquitectura confirmada,
-      ver `.juntia/DECISIONS.md`). Inicial `0` en `createGameState`.
+      ver `.dorch/history/DECISIONS.md`). Inicial `0` en `createGameState`.
 - [x] `ReputationSystem.update` pasa a `state.reputation = calculateTotalReputation(furniture,
       catalog) + state.reputationAdjustments` — sin inspeccionar `state.customers` en ningún
       momento (decisión confirmada: "Customer lifecycle events ownership").
@@ -759,7 +760,7 @@ clientes y la capacidad del restaurante sobre la arquitectura ya vigente —
 `core/customers/` (dominio puro) + `state/GameState.customers[]` + `systems/CustomerSystem`
 — sin introducir una estructura de ocupación separada (`occupiedTables` o similar): la
 ocupación de mesas sigue derivándose de `state.customers` en cada lectura, como ya decidió
-M04.4/M04.6 (ver `.juntia/ARCHITECTURE.md`).*
+M04.4/M04.6 (ver `.dorch/history/ARCHITECTURE.md`).*
 
 **Player-visible outcome (milestone completo):** en su mayoría, ninguno nuevo — el
 comportamiento visible ya construido en M04–M05 (clientes que entran, encuentran mesa,
@@ -822,7 +823,7 @@ ocupación de mesas que hoy vive inline al principio de `assignTables`
 (`core/customers/customer.ts`) — sin crear una estructura de ocupación separada ni un
 módulo de reservas.
 
-**Decisión de ownership (ver `.juntia/ARCHITECTURE.md`):** `Customer.tableId` es la única
+**Decisión de ownership (ver `.dorch/history/ARCHITECTURE.md`):** `Customer.tableId` es la única
 fuente de verdad de qué mesa ocupa cada cliente — sin `occupiedTables`/`Table.isOccupied`
 independientes; se deriva siempre de `state.customers` vía `getOccupiedTableIds`.
 
@@ -873,7 +874,7 @@ posición lógica a una celda de grid, nunca decide el orden.
 `getSeatForTable` (`core/restaurant.ts`) buscan sobre su propio `furniture` a nivel de
 módulo, no sobre el `furnitureList` que reciben como parámetro — inofensivo hoy solo porque
 `GameState.furniture` es la misma referencia de array, nunca una copia. Detalle en
-`.juntia/ARCHITECTURE.md`.
+`.dorch/history/ARCHITECTURE.md`.
 
 **Fuera de alcance:** UI de cola; prioridad VIP; reservas.
 
@@ -1062,7 +1063,7 @@ más clientes; menos reputación, menos clientes.
 - [x] Implementar `deriveSpawnIntervalMs(reputation: number): number` en `core/demand.ts`
       (M07.1) con la fórmula real: interpolación lineal acotada entre 1200ms (reputación
       >= 15) y 5000ms (reputación <= -5) — valores de balance confirmados como decisión de
-      producto, ver `.juntia/DECISIONS.md`.
+      producto, ver `.dorch/history/DECISIONS.md`.
 - [x] Reemplazar el `SPAWN_INTERVAL_MS` fijo de `CustomerSystem` por esta función, evaluada
       contra `state.reputation` en cada spawn (recalculada dentro del bucle de spawn, no
       una sola vez por tick — deja el terreno listo para M07.3, donde el spawn de un
@@ -1321,7 +1322,7 @@ operativo se refleja en el dinero del HUD con el tiempo.
 - [ ] Revisar y arreglar bugs de integración entre milestones (edge cases: cola vacía,
       mesa liberada dos veces, etc.).
 - [ ] Confirmar que 2+ clientes completan el ciclo en paralelo sin bloquear la escena.
-- [ ] Actualizar `PROJECT_STATE.md`: loop completo como "Working".
+- [ ] Actualizar `.dorch/project.md`: loop completo como "Working".
 
 **Player-visible outcome:** el jugador puede jugar el ciclo completo de principio a fin,
 de forma reproducible, sin errores en consola.
@@ -1334,7 +1335,7 @@ consola.
 ## Visión futura — demanda dinámica y economía de gestión
 
 *Documentado el 2026-08-21 a partir de una decisión de producto confirmada (ver
-`.juntia/DECISIONS.md`, "Restaurant simulation economy model"). Esta sección describe
+`.dorch/history/DECISIONS.md`, "Restaurant simulation economy model"). Esta sección describe
 dirección de diseño, no tareas — nada de lo siguiente se implementa todavía, ni pertenece a
 M06 (ver "M06 scope boundaries" más arriba). Se registra acá para que los milestones que
 dependan de estos sistemas (M07, M09, M10, M13, M15, y los que se desglosen más adelante)

@@ -8,12 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@juntia/juntia':
-        specifier: ^0.14.0
-        version: 0.14.0
-      latest:
-        specifier: link:@juntia/juntia/latest
-        version: link:@juntia/juntia/latest
       phaser:
         specifier: ^4.2.1
         version: 4.2.1
@@ -32,11 +26,6 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
-
-  '@juntia/juntia@0.14.0':
-    resolution: {integrity: sha512-ekC8CURk/eWLETyrT9kmUB8XhDOQ7RbvDAzDivXGYMVGXxhe8SGNrqMnw6dMAzADjAlMCCy9xRYe7ueR8bLW1g==}
-    engines: {node: '>=18'}
-    hasBin: true
 
   '@oxc-project/types@0.143.0':
     resolution: {integrity: sha512-u6JZdLBTLotrNC9Vd6vPssINdzcCzleKAH6EJKImQb7GtYvX5keN2dxkoK44stCc4tffE6QQRtZTXVSzsLUlWA==}
@@ -450,8 +439,6 @@ packages:
 snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
-
-  '@juntia/juntia@0.14.0': {}
 
   '@oxc-project/types@0.143.0': {}
 

@@ -10,7 +10,7 @@
 export type DeriveSpawnIntervalMs = (reputation: number) => number;
 
 // Valores de balance confirmados como decisión de producto (M07.2), ver
-// .juntia/DECISIONS.md. Reputación <= MIN_REPUTATION_REFERENCE da el
+// .dorch/history/DECISIONS.md. Reputación <= MIN_REPUTATION_REFERENCE da el
 // intervalo más lento (MAX_SPAWN_INTERVAL_MS); reputación >=
 // MAX_REPUTATION_REFERENCE da el más rápido (MIN_SPAWN_INTERVAL_MS);
 // interpolación lineal entre ambos puntos.
