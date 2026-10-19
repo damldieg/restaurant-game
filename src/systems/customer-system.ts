@@ -12,7 +12,7 @@ import {
 import { deriveSpawnIntervalMs } from "../core/demand";
 
 // Eventos de reputación por ciclo de vida de customer (M05.4, decisión de
-// producto confirmada, ver .juntia/DECISIONS.md). Se aplican exactamente
+// producto confirmada, ver .dorch/history/DECISIONS.md). Se aplican exactamente
 // una vez por evento de salida, nunca por frame.
 const REPUTATION_REWARD_COMPLETED_CYCLE = 1;
 const REPUTATION_PENALTY_ABANDONED_WAIT = 2;

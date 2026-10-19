@@ -7,7 +7,7 @@ const CUSTOMER_HEIGHT = 28;
 const CUSTOMER_COLOR = 0xc97a5b;
 
 // Lector puro de GameState.customers (decisión confirmada en M03.5, ver
-// .juntia/DECISIONS.md): nunca modifica CustomerState, solo crea/actualiza
+// .dorch/history/DECISIONS.md): nunca modifica CustomerState, solo crea/actualiza
 // sprites a partir de lo que la simulación ya decidió.
 export class CustomerRenderer {
   private sprites = new Map<string, Phaser.GameObjects.Rectangle>();

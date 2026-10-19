@@ -548,7 +548,7 @@ describe("sendToExit", () => {
   // M06.2 — confirma que sendToExit sigue siendo el único punto que libera
   // una mesa: apenas corre, la mesa deja de aparecer en getOccupiedTableIds,
   // sin necesidad de una función releaseTable ni una lista de ocupación
-  // aparte (ver .juntia/ARCHITECTURE.md).
+  // aparte (ver .dorch/history/ARCHITECTURE.md).
   it("frees the table immediately, before removeDepartedCustomers runs", () => {
     const seated = createCustomer("customer-1", { col: 5, row: 6 }, "seated", null, "table-1");
 
